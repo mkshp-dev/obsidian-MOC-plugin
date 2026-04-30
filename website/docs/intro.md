@@ -15,6 +15,8 @@ The Obsidian MOC Plugin is a smart **Map of Content** generator for [Obsidian](h
 - Automatic MOC generation from your vault
 - Customizable grouping and filtering
 - Seamless integration with Obsidian's native linking
+- Configurable link depth and folder exclusions
+- Orphan note detection
 
 ## Installation
 

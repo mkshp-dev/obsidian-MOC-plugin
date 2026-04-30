@@ -1,0 +1,6 @@
+{
+  "extends": "@docusaurus/module-type-aliases",
+  "compilerOptions": {
+    "rootDir": "."
+  }
+}

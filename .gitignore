@@ -8,6 +8,10 @@
 # npm
 node_modules
 
+# Docusaurus
+website/.docusaurus
+website/build
+
 # Don't include the compiled main.js file in the repo.
 # They should be uploaded to GitHub releases instead.
 main.js

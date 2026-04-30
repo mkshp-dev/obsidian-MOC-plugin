@@ -6,12 +6,10 @@ const config: Config = {
   title: "Obsidian MOC Plugin",
   tagline: "Smart Map of Content for Obsidian",
 
-  // TODO: Replace with your GitHub Pages URL
-  url: "https://YOUR_GITHUB_USERNAME.github.io",
+  url: "https://mkshp-dev.github.io",
   baseUrl: "/obsidian-MOC-plugin/",
 
-  // GitHub Pages deployment config — update these to match your repo
-  organizationName: "YOUR_GITHUB_USERNAME",
+  organizationName: "mkshp-dev",
   projectName: "obsidian-MOC-plugin",
 
   onBrokenLinks: "throw",
@@ -49,8 +47,7 @@ const config: Config = {
           label: "Docs",
         },
         {
-          // TODO: Replace with your actual GitHub repo URL
-          href: "https://github.com/YOUR_GITHUB_USERNAME/obsidian-MOC-plugin",
+          href: "https://github.com/mkshp-dev/obsidian-MOC-plugin",
           label: "GitHub",
           position: "right",
         },

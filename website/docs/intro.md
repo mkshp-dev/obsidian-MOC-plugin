@@ -26,10 +26,11 @@ The Obsidian MOC Plugin is a smart **Map of Content** generator for [Obsidian](h
 
 ### Manual installation
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/YOUR_GITHUB_USERNAME/obsidian-MOC-plugin/releases).
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/mkshp-dev/obsidian-MOC-plugin/releases).
 2. Copy the files to `<Vault>/.obsidian/plugins/obsidian-MOC-plugin/`.
 3. Reload Obsidian and enable the plugin under **Settings → Community plugins**.
 
 ## Getting Started
 
 Once enabled, open the command palette (`Ctrl/Cmd + P`) and search for **MOC** to see all available commands.
+

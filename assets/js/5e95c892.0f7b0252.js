@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkobsidian_moc_plugin_docs=self.webpackChunkobsidian_moc_plugin_docs||[]).push([[647],{8122:(s,e,c)=>{c.r(e),c.d(e,{default:()=>d});c(6540);var n=c(4164),r=c(1769),u=c(204),a=c(2831),i=c(1410),o=c(4848);function d(s){return(0,o.jsx)(r.e3,{className:(0,n.A)(u.G.wrapper.docsPages),children:(0,o.jsx)(i.A,{children:(0,a.v)(s.route.routes)})})}}}]);

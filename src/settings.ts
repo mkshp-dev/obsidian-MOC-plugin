@@ -1,12 +1,11 @@
 import {App, PluginSettingTab, Setting} from "obsidian";
 import MOCPlugin from "./main";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface MOCPluginSettings {
-	mySetting: string;
 }
 
 export const DEFAULT_SETTINGS: MOCPluginSettings = {
-	mySetting: 'default'
 }
 
 export class MOCSettingTab extends PluginSettingTab {
@@ -19,18 +18,12 @@ export class MOCSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const {containerEl} = this;
-
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Settings #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+			.setName('Moc plugin configuration')
+			.setHeading();
+
+		containerEl.createEl('p', {text: 'No settings are currently required for the MOC plugin. Just use the `moc` code block.'});
 	}
 }

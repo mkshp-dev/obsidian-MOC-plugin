@@ -1,14 +1,26 @@
 import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
 
-export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete';
+export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
 
 export interface ParsedFilter {
     type: FilterType;
     value?: string;
     regex?: RegExp;
+    propKey?: string;
+    propValue?: unknown;
 }
 
 export function parseFilter(filterString: string): ParsedFilter | null {
+    const propertiesPattern = /^properties\(\s*([a-zA-Z0-9_-]+)\s*==\s*(?:["'](.*?)["']|([^"\s)]+))\s*\)$/;
+    const propMatch = filterString.match(propertiesPattern);
+    if (propMatch) {
+        return {
+            type: 'properties',
+            propKey: propMatch[1],
+            propValue: propMatch[2] !== undefined ? propMatch[2] : propMatch[3]
+        };
+    }
+
     const stringMatchPattern = /^(has_word|contains|has_text|matches|has_tag)\(\s*["'](.*?)["']\s*\)$/;
     const boolPattern = /^(is_completed|is_incomplete)\(\s*\)$/;
 
@@ -48,6 +60,8 @@ export function evaluateFilter(text: string, filter: ParsedFilter, isCompletedTa
             return isCompletedTask === true;
         case 'is_incomplete':
             return isCompletedTask === false;
+        case 'properties':
+            return true; // Already filtered at the file level
         default:
             return false;
     }
@@ -193,6 +207,13 @@ export async function processMocBlock(
     for (const file of matchedFiles) {
         const fileCache = app.metadataCache.getFileCache(file);
         if (!fileCache) continue;
+
+        if (parsedFilter.type === 'properties') {
+            const frontmatter = fileCache.frontmatter;
+            if (!frontmatter || frontmatter[parsedFilter.propKey as string] != parsedFilter.propValue) {
+                continue; // Skip file entirely if property does not match
+            }
+        }
 
         const fileContent = await app.vault.cachedRead(file);
         const lines = fileContent.split(/\r?\n/);

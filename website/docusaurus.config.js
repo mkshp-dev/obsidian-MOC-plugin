@@ -1,10 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- disable typescript-eslint checks for docusaurus config since docusaurus types are not installed in the root workspace */
 import { themes as prismThemes } from "prism-react-renderer";
-import type { Config } from "@docusaurus/types";
-import type * as Preset from "@docusaurus/preset-classic";
 
-const config: Config = {
-  title: "Obsidian MOC Plugin",
+/** @type {import('@docusaurus/types').Config} */
+const config = {
+  title: "Maps of Content",
   tagline: "Smart Map of Content for Obsidian",
 
   url: "https://mkshp-dev.github.io",
@@ -26,20 +24,20 @@ const config: Config = {
       "classic",
       {
         docs: {
-          sidebarPath: "./sidebars.ts",
+          sidebarPath: "./sidebars.js",
           routeBasePath: "/",
         },
         blog: false,
         theme: {
           customCss: "./src/css/custom.css",
         },
-      } satisfies Preset.Options,
+      },
     ],
   ],
 
   themeConfig: {
     navbar: {
-      title: "Obsidian MOC Plugin",
+      title: "Maps of Content",
       items: [
         {
           type: "docSidebar",
@@ -56,15 +54,13 @@ const config: Config = {
     },
     footer: {
       style: "dark",
-      copyright: `Copyright © ${new Date().getFullYear()} Obsidian MOC Plugin. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Maps of Content. Built with Docusaurus.`,
     },
     prism: {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Prism theme properties are resolved at build time
       theme: prismThemes.github,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Prism theme properties are resolved at build time
       darkTheme: prismThemes.dracula,
     },
-  } satisfies Preset.ThemeConfig,
+  },
 };
 
 export default config;

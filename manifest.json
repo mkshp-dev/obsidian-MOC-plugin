@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-moc-plugin",
 	"name": "MOC Plugin",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"minAppVersion": "0.15.0",
 	"description": "Dynamically generate Maps of Content (MOC) by extracting matching list items from notes in your vault.",
 	"author": "mkshp-dev",

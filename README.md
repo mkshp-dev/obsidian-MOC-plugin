@@ -1,4 +1,4 @@
-# Obsidian MOC Plugin
+# Maps of Content
 
 This plugin provides a dynamic way to extract elements (like lists, tasks, headings, paragraphs, or blockquotes) from your Markdown files that match a specific word filter, automatically generating Map of Content (MOC) indexes in your vault.
 

@@ -1,6 +1,6 @@
 {
 	"name": "maps-of-content",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"description": "Dynamically generate Maps of Content (MOC) by extracting matching list items from notes in your vault.",
 	"main": "main.js",
 	"type": "module",

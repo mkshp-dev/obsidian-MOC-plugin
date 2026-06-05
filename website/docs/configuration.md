@@ -10,14 +10,14 @@ You can write Map of Content (MOC) queries manually in any markdown file by crea
 
 A basic `moc` code block looks like this:
 
-```yaml
+````yaml
 ```moc
 folder: Diary
 element: List
 filter: has_word("MOC")
 recursive: true
 ```
-```
+````
 
 ---
 

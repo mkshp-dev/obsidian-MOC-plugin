@@ -1,4 +1,3 @@
-/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, Modal, Setting, MarkdownView } from 'obsidian';
 
 export class MocWizardModal extends Modal {
@@ -23,7 +22,7 @@ export class MocWizardModal extends Modal {
             .setName('Folder')
             .setDesc('The vault folder to search in')
             .addText(text => text
-                .setPlaceholder('E.g. diary')
+                .setPlaceholder('Example: diary')
                 .setValue(this.folder)
                 .onChange(value => {
                     this.folder = value;
@@ -56,13 +55,13 @@ export class MocWizardModal extends Modal {
             .setName('Filter type')
             .setDesc('The matching condition to apply')
             .addDropdown(drop => drop
-                .addOption('has_word', 'has_word')
-                .addOption('contains', 'contains')
-                .addOption('has_text', 'has_text')
-                .addOption('matches', 'matches')
-                .addOption('has_tag', 'has_tag')
-                .addOption('is_completed', 'is_completed')
-                .addOption('is_incomplete', 'is_incomplete')
+                .addOption('has_word', 'Has word')
+                .addOption('contains', 'Contains')
+                .addOption('has_text', 'Has text')
+                .addOption('matches', 'Matches')
+                .addOption('has_tag', 'Has tag')
+                .addOption('is_completed', 'Is completed')
+                .addOption('is_incomplete', 'Is incomplete')
                 .setValue(this.filterType)
                 .onChange(value => {
                     this.filterType = value;
@@ -73,7 +72,7 @@ export class MocWizardModal extends Modal {
             .setName('Filter value')
             .setDesc('The value for the filter function')
             .addText(text => text
-                .setPlaceholder('e.g., MOC')
+                .setPlaceholder('Example: moc')
                 .setValue(this.filterValue)
                 .onChange(value => {
                     this.filterValue = value;
@@ -83,7 +82,7 @@ export class MocWizardModal extends Modal {
 
         new Setting(contentEl)
             .addButton(btn => btn
-                .setButtonText('Insert MOC block')
+                .setButtonText('Insert block')
                 .setCta()
                 .onClick(() => {
                     this.insertMocBlock();

@@ -58,7 +58,9 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} Obsidian MOC Plugin. Built with Docusaurus.`,
     },
     prism: {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Prism theme properties are resolved at build time
       theme: prismThemes.github,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Prism theme properties are resolved at build time
       darkTheme: prismThemes.dracula,
     },
   } satisfies Preset.ThemeConfig,

@@ -59,6 +59,8 @@ export interface MocConfig {
     element?: string;
     filter?: string;
     recursive?: boolean;
+    sort?: string;
+    limit?: number;
 }
 
 export async function processMocBlock(
@@ -93,10 +95,45 @@ export async function processMocBlock(
     const folderPath = config.folder.trim().replace(/^\/+|\/+$/g, '');
     const isRecursive = config.recursive === true;
 
+    let sortField = 'name';
+    let sortDirection = 'desc';
+    if (config.sort !== undefined) {
+        if (typeof config.sort !== 'string') {
+            el.createEl("div", { text: "Error: invalid 'sort' format in moc block.", cls: 'moc-error' });
+            return;
+        }
+        const parts = config.sort.trim().split(/\s+/);
+        if (parts.length > 0) {
+            sortField = parts[0]!.toLowerCase();
+        }
+        if (parts.length > 1) {
+            sortDirection = parts[1]!.toLowerCase();
+        }
+
+        const validSortFields = ['ctime', 'mtime', 'name'];
+        if (!validSortFields.includes(sortField)) {
+            el.createEl("div", { text: `Error: invalid sort field '${sortField}'. Must be one of: ${validSortFields.join(', ')}.`, cls: 'moc-error' });
+            return;
+        }
+
+        const validSortDirections = ['asc', 'desc'];
+        if (!validSortDirections.includes(sortDirection)) {
+            el.createEl("div", { text: `Error: invalid sort direction '${sortDirection}'. Must be 'asc' or 'desc'.`, cls: 'moc-error' });
+            return;
+        }
+    }
+
+    if (config.limit !== undefined) {
+        if (typeof config.limit !== 'number' || config.limit <= 0) {
+            el.createEl("div", { text: "Error: invalid 'limit' in moc block. Must be a positive number.", cls: 'moc-error' });
+            return;
+        }
+    }
+
     // 1. Find all matching files
     const allFiles = app.vault.getMarkdownFiles();
 
-    const matchedFiles = allFiles.filter(file => {
+    let matchedFiles = allFiles.filter(file => {
         const parentPath = file.parent ? file.parent.path : '';
         const normalizedParent = parentPath.replace(/^\/+|\/+$/g, '');
 
@@ -119,6 +156,35 @@ export async function processMocBlock(
     if (matchedFiles.length === 0) {
         el.createEl("div", { text: `No markdown files found in folder '${config.folder}'.`, cls: 'moc-empty' });
         return;
+    }
+
+    if (config.sort !== undefined) {
+        matchedFiles.sort((a, b) => {
+            let valA, valB;
+            if (sortField === 'ctime') {
+                valA = a.stat.ctime;
+                valB = b.stat.ctime;
+            } else if (sortField === 'mtime') {
+                valA = a.stat.mtime;
+                valB = b.stat.mtime;
+            } else {
+                valA = a.basename;
+                valB = b.basename;
+            }
+
+            if (sortField === 'name') {
+                const cmp = String(valA).localeCompare(String(valB));
+                if (cmp !== 0) return sortDirection === 'asc' ? cmp : -cmp;
+            } else {
+                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+    }
+
+    if (config.limit !== undefined) {
+        matchedFiles = matchedFiles.slice(0, config.limit);
     }
 
     // 2. Extract elements

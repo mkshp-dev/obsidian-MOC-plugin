@@ -82,7 +82,7 @@ Limits the maximum number of markdown files processed. Must be a positive intege
 ### Extracting Tasks Grouped by Folder
 Search the `Projects/` folder recursively for incomplete tasks, sorting notes by filename, and grouping the output by their parent folder path:
 
-```yaml
+````yaml
 ```moc
 folder: Projects
 element: Task
@@ -91,12 +91,12 @@ recursive: true
 groupBy: folder
 sort: name asc
 ```
-```
+````
 
 ### Extracting Headings Filtered by Tag and Grouped by Tag
 Search the entire vault for headings containing the hashtag `#review`, grouping them under their corresponding tag headings:
 
-```yaml
+````yaml
 ```moc
 folder: ""
 element: Heading
@@ -104,15 +104,15 @@ filter: has_tag("#review")
 recursive: true
 groupBy: tag
 ```
-```
+````
 
 ### Advanced Frontmatter Property Filtering
 Extract lists from notes in the `Archive` folder that have the frontmatter property `archived: true`:
 
-```yaml
+````yaml
 ```moc
 folder: Archive
 element: List
 filter: properties(archived == true)
 ```
-```
+````

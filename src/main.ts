@@ -1,3 +1,4 @@
+import { MocWizardModal } from "./ui/moc-wizard";
 import { Plugin, parseYaml } from 'obsidian';
 import { DEFAULT_SETTINGS, MOCPluginSettings, MOCSettingTab } from "./settings";
 import { processMocBlock, MocConfig } from "./moc";
@@ -7,6 +8,19 @@ export default class MOCPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+
+		this.addRibbonIcon('list', 'Create map of content block', () => {
+			new MocWizardModal(this.app).open();
+		});
+
+		this.addCommand({
+			id: 'create-moc-block',
+			name: 'Create map of content block',
+			callback: () => {
+				new MocWizardModal(this.app).open();
+			}
+		});
+
 
 		this.registerMarkdownCodeBlockProcessor("moc", async (source, el, ctx) => {
 			try {

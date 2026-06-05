@@ -21,7 +21,7 @@ export class MOCSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Moc plugin configuration')
+			.setName('Configuration')
 			.setHeading();
 
 		containerEl.createEl('p', {text: 'No settings are currently required for the MOC plugin. Just use the `moc` code block.'});

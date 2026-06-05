@@ -1,4 +1,4 @@
-import { App, MarkdownRenderer, Component, MarkdownPostProcessorContext } from 'obsidian';
+import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
 
 export interface MocConfig {
     folder?: string;
@@ -40,21 +40,27 @@ export async function processMocBlock(
         return;
     }
 
+    const folderPath = config.folder.trim().replace(/^\/+|\/+$/g, '');
     const isRecursive = config.recursive === true;
 
     // 1. Find all matching files
     const allFiles = app.vault.getMarkdownFiles();
-    const targetFolder = config.folder.endsWith('/') ? config.folder : config.folder + '/';
 
     const matchedFiles = allFiles.filter(file => {
-        // If the folder is exactly the target folder
-        if (file.parent?.path === config.folder) {
+        const parentPath = file.parent ? file.parent.path : '';
+        const normalizedParent = parentPath.replace(/^\/+|\/+$/g, '');
+
+        if (normalizedParent === folderPath) {
             return true;
         }
 
-        // If recursive, also match any subfolders
-        if (isRecursive && file.path.startsWith(targetFolder)) {
-            return true;
+        if (isRecursive) {
+            if (folderPath === '') {
+                return true;
+            }
+            if (normalizedParent.startsWith(folderPath + '/')) {
+                return true;
+            }
         }
 
         return false;
@@ -160,8 +166,8 @@ export async function processMocBlock(
 
     const markdownText = outputLines.join('\n');
 
-    const container = el.createDiv();
-    const component = new Component();
-    component.load();
-    await MarkdownRenderer.render(app, markdownText, container, sourcePath, component);
+    const container = el.createDiv({ cls: 'moc-container' });
+    const childComponent = new MarkdownRenderChild(container);
+    ctx.addChild(childComponent);
+    await MarkdownRenderer.render(app, markdownText, container, sourcePath, childComponent);
 }

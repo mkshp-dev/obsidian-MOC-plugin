@@ -1,8 +1,37 @@
-/*
+/* MOC Plugin custom styles */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.moc-container {
+    border-left: 2px solid var(--interactive-accent);
+    padding-left: 16px;
+    margin: 12px 0 12px 6px;
+    transition: border-color 0.2s ease;
+}
 
-If your plugin does not need CSS, delete this file.
+.moc-container:hover {
+    border-color: var(--interactive-accent-hover);
+}
 
-*/
+.moc-error {
+    background-color: var(--background-modifier-error);
+    color: var(--text-error);
+    border: 1px solid var(--border-error);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 8px 0;
+    font-family: var(--font-monospace);
+    font-size: var(--font-adaptive-small);
+    white-space: pre-wrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.moc-empty {
+    color: var(--text-muted);
+    background-color: var(--background-secondary);
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+    padding: 16px;
+    margin: 8px 0;
+    text-align: center;
+    font-style: italic;
+    font-size: var(--font-adaptive-small);
+}

@@ -1,4 +1,4 @@
-import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
+import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, TFile } from 'obsidian';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
 
@@ -358,10 +358,41 @@ export async function processMocBlock(
         return;
     }
 
+
     const markdownText = outputLines.join('\n');
 
-    const container = el.createDiv({ cls: 'moc-container' });
+    const wrapper = el.createDiv({ cls: 'moc-wrapper' });
+
+    const bakeButton = wrapper.createEl('button', {
+        text: 'Bake',
+        cls: 'moc-bake-button',
+        title: 'Bake dynamic block to static Markdown'
+    });
+
+    const container = wrapper.createDiv({ cls: 'moc-container' });
     const childComponent = new MarkdownRenderChild(container);
     ctx.addChild(childComponent);
+
+    bakeButton.onClickEvent(async (e) => {
+        e.preventDefault();
+        const sectionInfo = ctx.getSectionInfo(el);
+        if (!sectionInfo) {
+            new Notice("Could not determine section to bake");
+            return;
+        }
+
+        const file = app.vault.getAbstractFileByPath(sourcePath);
+        if (file instanceof TFile) {
+            await app.vault.process(file, (data) => {
+                const lines = data.split(/\r?\n/);
+                lines.splice(sectionInfo.lineStart, sectionInfo.lineEnd - sectionInfo.lineStart + 1, markdownText);
+                return lines.join('\n');
+            });
+            new Notice("Block baked");
+        } else {
+            new Notice("Source file not found");
+        }
+    });
+
     await MarkdownRenderer.render(app, markdownText, container, sourcePath, childComponent);
 }

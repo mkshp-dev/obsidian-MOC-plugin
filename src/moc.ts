@@ -1,4 +1,4 @@
-import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, TFile } from 'obsidian';
+import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, TFile } from 'obsidian';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
 
@@ -68,11 +68,32 @@ export function evaluateFilter(text: string, filter: ParsedFilter, isCompletedTa
 }
 
 
+
+
+function extractTags(text: string): string[] {
+    const tags = new Set<string>();
+    const tagRegex = /(?:^|\s)(#[^\s#]+)/g;
+    let match;
+    while ((match = tagRegex.exec(text)) !== null) {
+        if (match[1]) {
+            tags.add(match[1]);
+        }
+    }
+    return Array.from(tags);
+}
+
+export interface MatchedBlock {
+    file: TFile;
+    lines: string[];
+    tags: string[];
+}
+
 export interface MocConfig {
     folder?: string;
     element?: string;
     filter?: string;
     recursive?: boolean;
+    groupBy?: string;
     sort?: string;
     limit?: number;
 }
@@ -202,7 +223,7 @@ export async function processMocBlock(
     }
 
     // 2. Extract elements
-    const outputLines: string[] = [];
+    const matchedBlocks: MatchedBlock[] = [];
 
     for (const file of matchedFiles) {
         const fileCache = app.metadataCache.getFileCache(file);
@@ -218,12 +239,10 @@ export async function processMocBlock(
         const fileContent = await app.vault.cachedRead(file);
         const lines = fileContent.split(/\r?\n/);
 
-        let hasMatchesInFile = false;
-        const fileHeaderLines: string[] = [];
-        fileHeaderLines.push(`### [[${file.path}|${file.basename}]]`);
-        fileHeaderLines.push("");
 
-        const fileMatchLines: string[] = [];
+
+
+
 
         if (config.element === 'List' || config.element === 'Task') {
             if (!fileCache.listItems || fileCache.listItems.length === 0) continue;
@@ -243,7 +262,7 @@ export async function processMocBlock(
                 if (!lineContent) continue;
 
                 if (evaluateFilter(lineContent, parsedFilter, item.task !== undefined ? item.task !== ' ' : undefined)) {
-                    hasMatchesInFile = true;
+
 
                     let lastChildLine = item.position.start.line;
                     let j = i + 1;
@@ -268,6 +287,8 @@ export async function processMocBlock(
                     const baseIndentMatch = lines[startLine]?.match(/^(\s*)/);
                     const baseIndent = baseIndentMatch ? baseIndentMatch[1] : '';
 
+
+                    const blockLines: string[] = [];
                     for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
                         let currentLine = lines[lineNum];
                         if (currentLine === undefined) continue;
@@ -275,8 +296,11 @@ export async function processMocBlock(
                         if (baseIndent && currentLine.startsWith(baseIndent)) {
                             currentLine = currentLine.substring(baseIndent.length);
                         }
-                        fileMatchLines.push(currentLine);
+                        blockLines.push(currentLine);
                     }
+                    const blockText = blockLines.join('\n');
+                    matchedBlocks.push({ file, lines: blockLines, tags: extractTags(blockText) });
+
                 }
             }
         } else if (config.element === 'Heading') {
@@ -294,7 +318,7 @@ export async function processMocBlock(
                 if (!lineContent) continue;
 
                 if (evaluateFilter(heading.heading, parsedFilter)) {
-                    hasMatchesInFile = true;
+
 
                     const startLine = heading.position.start.line;
                     let endLine = lines.length - 1;
@@ -311,11 +335,16 @@ export async function processMocBlock(
 
                     skipUntilLine = endLine;
 
+
+                    const blockLines: string[] = [];
                     for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
                         if (lines[lineNum] !== undefined) {
-                            fileMatchLines.push(lines[lineNum] as string);
+                            blockLines.push(lines[lineNum] as string);
                         }
                     }
+                    const blockText = blockLines.join('\n');
+                    matchedBlocks.push({ file, lines: blockLines, tags: extractTags(blockText) });
+
                 }
             }
         } else if (config.element === 'Paragraph' || config.element === 'Blockquote') {
@@ -339,25 +368,104 @@ export async function processMocBlock(
                 const sectionText = sectionLines.join('\n');
 
                 if (evaluateFilter(sectionText, parsedFilter)) {
-                    hasMatchesInFile = true;
-                    fileMatchLines.push(...(sectionLines as string[]));
+
+                    matchedBlocks.push({ file, lines: sectionLines as string[], tags: extractTags(sectionText) });
                 }
             }
         }
 
-        if (hasMatchesInFile) {
-            outputLines.push(...fileHeaderLines);
-            outputLines.push(...fileMatchLines);
-            outputLines.push("");
-        }
+        // matchedBlocks already updated
     }
 
     // 3. Render output
-    if (outputLines.length === 0) {
+    if (matchedBlocks.length === 0) {
         el.createEl("div", { text: `No elements matching filter found in '${config.folder}'.`, cls: 'moc-empty' });
         return;
     }
 
+
+    const outputLines: string[] = [];
+
+    if (!config.groupBy) {
+        // Default behavior: group by file
+        const filesMap = new Map<string, MatchedBlock[]>();
+        for (const block of matchedBlocks) {
+            const filePath = block.file.path;
+            if (!filesMap.has(filePath)) {
+                filesMap.set(filePath, []);
+            }
+            filesMap.get(filePath)!.push(block);
+        }
+
+        for (const [filePath, blocks] of filesMap.entries()) {
+            const basename = blocks[0]?.file.basename;
+            outputLines.push(`### [[${filePath}|${basename}]]`);
+            outputLines.push("");
+            for (const block of blocks) {
+                outputLines.push(...block.lines);
+            }
+            outputLines.push("");
+        }
+    } else {
+        // Grouped behavior
+        const groupsMap = new Map<string, MatchedBlock[]>();
+
+        for (const block of matchedBlocks) {
+            let groupKeys: string[] = [];
+
+            if (config.groupBy === 'folder') {
+                const parentPath = block.file.parent ? block.file.parent.path : '/';
+                groupKeys.push(parentPath);
+            } else if (config.groupBy === 'cday') {
+                groupKeys.push(moment(block.file.stat.ctime).format('YYYY-MM-DD'));
+            } else if (config.groupBy === 'mday') {
+                groupKeys.push(moment(block.file.stat.mtime).format('YYYY-MM-DD'));
+            } else if (config.groupBy === 'tag') {
+                if (block.tags.length > 0) {
+                    groupKeys.push(...block.tags);
+                } else {
+                    groupKeys.push("Untagged");
+                }
+            } else {
+                groupKeys.push("Unknown");
+            }
+
+            for (const key of groupKeys) {
+                if (!groupsMap.has(key)) {
+                    groupsMap.set(key, []);
+                }
+                groupsMap.get(key)!.push(block);
+            }
+        }
+
+        // Sort groups alphabetically (except Untagged which could go last, but simple sort is fine for now)
+        const sortedGroups = Array.from(groupsMap.keys()).sort();
+
+        for (const group of sortedGroups) {
+            outputLines.push(`### ${group}`);
+            outputLines.push("");
+
+            const blocks = groupsMap.get(group)!;
+            const filesMap = new Map<string, MatchedBlock[]>();
+            for (const block of blocks) {
+                const filePath = block.file.path;
+                if (!filesMap.has(filePath)) {
+                    filesMap.set(filePath, []);
+                }
+                filesMap.get(filePath)!.push(block);
+            }
+
+            for (const [filePath, fileBlocks] of filesMap.entries()) {
+                const basename = fileBlocks[0]?.file.basename;
+                outputLines.push(`#### [[${filePath}|${basename}]]`);
+                outputLines.push("");
+                for (const block of fileBlocks) {
+                    outputLines.push(...block.lines);
+                }
+                outputLines.push("");
+            }
+        }
+    }
 
     const markdownText = outputLines.join('\n');
 

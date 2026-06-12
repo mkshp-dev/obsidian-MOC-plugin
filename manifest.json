@@ -1,10 +1,14 @@
 {
 	"id": "maps-of-content",
 	"name": "Maps of Content",
-	"version": "1.1.5",
+	"version": "1.2.0",
 	"minAppVersion": "1.1.0",
-	"description": "Dynamically generate Maps of Content (MOC) by extracting matching list items from notes in your vault.",
+	"description": "Dynamically generate Maps of Content (MOC) by extracting matching elements from notes in your vault.",
 	"author": "mkshp-dev",
 	"authorUrl": "https://github.com/mkshp-dev",
-	"isDesktopOnly": false
+	"isDesktopOnly": false,
+	"fundingUrl": {
+		"GitHub Sponsors": "https://github.com/sponsors/mkshp-dev",
+		"Buy Me a Coffee": "https://www.buymeacoffee.com/mkshp"
+	}
 }

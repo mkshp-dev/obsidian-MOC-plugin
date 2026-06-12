@@ -31,6 +31,25 @@ recursive: true
   - `is_incomplete()`: Matches only incomplete tasks (when `element` is `Task`).
 - **`recursive`** *(optional)*: A boolean (`true` or `false`) that determines whether the search should include subfolders within the specified `folder`. If omitted, it defaults to `false`.
 
+
+### Dynamic Parameters
+
+You can dynamically include the current note's parameters in the `folder` and `filter` options using the following variables:
+- `{{this.filename}}`: Expands to the current note's name (without the `.md` extension).
+- `{{this.folder}}`: Expands to the name of the folder containing the current note.
+- `{{this.path}}`: Expands to the full path of the current note (without the `.md` extension).
+
+For example, to list elements from the `Diary` folder that contain the current note's name:
+
+<pre>
+```moc
+folder: Diary
+element: List
+filter: has_word("{{this.filename}}")
+recursive: true
+```
+</pre>
+
 ## Result
 
 The plugin will scan all markdown files in the specified `folder`. For any files containing elements that match your `filter`, it will dynamically render a section.
@@ -40,3 +59,25 @@ The rendered output includes:
 2. The matching elements themselves.
 
 > Note: The original `moc` code block is replaced in reading/preview mode with the dynamically generated content.
+
+## Support
+
+If you find this plugin helpful, consider supporting its development!
+
+<a href="https://www.buymeacoffee.com/mkshp" target="_blank">
+  <img
+    src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=%E2%98%95&slug=mkshp&button_colour=5F7FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00"
+    alt="Buy me a coffee"
+    height="45"
+  />
+</a>
+
+<br/>
+
+<a href="https://github.com/sponsors/mkshp-dev" target="_blank">
+  <img
+    src="https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github-sponsors&style=flat-square"
+    alt="Sponsor mkshp-dev on GitHub"
+    height="32"
+  />
+</a>

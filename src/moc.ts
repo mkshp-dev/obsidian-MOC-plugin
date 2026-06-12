@@ -2,6 +2,18 @@ import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChil
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
 
+export type FilterNodeType = 'AND' | 'OR' | 'NOT' | 'CONDITION';
+
+export interface ASTNode {
+    type: FilterNodeType;
+    left?: ASTNode;
+    right?: ASTNode;
+    expr?: ASTNode;
+    condition?: ParsedFilter;
+}
+
+
+
 export interface ParsedFilter {
     type: FilterType;
     value?: string;
@@ -10,7 +22,104 @@ export interface ParsedFilter {
     propValue?: unknown;
 }
 
-export function parseFilter(filterString: string): ParsedFilter | null {
+
+function tokenizeFilter(input: string): string[] | null {
+    const tokenRegex = /\s*(AND\b|OR\b|NOT\b|\(|\)|properties\(\s*[a-zA-Z0-9_-]+\s*==\s*(?:["'].*?["']|[^"\s)]+)\s*\)|(?:has_word|contains|has_text|matches|has_tag)\(\s*["'].*?["']\s*\)|(?:is_completed|is_incomplete)\(\s*\))\s*/iy;
+    let lastIndex = 0;
+    const tokens: string[] = [];
+    tokenRegex.lastIndex = 0;
+
+    while (lastIndex < input.length) {
+        tokenRegex.lastIndex = lastIndex;
+        const match = tokenRegex.exec(input);
+        if (!match) {
+            return null; // Syntax error
+        }
+        tokens.push(match[1] as string);
+        lastIndex = tokenRegex.lastIndex;
+    }
+    return tokens;
+}
+
+class FilterParser {
+    tokens: string[];
+    pos: number = 0;
+
+    constructor(tokens: string[]) {
+        this.tokens = tokens;
+    }
+
+    parse(): ASTNode | null {
+        if (!this.tokens || this.tokens.length === 0) return null;
+        const expr = this.parseOr();
+        if (this.pos < this.tokens.length) {
+            return null; // Leftover tokens
+        }
+        return expr;
+    }
+
+    parseOr(): ASTNode | null {
+        let left = this.parseAnd();
+        if (!left) return null;
+        while (this.pos < this.tokens.length && this.tokens[this.pos] === 'OR') {
+            this.pos++;
+            const right = this.parseAnd();
+            if (!right) return null;
+            left = { type: 'OR', left, right };
+        }
+        return left;
+    }
+
+    parseAnd(): ASTNode | null {
+        let left = this.parseNot();
+        if (!left) return null;
+        while (this.pos < this.tokens.length && this.tokens[this.pos] === 'AND') {
+            this.pos++;
+            const right = this.parseNot();
+            if (!right) return null;
+            left = { type: 'AND', left, right };
+        }
+        return left;
+    }
+
+    parseNot(): ASTNode | null {
+        if (this.pos < this.tokens.length && this.tokens[this.pos] === 'NOT') {
+            this.pos++;
+            const expr = this.parsePrimary();
+            if (!expr) return null;
+            return { type: 'NOT', expr };
+        }
+        return this.parsePrimary();
+    }
+
+    parsePrimary(): ASTNode | null {
+        if (this.pos >= this.tokens.length) return null;
+        const token = this.tokens[this.pos] as string;
+
+        if (token === '(') {
+            this.pos++;
+            const expr = this.parseOr();
+            if (!expr) return null;
+            if (this.pos >= this.tokens.length || this.tokens[this.pos] !== ')') {
+                return null; // Missing closing parenthesis
+            }
+            this.pos++; // consume ')'
+            return expr;
+        }
+
+        if (token === 'AND' || token === 'OR' || token === 'NOT' || token === ')') {
+            return null; // Unexpected token
+        }
+        this.pos++;
+
+        const condition = parsePrimitiveFilter(token);
+        if (!condition) return null;
+        return { type: 'CONDITION', condition };
+    }
+}
+
+export function parsePrimitiveFilter(filterString: string): ParsedFilter | null {
+
     const propertiesPattern = /^properties\(\s*([a-zA-Z0-9_-]+)\s*==\s*(?:["'](.*?)["']|([^"\s)]+))\s*\)$/;
     const propMatch = filterString.match(propertiesPattern);
     if (propMatch) {
@@ -46,7 +155,14 @@ export function parseFilter(filterString: string): ParsedFilter | null {
     return null;
 }
 
-export function evaluateFilter(text: string, filter: ParsedFilter, isCompletedTask?: boolean): boolean {
+export function parseFilter(filterString: string): ASTNode | null {
+    const tokens = tokenizeFilter(filterString);
+    if (!tokens) return null;
+    const parser = new FilterParser(tokens);
+    return parser.parse();
+}
+
+export function evaluatePrimitiveFilter(text: string, filter: ParsedFilter, isCompletedTask?: boolean): boolean {
     switch (filter.type) {
         case 'has_word':
         case 'contains':
@@ -65,6 +181,49 @@ export function evaluateFilter(text: string, filter: ParsedFilter, isCompletedTa
         default:
             return false;
     }
+}
+
+
+function evaluateFrontmatter(frontmatter: Record<string, unknown> | null | undefined, node: ASTNode): boolean | null {
+    if (node.type === 'AND') {
+        const left = evaluateFrontmatter(frontmatter, node.left!);
+        const right = evaluateFrontmatter(frontmatter, node.right!);
+        if (left === false || right === false) return false;
+        if (left === true && right === true) return true;
+        return null; // Could not fully determine at file level
+    } else if (node.type === 'OR') {
+        const left = evaluateFrontmatter(frontmatter, node.left!);
+        const right = evaluateFrontmatter(frontmatter, node.right!);
+        if (left === true || right === true) return true;
+        if (left === false && right === false) return false;
+        return null;
+    } else if (node.type === 'NOT') {
+        const expr = evaluateFrontmatter(frontmatter, node.expr!);
+        if (expr === true) return false;
+        if (expr === false) return true;
+        return null;
+    } else if (node.type === 'CONDITION') {
+        const condition = node.condition!;
+        if (condition.type === 'properties') {
+            if (!frontmatter) return false;
+            return frontmatter[condition.propKey as string] == condition.propValue;
+        }
+        return null; // Not a property condition, cannot evaluate at file level
+    }
+    return null;
+}
+
+export function evaluateFilter(text: string, node: ASTNode, isCompletedTask?: boolean): boolean {
+    if (node.type === 'AND') {
+        return evaluateFilter(text, node.left!, isCompletedTask) && evaluateFilter(text, node.right!, isCompletedTask);
+    } else if (node.type === 'OR') {
+        return evaluateFilter(text, node.left!, isCompletedTask) || evaluateFilter(text, node.right!, isCompletedTask);
+    } else if (node.type === 'NOT') {
+        return !evaluateFilter(text, node.expr!, isCompletedTask);
+    } else if (node.type === 'CONDITION') {
+        return evaluatePrimitiveFilter(text, node.condition!, isCompletedTask);
+    }
+    return false;
 }
 
 
@@ -251,11 +410,9 @@ export async function processMocBlock(
         const fileCache = app.metadataCache.getFileCache(file);
         if (!fileCache) continue;
 
-        if (parsedFilter.type === 'properties') {
-            const frontmatter = fileCache.frontmatter;
-            if (!frontmatter || frontmatter[parsedFilter.propKey as string] != parsedFilter.propValue) {
-                continue; // Skip file entirely if property does not match
-            }
+        const frontmatterResult = evaluateFrontmatter(fileCache.frontmatter, parsedFilter);
+        if (frontmatterResult === false) {
+            continue; // Skip file entirely if properties condition fails
         }
 
         const fileContent = await app.vault.cachedRead(file);

@@ -1,12 +1,81 @@
-import { App, Modal, Setting, MarkdownView } from 'obsidian';
+import { App, Modal, Setting, MarkdownView, AbstractInputSuggest } from 'obsidian';
+
+class FilterSuggest extends AbstractInputSuggest<string> {
+    textInputEl: HTMLInputElement;
+
+    constructor(app: App, textInputEl: HTMLInputElement) {
+        super(app, textInputEl);
+        this.textInputEl = textInputEl;
+    }
+
+    getSuggestions(inputStr: string): string[] {
+        const cursorPosition = this.textInputEl.selectionStart || 0;
+        const textBeforeCursor = inputStr.substring(0, cursorPosition);
+
+        // Find the word we are currently typing (it might be part of an operator or function)
+        const match = textBeforeCursor.match(/([a-zA-Z_]+)$/);
+        const currentWord = match ? match[1] : '';
+
+        const suggestions = [
+            'has_word("")',
+            'contains("")',
+            'has_text("")',
+            'matches("")',
+            'has_tag("")',
+            'is_completed()',
+            'is_incomplete()',
+            'properties( == "")',
+            'AND',
+            'OR',
+            'NOT'
+        ];
+
+        if (!currentWord) {
+            return suggestions;
+        }
+
+        return suggestions.filter(s => s.toLowerCase().startsWith(currentWord.toLowerCase()));
+    }
+
+    renderSuggestion(suggestion: string, el: HTMLElement): void {
+        el.setText(suggestion);
+    }
+
+    selectSuggestion(suggestion: string): void {
+        const cursorPosition = this.textInputEl.selectionStart || 0;
+        const inputStr = this.textInputEl.value;
+        const textBeforeCursor = inputStr.substring(0, cursorPosition);
+
+        const match = textBeforeCursor.match(/([a-zA-Z_]+)$/);
+        const currentWordLength = match ? match[1]!.length : 0;
+
+        const start = inputStr.substring(0, cursorPosition - currentWordLength);
+        const end = inputStr.substring(cursorPosition);
+
+        const newValue = start + suggestion + end;
+        this.textInputEl.value = newValue;
+
+        // Adjust cursor position if there are quotes or parens
+        let newCursorPos = start.length + suggestion.length;
+        if (suggestion.endsWith('("")')) {
+            newCursorPos -= 2; // put cursor between quotes
+        } else if (suggestion === 'properties( == "")') {
+            newCursorPos -= 7; // put cursor right before ==
+        }
+
+        this.textInputEl.setSelectionRange(newCursorPos, newCursorPos);
+
+        // Trigger input event so the setting value gets updated
+        this.textInputEl.dispatchEvent(new Event('input'));
+    }
+}
+
 
 export class MocWizardModal extends Modal {
     folder: string = '';
     element: string = 'List';
     recursive: boolean = false;
-    filterType: string = 'has_word';
-    filterValue: string = '';
-    private filterValueSetting: Setting | null = null;
+    filterString: string = '';
 
     constructor(app: App) {
         super(app);
@@ -52,33 +121,20 @@ export class MocWizardModal extends Modal {
                 }));
 
         new Setting(contentEl)
-            .setName('Filter type')
-            .setDesc('The matching condition to apply')
-            .addDropdown(drop => drop
-                .addOption('has_word', 'Has word')
-                .addOption('contains', 'Contains')
-                .addOption('has_text', 'Has text')
-                .addOption('matches', 'Matches')
-                .addOption('has_tag', 'Has tag')
-                .addOption('is_completed', 'Is completed')
-                .addOption('is_incomplete', 'Is incomplete')
-                .setValue(this.filterType)
-                .onChange(value => {
-                    this.filterType = value;
-                    this.updateFilterValueVisibility();
-                }));
+            .setName('Filter string')
+            .setDesc('Type the complex logical filter condition')
+            .addText(text => {
+                text.setPlaceholder('Example: has_word("moc")');
+                text.setValue(this.filterString);
+                text.onChange(value => {
+                    this.filterString = value;
+                });
 
-        this.filterValueSetting = new Setting(contentEl)
-            .setName('Filter value')
-            .setDesc('The value for the filter function')
-            .addText(text => text
-                .setPlaceholder('Example: moc')
-                .setValue(this.filterValue)
-                .onChange(value => {
-                    this.filterValue = value;
-                }));
+                // Add autocomplete suggester
+                new FilterSuggest(this.app, text.inputEl);
+            });
 
-        this.updateFilterValueVisibility();
+
 
         new Setting(contentEl)
             .addButton(btn => btn
@@ -90,27 +146,13 @@ export class MocWizardModal extends Modal {
                 }));
     }
 
-    updateFilterValueVisibility() {
-        if (!this.filterValueSetting) return;
 
-        const isBoolFilter = this.filterType === 'is_completed' || this.filterType === 'is_incomplete';
-        if (isBoolFilter) {
-            this.filterValueSetting.settingEl.toggle(false);
-        } else {
-            this.filterValueSetting.settingEl.toggle(true);
-        }
-    }
 
     insertMocBlock() {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (view) {
             const editor = view.editor;
-            let filterString = '';
-            if (this.filterType === 'is_completed' || this.filterType === 'is_incomplete') {
-                filterString = `${this.filterType}()`;
-            } else {
-                filterString = `${this.filterType}("${this.filterValue}")`;
-            }
+            const filterString = this.filterString;
 
             const yamlLines = [
                 '```moc',

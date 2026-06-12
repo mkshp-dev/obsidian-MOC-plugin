@@ -33,18 +33,13 @@ Select the markdown element type you want to extract:
 ### 3. Recursive
 Toggle this on to include notes in subfolders of the specified directory. If toggled off, only notes directly inside the specified folder are scanned.
 
-### 4. Filter Type
-Select the matching condition to run on your selected elements:
-- **Has word**: Matches elements containing the specified word.
-- **Contains**: Matches elements containing the specified substring.
-- **Has text**: Similar to contains, checks for text inclusion.
-- **Matches**: Evaluates elements using a Regular Expression (RegEx).
-- **Has tag**: Matches elements containing a specific hashtag (e.g. `#todo`).
-- **Is completed**: Extracts only completed tasks (available only when **Element** is set to `Task`).
-- **Is incomplete**: Extracts only incomplete tasks (available only when **Element** is set to `Task`).
+### 4. Filter String
+Specify the complex logical filter condition to run on your selected elements.
+The wizard features an interactive autocomplete suggester that activates as you type.
 
-### 5. Filter Value
-Specify the query string or regular expression pattern for the filter. This field automatically hides if you select a boolean filter like **Is completed** or **Is incomplete**.
+You can use primitive functions such as `has_word("")`, `has_tag("")`, `is_completed()`, and combine them using logical operators like `AND`, `OR`, and `NOT`.
+
+- *Example*: `has_word("Meeting") AND NOT is_completed()`
 
 ---
 

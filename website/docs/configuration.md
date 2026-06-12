@@ -38,7 +38,9 @@ The specific markdown element to extract from matching notes. Must be one of the
 - `Blockquote`: Markdown blockquotes.
 
 ### `filter` (Required)
-The matching function applied to each candidate element. The following filter formulas are supported:
+The matching condition applied to each candidate element. The filter property supports both primitive functions and complex logical expressions.
+
+**Primitive Condition Functions:**
 - **String & Text Matches**:
   - `has_word("term")` or `contains("term")` or `has_text("term")`: Evaluates if the element text contains the specified word/string.
 - **Regular Expressions**:
@@ -50,7 +52,12 @@ The matching function applied to each candidate element. The following filter fo
   - `is_incomplete()`: Matches incomplete tasks.
 - **Advanced Metadata/Properties**:
   - `properties(key == value)`: Filters the note's frontmatter properties before parsing elements. Only files containing the specified property key matching the value will have their elements processed.
-  - *Example*: `filter: properties(status == "active")` or `filter: properties(priority == 1)`
+  - *Example*: `properties(status == "active")` or `properties(priority == 1)`
+
+**Complex Logical Expressions:**
+You can combine primitive conditions using logical operators `AND`, `OR`, and `NOT`. You can also use parentheses `()` to enforce precedence.
+
+*Example*: `filter: has_word("MOC") AND NOT (is_completed() OR has_tag("#todo"))`
 
 ### `recursive` (Optional)
 A boolean determining whether subfolders of the target `folder` should also be searched.

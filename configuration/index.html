@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.7.0">
 <title data-rh="true">Code Block Configuration | Maps of Content</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://mkshp-dev.github.io/obsidian-MOC-plugin/configuration"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Code Block Configuration | Maps of Content"><meta data-rh="true" name="description" content="You can write Map of Content (MOC) queries manually in any markdown file by creating a code block with the language set to moc and adding a YAML configuration."><meta data-rh="true" property="og:description" content="You can write Map of Content (MOC) queries manually in any markdown file by creating a code block with the language set to moc and adding a YAML configuration."><link data-rh="true" rel="canonical" href="https://mkshp-dev.github.io/obsidian-MOC-plugin/configuration"><link data-rh="true" rel="alternate" href="https://mkshp-dev.github.io/obsidian-MOC-plugin/configuration" hreflang="en"><link data-rh="true" rel="alternate" href="https://mkshp-dev.github.io/obsidian-MOC-plugin/configuration" hreflang="x-default"><link rel="stylesheet" href="/obsidian-MOC-plugin/assets/css/styles.6987b819.css">
-<script src="/obsidian-MOC-plugin/assets/js/runtime~main.05ce5dd2.js" defer="defer"></script>
+<script src="/obsidian-MOC-plugin/assets/js/runtime~main.c3fca370.js" defer="defer"></script>
 <script src="/obsidian-MOC-plugin/assets/js/main.6747e813.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -31,7 +31,8 @@
 <li><code>Blockquote</code>: Markdown blockquotes.</li>
 </ul>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="filter-required"><code>filter</code> (Required)<a href="#filter-required" class="hash-link" aria-label="Direct link to filter-required" title="Direct link to filter-required">​</a></h3>
-<p>The matching function applied to each candidate element. The following filter formulas are supported:</p>
+<p>The matching condition applied to each candidate element. The filter property supports both primitive functions and complex logical expressions.</p>
+<p><strong>Primitive Condition Functions:</strong></p>
 <ul>
 <li><strong>String &amp; Text Matches</strong>:<!-- -->
 <ul>
@@ -57,10 +58,13 @@
 <li><strong>Advanced Metadata/Properties</strong>:<!-- -->
 <ul>
 <li><code>properties(key == value)</code>: Filters the note&#x27;s frontmatter properties before parsing elements. Only files containing the specified property key matching the value will have their elements processed.</li>
-<li><em>Example</em>: <code>filter: properties(status == &quot;active&quot;)</code> or <code>filter: properties(priority == 1)</code></li>
+<li><em>Example</em>: <code>properties(status == &quot;active&quot;)</code> or <code>properties(priority == 1)</code></li>
 </ul>
 </li>
 </ul>
+<p><strong>Complex Logical Expressions:</strong>
+You can combine primitive conditions using logical operators <code>AND</code>, <code>OR</code>, and <code>NOT</code>. You can also use parentheses <code>()</code> to enforce precedence.</p>
+<p><em>Example</em>: <code>filter: has_word(&quot;MOC&quot;) AND NOT (is_completed() OR has_tag(&quot;#todo&quot;))</code></p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="recursive-optional"><code>recursive</code> (Optional)<a href="#recursive-optional" class="hash-link" aria-label="Direct link to recursive-optional" title="Direct link to recursive-optional">​</a></h3>
 <p>A boolean determining whether subfolders of the target <code>folder</code> should also be searched.</p>
 <ul>

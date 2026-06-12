@@ -75,6 +75,25 @@ Sorts the matching source notes before processing and extracting elements.
 Limits the maximum number of markdown files processed. Must be a positive integer.
 - *Example*: `limit: 10`
 
+### Dynamic Parameters
+
+You can dynamically include the current note's parameters in the `folder` and `filter` options using the following variables:
+- `{{this.filename}}`: Expands to the current note's name (without the `.md` extension).
+- `{{this.folder}}`: Expands to the name of the folder containing the current note.
+- `{{this.path}}`: Expands to the full path of the current note (without the `.md` extension).
+
+For example, to list elements from the `Diary` folder that contain the current note's name:
+
+````yaml
+```moc
+folder: Diary
+element: List
+filter: has_word("{{this.filename}}")
+recursive: true
+```
+````
+
+
 ---
 
 ## Complete Examples

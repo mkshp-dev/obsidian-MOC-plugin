@@ -105,9 +105,20 @@ export async function processMocBlock(
     app: App,
     sourcePath: string
 ) {
+    const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
+
     if (!config.folder || typeof config.folder !== 'string') {
         el.createEl("div", { text: "Error: invalid or missing 'folder' in moc block.", cls: 'moc-error' });
         return;
+    }
+
+    let expandedFolder = config.folder;
+    if (sourceFile && sourceFile instanceof TFile) {
+        expandedFolder = expandedFolder.replace(/\{\{this\.filename\}\}/g, sourceFile.basename);
+        const folderName = sourceFile.parent ? sourceFile.parent.name : '';
+        expandedFolder = expandedFolder.replace(/\{\{this\.folder\}\}/g, folderName);
+        const pathNoExt = sourceFile.path.replace(/\.md$/, '');
+        expandedFolder = expandedFolder.replace(/\{\{this\.path\}\}/g, pathNoExt);
     }
 
     const validElements = ['List', 'Task', 'Heading', 'Paragraph', 'Blockquote'];
@@ -121,13 +132,24 @@ export async function processMocBlock(
         return;
     }
 
-    const parsedFilter = parseFilter(config.filter);
+    let expandedFilter = config.filter;
+    if (sourceFile && sourceFile instanceof TFile) {
+        expandedFilter = expandedFilter.replace(/\{\{this\.filename\}\}/g, sourceFile.basename);
+
+        const folderName = sourceFile.parent ? sourceFile.parent.name : '';
+        expandedFilter = expandedFilter.replace(/\{\{this\.folder\}\}/g, folderName);
+
+        const pathNoExt = sourceFile.path.replace(/\.md$/, '');
+        expandedFilter = expandedFilter.replace(/\{\{this\.path\}\}/g, pathNoExt);
+    }
+
+    const parsedFilter = parseFilter(expandedFilter);
     if (!parsedFilter) {
         el.createEl("div", { text: `Error: unsupported or invalid filter format '${config.filter}'.`, cls: 'moc-error' });
         return;
     }
 
-    const folderPath = config.folder.trim().replace(/^\/+|\/+$/g, '');
+    const folderPath = expandedFolder.trim().replace(/^\/+|\/+$/g, '');
     const isRecursive = config.recursive === true;
 
     let sortField = 'name';

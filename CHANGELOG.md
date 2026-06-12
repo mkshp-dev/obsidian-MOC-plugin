@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## In-progress
+- **Feature: Dynamic Parameters** — Added support for dynamically including current note parameters (`{{this.filename}}`, `{{this.folder}}`, `{{this.path}}`) in `folder` and `filter` configs. Closes [#18](https://github.com/mkshp-dev/obsidian-MOC-plugin/issues/18).
 - **Misc**: Updated repository description to reflect expanded element extraction, and added sponsor options to README and manifest.json.
 - **Feature: Grouping/Hierarchical View** — Added a `groupBy` option to the MOC configuration block. You can now group matching elements by `folder`, `cday` (creation date), `mday` (modification date), or `tag`. Closes [#7](https://github.com/mkshp-dev/obsidian-MOC-plugin/issues/7).
 - **Feature: Bake to Markdown** — Added a "Bake" button to dynamic MOC blocks that replaces the dynamic view with static markdown directly in the note. Closes [#8](https://github.com/mkshp-dev/obsidian-MOC-plugin/issues/8).

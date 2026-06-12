@@ -31,6 +31,25 @@ recursive: true
   - `is_incomplete()`: Matches only incomplete tasks (when `element` is `Task`).
 - **`recursive`** *(optional)*: A boolean (`true` or `false`) that determines whether the search should include subfolders within the specified `folder`. If omitted, it defaults to `false`.
 
+
+### Dynamic Parameters
+
+You can dynamically include the current note's parameters in the `folder` and `filter` options using the following variables:
+- `{{this.filename}}`: Expands to the current note's name (without the `.md` extension).
+- `{{this.folder}}`: Expands to the name of the folder containing the current note.
+- `{{this.path}}`: Expands to the full path of the current note (without the `.md` extension).
+
+For example, to list elements from the `Diary` folder that contain the current note's name:
+
+<pre>
+```moc
+folder: Diary
+element: List
+filter: has_word("{{this.filename}}")
+recursive: true
+```
+</pre>
+
 ## Result
 
 The plugin will scan all markdown files in the specified `folder`. For any files containing elements that match your `filter`, it will dynamically render a section.

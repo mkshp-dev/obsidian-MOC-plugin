@@ -1,7 +1,7 @@
 {
 	"id": "maps-of-content",
 	"name": "Maps of Content",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"minAppVersion": "1.4.10",
 	"description": "Dynamically generate Maps of Content (MOC) by extracting matching elements from notes in your vault.",
 	"author": "mkshp-dev",

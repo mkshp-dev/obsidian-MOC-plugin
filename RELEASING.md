@@ -43,6 +43,10 @@ npm version <patch | minor | major> --no-git-tag-version
 ```
 *(For example, `npm version patch --no-git-tag-version` will automatically bump the patch number and update `manifest.json`, `package.json`, and `versions.json`)*.
 
+> [!IMPORTANT]
+> **Criticality of `--no-git-tag-version`**: 
+> You **must** include this flag. By default, `npm version` will automatically create a Git commit (with a message of just the version number, e.g., `1.2.3`) and a local Git tag. If it commits automatically, the commit message will **not** have the required `Release ` prefix, causing the automated release pipeline to skip it. Using `--no-git-tag-version` prevents the automatic commit and tag, letting you manually create the `Release X.Y.Z` commit in Step 3.
+
 ### Step 3 — Commit and Push
 Create a commit on `Dev` with the message prefix `Release ` followed by the new version. This prefix is **strictly required** to trigger the release pipeline.
 
@@ -55,6 +59,9 @@ git push origin Dev
 ---
 
 ## What Happens Next (Automated)
+
+> [!NOTE]
+> **Everything below is automated till draft release.** Once you push your commit with the `Release ` prefix, the rest of the cycle happens without manual intervention.
 
 Once pushed, GitHub Actions handles the rest of the release cycle:
 

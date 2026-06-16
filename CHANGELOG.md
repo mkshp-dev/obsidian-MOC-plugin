@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## In-progress
+- **Misc**: Removed documentation from `main` and `Dev` branches, moving it to a new `docs` branch. Updated `deploy-docs` workflow to trigger on push to `docs`.
 - **Feature: Complex Filter Logic** — Added support for complex filter logic using AND, OR, NOT and parentheses. Also added auto-completion to the MOC Creation Wizard for writing these complex filters.
 - **Feature: Dynamic Parameters** — Added support for dynamically including current note parameters (`{{this.filename}}`, `{{this.folder}}`, `{{this.path}}`) in `folder` and `filter` configs. Closes [#18](https://github.com/mkshp-dev/obsidian-MOC-plugin/issues/18).
 - **Misc**: Updated repository description to reflect expanded element extraction, and added sponsor options to README and manifest.json.

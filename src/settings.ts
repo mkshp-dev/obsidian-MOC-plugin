@@ -1,9 +1,12 @@
 import {App, PluginSettingTab, Setting} from "obsidian";
 import MOCPlugin from "./main";
 
-export type MOCPluginSettings = Record<string, unknown>;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Empty settings interface for future configuration options
+export interface MOCPluginSettings {
+}
 
-export const DEFAULT_SETTINGS: MOCPluginSettings = {}
+export const DEFAULT_SETTINGS: MOCPluginSettings = {
+}
 
 export class MOCSettingTab extends PluginSettingTab {
 	plugin: MOCPlugin;

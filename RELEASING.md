@@ -17,7 +17,7 @@ Tags are always created on `master`. The GitHub Actions workflow (`.github/workf
 
 ### 1. Enable GitHub Actions write permissions
 
-Go to your repo on GitHub:  
+Go to your repo on GitHub:
 **Settings → Actions → General → Workflow permissions → Read and write permissions → Save**
 
 This allows the workflow to create GitHub Releases on your behalf.
@@ -47,7 +47,7 @@ git commit -m "Release 1.0.0"
 git push origin Dev
 ```
 
-> `--no-git-tag-version` prevents npm from tagging automatically — you control the tag after the merge.  
+> `--no-git-tag-version` prevents npm from tagging automatically — you control the tag after the merge.
 > The `version-bump.mjs` script (wired to `npm version`) automatically keeps `manifest.json` and `versions.json` in sync.
 
 ### Step 3 — Open a PR from Dev → master and merge it

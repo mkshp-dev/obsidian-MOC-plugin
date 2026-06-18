@@ -43,6 +43,8 @@ The matching condition applied to each candidate element. The filter property su
 **Primitive Condition Functions:**
 - **String & Text Matches**:
   - `has_word("term")` or `contains("term")` or `has_text("term")`: Evaluates if the element text contains the specified word/string.
+  
+    ![Extracting lists by keyword/phrase](/img/Showcase_3.png)
 - **Regular Expressions**:
   - `matches("regex_pattern")`: Evaluates the element using a regular expression match.
 - **Tags**:
@@ -50,9 +52,13 @@ The matching condition applied to each candidate element. The filter property su
 - **Tasks** (Only when `element` is `Task`):
   - `is_completed()`: Matches completed tasks.
   - `is_incomplete()`: Matches incomplete tasks.
+  
+    ![Extracting incomplete tasks](/img/Showcase_2.png)
 - **Advanced Metadata/Properties**:
   - `properties(key == value)`: Filters the note's frontmatter properties before parsing elements. Only files containing the specified property key matching the value will have their elements processed.
   - *Example*: `properties(status == "active")` or `properties(priority == 1)`
+  
+    ![Filtering by frontmatter properties](/img/Showcase_4.png)
 
 **Complex Logical Expressions:**
 You can combine primitive conditions using logical operators `AND`, `OR`, and `NOT`. You can also use parentheses `()` to enforce precedence.
@@ -99,6 +105,8 @@ filter: has_word("{{this.filename}}")
 recursive: true
 ```
 ````
+
+![Dynamic parameters usage](/img/Showcase_5.png)
 
 
 ---

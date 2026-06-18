@@ -14,6 +14,8 @@ When a note containing a `moc` block is rendered in **Reading/Preview mode**:
 2. A **Bake** button will appear at the top-right corner of the block container.
 3. Click **Bake**. The plugin will search for the source `moc` block inside your active note and replace it with the compiled Markdown list of extracted elements.
 
+![Bake button on Map of Content block](/img/Showcase_2.png)
+
 > [!WARNING]
 > Baking is a destructive action. Once baked, the static Markdown list will no longer automatically update when you modify other notes in your vault. If you need to regenerate the block, you will have to recreate the `moc` query block.
 

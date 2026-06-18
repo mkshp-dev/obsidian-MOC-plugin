@@ -60,6 +60,66 @@ The rendered output includes:
 
 > Note: The original `moc` code block is replaced in reading/preview mode with the dynamically generated content.
 
+## Showcase
+
+Here are visual examples of the plugin's capabilities:
+
+### 1. Extract Lists by Hashtag
+Filter lists from a specific folder containing a hashtag like `#todo`:
+```yaml
+```moc
+folder: MOC_Plugin/Demo
+element: List
+filter: contains("#todo")
+```
+```
+![Extract lists containing tag](./images/Showcase_1.png)
+
+### 2. Extract Incomplete Tasks
+Retrieve all incomplete tasks from a target folder:
+```yaml
+```moc
+folder: Notes
+element: task
+filter: is_incomplete()
+```
+```
+![Extract incomplete tasks](./images/Showcase_2.png)
+
+### 3. Extract Lists by Keyword
+Find and display list items containing a specific phrase:
+```yaml
+```moc
+folder: Notes
+element: List
+filter: contains("Project Alpha")
+```
+```
+![Extract lists containing keyword](./images/Showcase_3.png)
+
+### 4. Filter by Frontmatter Properties
+Only extract elements from notes that match specific frontmatter property values (e.g., `type: recipe`):
+```yaml
+```moc
+folder: Notes
+element: List
+filter: properties(type == recipe)
+```
+```
+![Filter by properties](./images/Showcase_4.png)
+
+### 5. Dynamic Current-Note Parameters
+Use dynamic variables like `{{this.filename}}` to query elements containing the current note's name:
+```yaml
+```moc
+folder: MOC_Plugin/Demo
+element: List
+filter: contains("{{this.filename}}")
+recursive: true
+```
+```
+![Dynamic parameters](./images/Showcase_5.png)
+
 ## Support
 
 If you find this plugin helpful, consider supporting its development!

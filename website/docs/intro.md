@@ -11,6 +11,8 @@ Welcome to the **Obsidian MOC Plugin** documentation.
 
 The Obsidian MOC Plugin is a smart **Map of Content** generator for [Obsidian](https://obsidian.md). It automatically organizes your notes into structured, navigable maps so you can explore your knowledge graph with ease.
 
+![Obsidian MOC Plugin Showcase](/img/Showcase_1.png)
+
 ## Features
 
 - **Interactive MOC Creation Wizard**: Build complex query blocks visually without manually writing YAML.

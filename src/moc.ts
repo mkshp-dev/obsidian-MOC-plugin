@@ -184,7 +184,7 @@ export function evaluatePrimitiveFilter(text: string, filter: ParsedFilter, isCo
 }
 
 
-function evaluateFrontmatter(frontmatter: Record<string, unknown> | null | undefined, node: ASTNode): boolean | null {
+export function evaluateFrontmatter(frontmatter: Record<string, unknown> | null | undefined, node: ASTNode): boolean | null {
     if (node.type === 'AND') {
         const left = evaluateFrontmatter(frontmatter, node.left!);
         const right = evaluateFrontmatter(frontmatter, node.right!);

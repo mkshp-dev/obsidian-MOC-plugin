@@ -11,10 +11,7 @@ export default tseslint.config(
 			},
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: [
-						'eslint.config.js',
-						'manifest.json'
-					]
+					allowDefaultProject: ['eslint.config.js', 'manifest.json', 'obsidian-mock.js', 'test-runner.mjs']
 				},
 				tsconfigRootDir: import.meta.dirname,
 				extraFileExtensions: ['.json']
@@ -32,4 +29,17 @@ export default tseslint.config(
 		"versions.json",
 		"main.js",
 	]),
+	{
+		files: ['src/tests/**/*.ts', 'test-runner.mjs', 'obsidian-mock.js'],
+		languageOptions: {
+			globals: {
+				...globals.node
+			}
+		},
+		rules: {
+			'import/no-nodejs-modules': 'off',
+
+
+		}
+	}
 );

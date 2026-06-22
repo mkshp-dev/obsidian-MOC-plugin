@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- Add automated tests covering MOC filter parsing, boolean filter composition, property-based filters, and malformed filter handling.
 - Refresh the README to document the current MOC block schema, advanced filtering, result shaping options, the MOC Creation Wizard, and Bake to Markdown.
 - Add support for configuring groupBy, sort, and limit directly from the MOC Creation Wizard.
 - Document the repository’s Jules task workflow and issue queue setup in the README.

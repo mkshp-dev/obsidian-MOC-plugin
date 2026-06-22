@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- Document the repository’s Jules task workflow and issue queue setup in the README.
+
 ## 1.2.4 - 2026-06-16
 
 - **Misc**: Removed documentation from `main` and `Dev` branches, moving it to a new `docs` branch. Updated `deploy-docs` workflow to trigger on push to `docs`.

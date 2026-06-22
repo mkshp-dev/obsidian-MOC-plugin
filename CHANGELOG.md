@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## In-progress
+
+## 1.2.4 - 2026-06-16
+
 - **Misc**: Removed documentation from `main` and `Dev` branches, moving it to a new `docs` branch. Updated `deploy-docs` workflow to trigger on push to `docs`.
 - **Chore: Fix ESLint warnings** — Fixed the empty object type linting error in settings.ts by avoiding `eslint-disable-next-line`.
 

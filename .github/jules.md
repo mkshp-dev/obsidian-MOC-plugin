@@ -83,7 +83,7 @@ Before opening a PR, run the following commands from the repository root:
 npm ci
 npm run lint
 npm run build
-````
+```
 
 All of these should pass before the task is considered ready for review.
 

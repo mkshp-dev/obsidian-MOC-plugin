@@ -1,4 +1,4 @@
-import { App, Modal, Setting, MarkdownView, AbstractInputSuggest } from 'obsidian';
+import { App, Modal, Setting, MarkdownView, AbstractInputSuggest, Notice } from 'obsidian';
 
 class FilterSuggest extends AbstractInputSuggest<string> {
     textInputEl: HTMLInputElement;
@@ -76,6 +76,10 @@ export class MocWizardModal extends Modal {
     element: string = 'List';
     recursive: boolean = false;
     filterString: string = '';
+    groupBy: string = '';
+    sortField: string = '';
+    sortDirection: string = 'asc';
+    limit: string = '';
 
     constructor(app: App) {
         super(app);
@@ -134,7 +138,51 @@ export class MocWizardModal extends Modal {
                 new FilterSuggest(this.app, text.inputEl);
             });
 
+        contentEl.createEl('h3', { text: 'Optional result shaping' });
 
+        new Setting(contentEl)
+            .setName('Group by')
+            .setDesc('Group results by a property')
+            .addDropdown(drop => drop
+                .addOption('', 'None')
+                .addOption('folder', 'Folder')
+                .addOption('tag', 'Tag')
+                .addOption('cday', 'Creation day')
+                .addOption('mday', 'Modification day')
+                .setValue(this.groupBy)
+                .onChange(value => {
+                    this.groupBy = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Sort')
+            .setDesc('Sort results by a field')
+            .addDropdown(drop => drop
+                .addOption('', 'None')
+                .addOption('name', 'Name')
+                .addOption('ctime', 'Creation time')
+                .addOption('mtime', 'Modification time')
+                .setValue(this.sortField)
+                .onChange(value => {
+                    this.sortField = value;
+                }))
+            .addDropdown(drop => drop
+                .addOption('asc', 'Ascending')
+                .addOption('desc', 'Descending')
+                .setValue(this.sortDirection)
+                .onChange(value => {
+                    this.sortDirection = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Limit')
+            .setDesc('Maximum number of results (positive integer)')
+            .addText(text => text
+                .setPlaceholder('Example: 10')
+                .setValue(this.limit)
+                .onChange(value => {
+                    this.limit = value;
+                }));
 
         new Setting(contentEl)
             .addButton(btn => btn
@@ -154,6 +202,13 @@ export class MocWizardModal extends Modal {
             const editor = view.editor;
             const filterString = this.filterString;
 
+            if (this.limit) {
+                if (!/^[1-9]\d*$/.test(this.limit)) {
+                    new Notice('Limit must be a positive integer');
+                    return;
+                }
+            }
+
             const yamlLines = [
                 '```moc',
                 `folder: ${this.folder}`,
@@ -163,6 +218,18 @@ export class MocWizardModal extends Modal {
 
             if (this.recursive) {
                 yamlLines.push('recursive: true');
+            }
+
+            if (this.groupBy) {
+                yamlLines.push(`groupBy: ${this.groupBy}`);
+            }
+
+            if (this.sortField) {
+                yamlLines.push(`sort: ${this.sortField} ${this.sortDirection}`);
+            }
+
+            if (this.limit) {
+                yamlLines.push(`limit: ${this.limit}`);
             }
 
             yamlLines.push('```\n');

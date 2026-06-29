@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+## 1.2.6 - 2026-06-29
+
 ## 1.2.5 - 2026-06-24
 
 - Add automated tests covering MOC filter parsing, boolean filter composition, property-based filters, and malformed filter handling.

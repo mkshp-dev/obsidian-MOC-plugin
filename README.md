@@ -130,23 +130,6 @@ The rendered output includes:
 
 > Note: The original `moc` code block is replaced in reading/preview mode with the dynamically generated content.
 
-## Automation / Jules Workflow
-
-This repository uses [Google Jules](https://github.com/features/jules) to automate implementation tasks based on GitHub issues. Tasks for Jules should be created using the dedicated [Jules Task issue template](.github/ISSUE_TEMPLATE/jules-task.yml). All Jules pull requests target the `Dev` branch. When no other Jules issue is actively being worked on, a dispatch workflow automatically processes the oldest queued task.
-
-### Jules Configuration Files
-- **`.github/ISSUE_TEMPLATE/jules-task.yml`**: Structured issue template for defining the goal, scope, and acceptance criteria for Jules tasks.
-- **`.github/jules.md`**: Agent instructions defining the repository-specific workflow, scope discipline, pull request rules, and behaviors expected of Jules.
-- **`.github/workflows/jules-dispatch.yml`**: Automation workflow that identifies the next queued issue and dispatches Jules to work on it.
-- **`.github/workflows/jules-state-sync.yml`**: Automation workflow that syncs the issue's state (review, done, blocked) based on pull request events and comments.
-
-### Issue Lifecycle & Labels
-- **`status:todo`**: Task is queued and waiting for Jules to pick it up.
-- **`status:in-progress`**: Jules is actively working on the task.
-- **`status:review`**: Jules has opened a PR and is waiting for maintainer review.
-- **`status:blocked`**: Jules encountered an issue and requires maintainer input.
-- **`status:done`**: The PR is merged and the task is complete.
-
 ## Support
 
 If you find this plugin helpful, consider supporting its development!

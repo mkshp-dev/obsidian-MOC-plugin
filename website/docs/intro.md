@@ -20,6 +20,8 @@ The Obsidian MOC Plugin is a smart **Map of Content** generator for [Obsidian](h
 - **Advanced Filtering**: Match elements by exact word, text patterns, tags, task completion status, regular expressions, or frontmatter properties.
 - **Hierarchical Grouping**: Group matching elements dynamically by **folder**, **creation date (cday)**, **modification date (mday)**, or **tag**.
 - **Sorting & Limiting**: Sort scanned files by filename, creation date, or modification date, and limit the maximum number of processed notes.
+- **Reusable Find & Replace Rules**: Define text transformations globally in plugin settings and apply them singly or in sequential chains to clean up extracted block text.
+- **Decoupled Block & Note Separators**: Separately control separators (e.g. blank lines, horizontal rules) between blocks from the same note and different note sections.
 - **Bake to Markdown**: Instantly convert dynamic blocks into static markdown notes directly inside the editor.
 
 ## Installation

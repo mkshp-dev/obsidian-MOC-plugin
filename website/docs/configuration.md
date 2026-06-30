@@ -88,6 +88,28 @@ Sorts the matching source notes before processing and extracting elements.
 Limits the maximum number of markdown files processed. Must be a positive integer.
 - *Example*: `limit: 10`
 
+### `applyFnR` (Optional)
+Applies reusable Find & Replace rules defined globally in the plugin's settings to the matched block contents. Can be a single rule name string or an array of rule name strings. If an array is provided, the rules are applied sequentially in the specified order.
+- **Format**: `string` or `string[]`
+- *Example (single)*: `applyFnR: clean-headers`
+- *Example (chain)*: `applyFnR: ["strip-comments", "clean-headers"]`
+
+### `blockSeparator` (Optional)
+Defines the separator to be rendered between different matched blocks extracted from the **same note**.
+- **Values**: 
+  - `none` (default): Blocks are joined directly (useful for joining consecutive lists).
+  - `divider`: A horizontal rule `---` is inserted between blocks.
+  - `newline`: A blank line is inserted between blocks (useful for separating paragraphs).
+- *Example*: `blockSeparator: newline`
+
+### `noteSeparator` (Optional)
+Defines the separator to be rendered between block groups from **different notes**.
+- **Values**:
+  - `newline` (default): A single empty line separates note sections.
+  - `divider`: A horizontal rule `---` is inserted between note sections.
+  - `none`: Note sections are joined directly without extra spacing.
+- *Example*: `noteSeparator: divider`
+
 ### Dynamic Parameters
 
 You can dynamically include the current note's parameters in the `folder` and `filter` options using the following variables:
@@ -148,5 +170,19 @@ Extract lists from notes in the `Archive` folder that have the frontmatter prope
 folder: Archive
 element: List
 filter: properties(archived == true)
+```
+````
+
+### Find & Replace Rules and Spacing Customization
+Extract paragraphs containing the word "meeting" from notes, applying a chain of two cleanup rules, setting empty lines between paragraphs from the same note, and divider lines between different note blocks:
+
+````yaml
+```moc
+folder: Meetings
+element: Paragraph
+filter: has_word("meeting")
+applyFnR: ["remove-redundancies", "clean-headers"]
+blockSeparator: newline
+noteSeparator: divider
 ```
 ````

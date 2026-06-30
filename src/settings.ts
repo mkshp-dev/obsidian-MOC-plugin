@@ -55,7 +55,7 @@ export class MOCSettingTab extends PluginSettingTab {
 					e.preventDefault();
 					this.plugin.settings.rules.splice(i, 1);
 					await this.plugin.saveSettings();
-					this.display(); // Refresh settings tab
+					(this as unknown as { display(): void }).display(); // Refresh settings tab
 				});
 			}
 		}
@@ -120,7 +120,7 @@ export class MOCSettingTab extends PluginSettingTab {
 
 					await this.plugin.saveSettings();
 					new Notice(`Rule "${newName}" added`);
-					this.display(); // Re-render setting tab
+					(this as unknown as { display(): void }).display(); // Re-render setting tab
 				}));
 	}
 }

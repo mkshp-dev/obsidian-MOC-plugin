@@ -669,9 +669,11 @@ export async function processMocBlock(
                 const parentPath = block.file.parent ? block.file.parent.path : '/';
                 groupKeys.push(parentPath);
             } else if (config.groupBy === 'cday') {
-                groupKeys.push(moment(block.file.stat.ctime).format('YYYY-MM-DD'));
+                const safeMoment = moment as unknown as (date?: number | string | Date) => { format(formatStr: string): string };
+                groupKeys.push(safeMoment(block.file.stat.ctime).format('YYYY-MM-DD'));
             } else if (config.groupBy === 'mday') {
-                groupKeys.push(moment(block.file.stat.mtime).format('YYYY-MM-DD'));
+                const safeMoment = moment as unknown as (date?: number | string | Date) => { format(formatStr: string): string };
+                groupKeys.push(safeMoment(block.file.stat.mtime).format('YYYY-MM-DD'));
             } else if (config.groupBy === 'tag') {
                 if (block.tags.length > 0) {
                     groupKeys.push(...block.tags);

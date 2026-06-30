@@ -82,7 +82,7 @@ export class MocWizardModal extends Modal {
     sortDirection: string = 'asc';
     limit: string = '';
     plugin: MOCPlugin;
-    applyFnR: string = '';
+    applyFnR: string[] = [];
 
     constructor(app: App, plugin: MOCPlugin) {
         super(app);
@@ -190,20 +190,8 @@ export class MocWizardModal extends Modal {
 
         contentEl.createEl('h3', { text: 'Find and replace (optional)' });
 
-        const ruleOptions: Record<string, string> = { '': 'None' };
-        for (const rule of this.plugin.settings.rules || []) {
-            ruleOptions[rule.name] = rule.name;
-        }
-
-        new Setting(contentEl)
-            .setName('Apply rule')
-            .setDesc('Select a find and replace rule defined in settings')
-            .addDropdown(drop => drop
-                .addOptions(ruleOptions)
-                .setValue(this.applyFnR)
-                .onChange(value => {
-                    this.applyFnR = value;
-                }));
+        const ruleChainContainer = contentEl.createDiv({ cls: 'moc-rule-chain-container' });
+        this.renderRuleChain(ruleChainContainer);
 
         new Setting(contentEl)
             .addButton(btn => btn
@@ -213,6 +201,94 @@ export class MocWizardModal extends Modal {
                     this.insertMocBlock();
                     this.close();
                 }));
+    }
+
+    renderRuleChain(containerEl: HTMLElement) {
+        containerEl.empty();
+
+        const rules = this.plugin.settings.rules || [];
+        if (rules.length === 0) {
+            containerEl.createEl('p', { text: 'No rules defined yet. Define them in settings first.', cls: 'moc-no-rules' });
+            return;
+        }
+
+        // 1. Render currently selected rules in order
+        const selectedList = containerEl.createDiv({ cls: 'moc-wizard-selected-rules' });
+        if (this.applyFnR.length === 0) {
+            selectedList.createEl('p', { text: 'No rules selected yet.', cls: 'moc-no-rules' });
+        } else {
+            for (let i = 0; i < this.applyFnR.length; i++) {
+                const ruleName = this.applyFnR[i];
+                const rule = rules.find(r => r.name === ruleName);
+                if (!rule) continue;
+
+                const row = selectedList.createDiv({ cls: 'moc-rule-chain-item' });
+
+                const nameSpan = row.createEl('span', { cls: 'moc-rule-chain-name' });
+                nameSpan.createEl('strong', { text: `${i + 1}. ${rule.name}` });
+                nameSpan.createEl('span', { text: ` (Find: "${rule.find}" ➔ Replace: "${rule.replace}")`, cls: 'moc-rule-chain-details' });
+
+                const buttons = row.createDiv({ cls: 'moc-rule-chain-buttons' });
+
+                // Move Up button
+                const upBtn = buttons.createEl('button', { text: '▲', title: 'Move up' });
+                if (i === 0) {
+                    upBtn.disabled = true;
+                } else {
+                    upBtn.onClickEvent((e) => {
+                        e.preventDefault();
+                        const temp = this.applyFnR[i];
+                        this.applyFnR[i] = this.applyFnR[i - 1]!;
+                        this.applyFnR[i - 1] = temp!;
+                        this.renderRuleChain(containerEl);
+                    });
+                }
+
+                // Move Down button
+                const downBtn = buttons.createEl('button', { text: '▼', title: 'Move down' });
+                if (i === this.applyFnR.length - 1) {
+                    downBtn.disabled = true;
+                } else {
+                    downBtn.onClickEvent((e) => {
+                        e.preventDefault();
+                        const temp = this.applyFnR[i];
+                        this.applyFnR[i] = this.applyFnR[i + 1]!;
+                        this.applyFnR[i + 1] = temp!;
+                        this.renderRuleChain(containerEl);
+                    });
+                }
+
+                // Remove button
+                const removeBtn = buttons.createEl('button', { text: 'Remove', cls: 'mod-warning' });
+                removeBtn.onClickEvent((e) => {
+                    e.preventDefault();
+                    this.applyFnR.splice(i, 1);
+                    this.renderRuleChain(containerEl);
+                });
+            }
+        }
+
+        // 2. Render Add Dropdown at the bottom if there are remaining rules
+        const remainingRules = rules.filter(r => !this.applyFnR.includes(r.name));
+        if (remainingRules.length > 0) {
+            const dropdownOptions: Record<string, string> = { '': 'Select a rule to add...' };
+            for (const r of remainingRules) {
+                dropdownOptions[r.name] = r.name;
+            }
+
+            new Setting(containerEl)
+                .setName('Add rule to chain')
+                .setDesc('Choose a rule to append to the search-and-replace sequence')
+                .addDropdown(drop => drop
+                    .addOptions(dropdownOptions)
+                    .setValue('')
+                    .onChange(value => {
+                        if (value) {
+                            this.applyFnR.push(value);
+                            this.renderRuleChain(containerEl);
+                        }
+                    }));
+        }
     }
 
 
@@ -253,8 +329,12 @@ export class MocWizardModal extends Modal {
                 yamlLines.push(`limit: ${this.limit}`);
             }
 
-            if (this.applyFnR) {
-                yamlLines.push(`applyFnR: ${this.applyFnR}`);
+            if (this.applyFnR.length > 0) {
+                if (this.applyFnR.length === 1) {
+                    yamlLines.push(`applyFnR: ${this.applyFnR[0]}`);
+                } else {
+                    yamlLines.push(`applyFnR: ${JSON.stringify(this.applyFnR)}`);
+                }
             }
 
             yamlLines.push('```\n');

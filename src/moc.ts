@@ -1,4 +1,5 @@
 import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, TFile } from 'obsidian';
+import { MOCPluginSettings } from './settings';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
 
@@ -247,6 +248,28 @@ export interface MatchedBlock {
     tags: string[];
 }
 
+export function applyFindReplace(text: string, find?: string, replace?: string): string {
+    if (!find) return text;
+    const replacement = replace ?? "";
+
+    // Check if it is a regex: starts with '/' and ends with '/' followed by optional flags
+    const regexMatch = find.match(/^\/(.*)\/([gimsuy]*)$/);
+    if (regexMatch) {
+        try {
+            const [, pattern, flags] = regexMatch;
+            const finalFlags = flags && flags.includes('g') ? flags : (flags || '') + 'g';
+            const regex = new RegExp(pattern!, finalFlags);
+            return text.replace(regex, replacement);
+        } catch {
+            // Fall back to literal string replacement if regex is invalid
+            void 0;
+        }
+    }
+
+    // Literal string replacement using split/join to avoid TS compilation issues with replaceAll
+    return text.split(find).join(replacement);
+}
+
 export interface MocConfig {
     folder?: string;
     element?: string;
@@ -255,6 +278,7 @@ export interface MocConfig {
     groupBy?: string;
     sort?: string;
     limit?: number;
+    applyFnR?: string | string[];
 }
 
 export async function processMocBlock(
@@ -262,7 +286,8 @@ export async function processMocBlock(
     el: HTMLElement,
     ctx: MarkdownPostProcessorContext,
     app: App,
-    sourcePath: string
+    sourcePath: string,
+    settings: MOCPluginSettings
 ) {
     const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
 
@@ -554,6 +579,22 @@ export async function processMocBlock(
         }
 
         // matchedBlocks already updated
+    }
+
+    // Apply find & replace to matched blocks if configured
+    if (config.applyFnR) {
+        const ruleNames = Array.isArray(config.applyFnR) ? config.applyFnR : [config.applyFnR];
+        for (const ruleName of ruleNames) {
+            const rule = settings.rules?.find(r => r.name === ruleName);
+            if (rule) {
+                for (const block of matchedBlocks) {
+                    const blockText = block.lines.join('\n');
+                    const replacedText = applyFindReplace(blockText, rule.find, rule.replace);
+                    block.lines = replacedText.split(/\r?\n/);
+                    block.tags = extractTags(replacedText);
+                }
+            }
+        }
     }
 
     // 3. Render output

@@ -1,4 +1,5 @@
 import { App, Modal, Setting, MarkdownView, AbstractInputSuggest, Notice } from 'obsidian';
+import MOCPlugin from '../main';
 
 class FilterSuggest extends AbstractInputSuggest<string> {
     textInputEl: HTMLInputElement;
@@ -80,9 +81,12 @@ export class MocWizardModal extends Modal {
     sortField: string = '';
     sortDirection: string = 'asc';
     limit: string = '';
+    plugin: MOCPlugin;
+    applyFnR: string = '';
 
-    constructor(app: App) {
+    constructor(app: App, plugin: MOCPlugin) {
         super(app);
+        this.plugin = plugin;
     }
 
     onOpen() {
@@ -184,6 +188,23 @@ export class MocWizardModal extends Modal {
                     this.limit = value;
                 }));
 
+        contentEl.createEl('h3', { text: 'Find and replace (optional)' });
+
+        const ruleOptions: Record<string, string> = { '': 'None' };
+        for (const rule of this.plugin.settings.rules || []) {
+            ruleOptions[rule.name] = rule.name;
+        }
+
+        new Setting(contentEl)
+            .setName('Apply rule')
+            .setDesc('Select a find and replace rule defined in settings')
+            .addDropdown(drop => drop
+                .addOptions(ruleOptions)
+                .setValue(this.applyFnR)
+                .onChange(value => {
+                    this.applyFnR = value;
+                }));
+
         new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText('Insert block')
@@ -230,6 +251,10 @@ export class MocWizardModal extends Modal {
 
             if (this.limit) {
                 yamlLines.push(`limit: ${this.limit}`);
+            }
+
+            if (this.applyFnR) {
+                yamlLines.push(`applyFnR: ${this.applyFnR}`);
             }
 
             yamlLines.push('```\n');

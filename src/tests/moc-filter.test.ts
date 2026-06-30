@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { parseFilter, evaluateFilter, evaluateFrontmatter } from '../moc';
+import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace } from '../moc';
 
 void describe('MOC Filter - Primitive Filters', () => {
     void test('has_word(...)', () => {
@@ -181,5 +181,33 @@ void describe('MOC Filter - Malformed Filter Handling', () => {
     void test('Empty expression', () => {
         assert.strictEqual(parseFilter(''), null);
         assert.strictEqual(parseFilter('   '), null);
+    });
+});
+
+void describe('MOC Find & Replace', () => {
+    void test('Literal replacement', () => {
+        const text = 'Hello world, hello universe!';
+        assert.strictEqual(applyFindReplace(text, 'hello', 'hi'), 'Hello world, hi universe!');
+        assert.strictEqual(applyFindReplace(text, 'world', ''), 'Hello , hello universe!');
+    });
+
+    void test('Multi-line literal replacement', () => {
+        const text = '# Project ABC\n- This happened\n\nOther text.';
+        assert.strictEqual(applyFindReplace(text, '# Project ABC\n', ''), '- This happened\n\nOther text.');
+    });
+
+    void test('Regex replacement without flags', () => {
+        const text = 'Project ABC: task 1, Project DEF: task 2';
+        assert.strictEqual(applyFindReplace(text, '/Project [A-Z]+:/', 'Project:'), 'Project: task 1, Project: task 2');
+    });
+
+    void test('Regex replacement with custom flags', () => {
+        const text = 'Apple apple APPLE';
+        assert.strictEqual(applyFindReplace(text, '/apple/gi', 'fruit'), 'fruit fruit fruit');
+    });
+
+    void test('Regex replacement edge cases (invalid pattern)', () => {
+        const text = 'Regex pattern';
+        assert.strictEqual(applyFindReplace(text, '/[invalid/', 'literal'), 'Regex pattern');
     });
 });

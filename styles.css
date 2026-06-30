@@ -63,3 +63,62 @@
     background-color: var(--background-modifier-active-hover);
     color: var(--text-normal);
 }
+
+.moc-rule-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-s);
+    margin-bottom: 8px;
+}
+
+.moc-rule-info {
+    flex-grow: 1;
+    font-size: var(--font-ui-small);
+}
+
+.moc-rule-actions {
+    margin-left: 12px;
+}
+
+.moc-no-rules {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.moc-rule-chain-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-s);
+    margin-bottom: 8px;
+}
+
+.moc-rule-chain-name {
+    flex-grow: 1;
+    font-size: var(--font-ui-small);
+}
+
+.moc-rule-chain-details {
+    color: var(--text-muted);
+    margin-left: 6px;
+}
+
+.moc-rule-chain-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.moc-rule-chain-buttons button {
+    padding: 2px 8px;
+    font-size: var(--font-ui-small);
+    cursor: pointer;
+}
+
+

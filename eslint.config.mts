@@ -28,6 +28,7 @@ export default tseslint.config(
 		"version-bump.mjs",
 		"versions.json",
 		"main.js",
+		".test-out.cjs",
 	]),
 	{
 		files: ['src/tests/**/*.ts', 'test-runner.mjs', 'obsidian-mock.js'],

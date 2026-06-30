@@ -83,6 +83,8 @@ export class MocWizardModal extends Modal {
     limit: string = '';
     plugin: MOCPlugin;
     applyFnR: string[] = [];
+    blockSeparator: string = 'none';
+    noteSeparator: string = 'newline';
 
     constructor(app: App, plugin: MOCPlugin) {
         super(app);
@@ -186,6 +188,30 @@ export class MocWizardModal extends Modal {
                 .setValue(this.limit)
                 .onChange(value => {
                     this.limit = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Block separator')
+            .setDesc('Separator between extracted blocks')
+            .addDropdown(drop => drop
+                .addOption('none', 'None')
+                .addOption('divider', 'Divider line')
+                .addOption('newline', 'Empty line')
+                .setValue(this.blockSeparator)
+                .onChange(value => {
+                    this.blockSeparator = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Note separator')
+            .setDesc('Separator between different notes')
+            .addDropdown(drop => drop
+                .addOption('newline', 'Empty line')
+                .addOption('divider', 'Divider line')
+                .addOption('none', 'None')
+                .setValue(this.noteSeparator)
+                .onChange(value => {
+                    this.noteSeparator = value;
                 }));
 
         contentEl.createEl('h3', { text: 'Find and replace (optional)' });
@@ -335,6 +361,14 @@ export class MocWizardModal extends Modal {
                 } else {
                     yamlLines.push(`applyFnR: ${JSON.stringify(this.applyFnR)}`);
                 }
+            }
+
+            if (this.blockSeparator && this.blockSeparator !== 'none') {
+                yamlLines.push(`blockSeparator: ${this.blockSeparator}`);
+            }
+
+            if (this.noteSeparator && this.noteSeparator !== 'newline') {
+                yamlLines.push(`noteSeparator: ${this.noteSeparator}`);
             }
 
             yamlLines.push('```\n');

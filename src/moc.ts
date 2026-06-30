@@ -279,6 +279,8 @@ export interface MocConfig {
     sort?: string;
     limit?: number;
     applyFnR?: string | string[];
+    blockSeparator?: 'none' | 'divider' | 'newline';
+    noteSeparator?: 'none' | 'divider' | 'newline';
 }
 
 export async function processMocBlock(
@@ -617,14 +619,44 @@ export async function processMocBlock(
             filesMap.get(filePath)!.push(block);
         }
 
-        for (const [filePath, blocks] of filesMap.entries()) {
+        const filePaths = Array.from(filesMap.keys());
+        for (let idx = 0; idx < filePaths.length; idx++) {
+            const filePath = filePaths[idx]!;
+            const blocks = filesMap.get(filePath)!;
             const basename = blocks[0]?.file.basename;
             outputLines.push(`### [[${filePath}|${basename}]]`);
             outputLines.push("");
-            for (const block of blocks) {
-                outputLines.push(...block.lines);
+            for (let i = 0; i < blocks.length; i++) {
+                const block = blocks[i];
+                if (block) {
+                    outputLines.push(...block.lines);
+                    if (i < blocks.length - 1) {
+                        if (config.blockSeparator === 'divider') {
+                            outputLines.push("");
+                            outputLines.push("---");
+                            outputLines.push("");
+                        } else if (config.blockSeparator === 'newline') {
+                            outputLines.push("");
+                        }
+                    }
+                }
             }
-            outputLines.push("");
+            
+            // Add note separator if not the last file
+            if (idx < filePaths.length - 1) {
+                if (config.noteSeparator === 'divider') {
+                    outputLines.push("");
+                    outputLines.push("---");
+                    outputLines.push("");
+                } else if (config.noteSeparator === 'none') {
+                    // Do nothing
+                } else {
+                    // Default to newline
+                    outputLines.push("");
+                }
+            } else {
+                outputLines.push("");
+            }
         }
     } else {
         // Grouped behavior
@@ -675,14 +707,44 @@ export async function processMocBlock(
                 filesMap.get(filePath)!.push(block);
             }
 
-            for (const [filePath, fileBlocks] of filesMap.entries()) {
+            const filePaths = Array.from(filesMap.keys());
+            for (let idx = 0; idx < filePaths.length; idx++) {
+                const filePath = filePaths[idx]!;
+                const fileBlocks = filesMap.get(filePath)!;
                 const basename = fileBlocks[0]?.file.basename;
                 outputLines.push(`#### [[${filePath}|${basename}]]`);
                 outputLines.push("");
-                for (const block of fileBlocks) {
-                    outputLines.push(...block.lines);
+                for (let i = 0; i < fileBlocks.length; i++) {
+                    const block = fileBlocks[i];
+                    if (block) {
+                        outputLines.push(...block.lines);
+                        if (i < fileBlocks.length - 1) {
+                            if (config.blockSeparator === 'divider') {
+                                outputLines.push("");
+                                outputLines.push("---");
+                                outputLines.push("");
+                            } else if (config.blockSeparator === 'newline') {
+                                outputLines.push("");
+                            }
+                        }
+                    }
                 }
-                outputLines.push("");
+                
+                // Add note separator if not the last file
+                if (idx < filePaths.length - 1) {
+                    if (config.noteSeparator === 'divider') {
+                        outputLines.push("");
+                        outputLines.push("---");
+                        outputLines.push("");
+                    } else if (config.noteSeparator === 'none') {
+                        // Do nothing
+                    } else {
+                        // Default to newline
+                        outputLines.push("");
+                    }
+                } else {
+                    outputLines.push("");
+                }
             }
         }
     }

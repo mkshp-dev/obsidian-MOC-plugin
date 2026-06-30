@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## In-progress
 
 - **Feature: Reusable Find & Replace Rules** — Added a rules manager to the settings panel allowing users to define reusable find-and-replace literal or regex transformations. These can be selected via a dropdown in the MOC Wizard or referenced in MOC blocks using `applyFnR: <RuleName>` (or sequentially chained using array syntax like `applyFnR: [<rule1>, <rule2>]`).
+- **Feature: Decoupled Block & Note Separators** — Added support for configuring separators at two levels: between adjacent matched blocks in the same note (`blockSeparator`) and between different note sections (`noteSeparator`). Users can configure both separators to be `None`, `Divider line` (inserts `---`), or `Empty line` through dropdowns in the MOC Wizard or YAML keys.
 
 ## 1.2.7 - 2026-06-29
 

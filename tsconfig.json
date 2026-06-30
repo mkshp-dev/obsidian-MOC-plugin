@@ -22,7 +22,10 @@
 			"ES5",
 			"ES6",
 			"ES7"
-		]
+		],
+		"paths": {
+			"moment": ["../node_modules/moment"]
+		}
 	},
 	"include": [
 		"src/**/*.ts"

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+## 1.3.1 - 2026-06-30
+
 ## 1.3.0 - 2026-06-30
 
 - **Feature: Reusable Find & Replace Rules** — Added a rules manager to the settings panel allowing users to define reusable find-and-replace literal or regex transformations. These can be selected via a dropdown in the MOC Wizard or referenced in MOC blocks using `applyFnR: <RuleName>` (or sequentially chained using array syntax like `applyFnR: [<rule1>, <rule2>]`).

@@ -41,6 +41,24 @@ You can use primitive functions such as `has_word("")`, `has_tag("")`, `is_compl
 
 - *Example*: `has_word("Meeting") AND NOT is_completed()`
 
+### 5. Block Separator
+Select the spacing or divider format to apply between matching blocks extracted from the **same note**:
+- **None**: Elements are joined directly together (useful for keeping list elements combined).
+- **Divider line**: Injects a horizontal divider line (`---`) between adjacent blocks.
+- **Empty line**: Injects a single blank line spacing between adjacent blocks.
+
+### 6. Note Separator
+Select the spacing or divider format to apply between sections representing **different notes**:
+- **Empty line** (default): Standard blank line spacing.
+- **Divider line**: Injects a horizontal divider line (`---`) between note sections.
+- **None**: Renders note sections adjacent to each other without extra spacing.
+
+### 7. Find and Replace (Optional)
+Manage a sequence of Find & Replace text transformations to execute on the extracted block texts:
+- **Add rule**: Select any rule defined in your plugin settings from the dropdown menu to append it to your active transformation chain.
+- **Order rules**: Use the up (**▲**) and down (**▼**) buttons next to each rule to adjust their execution order. Rules are applied sequentially, so the output of the first rule is passed directly into the input of the second.
+- **Remove rules**: Click **Remove** next to a rule in the list to remove it from the active chain.
+
 ---
 
 ## Inserting the Block

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Feature: Standardized Filters & Aliases** — Consolidated redundant substring filters (`has_word`, `contains`, `has_text`) into a canonical `contains` filter, while retaining `has_word` and `has_text` as backward-compatible aliases.
 - **Feature: Robust Tag-Aware Matching** — Re-implemented `has_tag` to match exact tags (case-insensitively) and nested subtags (e.g., `#project/subtag`), preventing false positives from longer substring tags and URL fragments.
 - **Feature: Enhanced `matches()` with Regex Flags** — Added support for slash-delimited regular expression patterns with flags in `matches()` (e.g., `matches("/pattern/i")` for case-insensitive matching).
+- **Feature: Context-Aware Autocomplete suggestions** — Updated the MOC Creation Wizard to dynamically adjust autocomplete suggestions based on the selected target element, hiding task filters (`is_completed()` and `is_incomplete()`) for non-task elements like `Heading`, `Paragraph`, or `Blockquote`.
 ## 1.3.3 - 2026-06-30
 
 ## 1.3.2 - 2026-06-30

@@ -3,10 +3,12 @@ import MOCPlugin from '../main';
 
 class FilterSuggest extends AbstractInputSuggest<string> {
     textInputEl: HTMLInputElement;
+    getElement: () => string;
 
-    constructor(app: App, textInputEl: HTMLInputElement) {
+    constructor(app: App, textInputEl: HTMLInputElement, getElement: () => string) {
         super(app, textInputEl);
         this.textInputEl = textInputEl;
+        this.getElement = getElement;
     }
 
     getSuggestions(inputStr: string): string[] {
@@ -17,12 +19,14 @@ class FilterSuggest extends AbstractInputSuggest<string> {
         const match = textBeforeCursor.match(/([a-zA-Z_]+)$/);
         const currentWord = match ? match[1] : '';
 
+        const element = this.getElement();
+        const isTaskOrList = element === 'Task' || element === 'List';
+
         const suggestions = [
             'contains("")',
             'matches("")',
             'has_tag("")',
-            'is_completed()',
-            'is_incomplete()',
+            ...(isTaskOrList ? ['is_completed()', 'is_incomplete()'] : []),
             'properties( == "")',
             'AND',
             'OR',
@@ -139,7 +143,7 @@ export class MocWizardModal extends Modal {
                 });
 
                 // Add autocomplete suggester
-                new FilterSuggest(this.app, text.inputEl);
+                new FilterSuggest(this.app, text.inputEl, () => this.element);
             });
 
         contentEl.createEl('h3', { text: 'Optional result shaping' });

@@ -25,7 +25,7 @@ Here is an example:
 ```moc
 folder: Diary
 element: List
-filter: has_word("MOC")
+filter: contains("MOC")
 recursive: true
 ```
 </pre>
@@ -35,9 +35,9 @@ recursive: true
 - **`folder`** *(required)*: The folder path within your vault to search for files. E.g., `Diary` or `Notes/Meetings`.
 - **`element`** *(required)*: The type of element to extract. Can be set to `List`, `Task`, `Heading`, `Paragraph`, or `Blockquote`.
 - **`filter`** *(required)*: The filter condition to apply to each element. See the **Advanced Filter Examples** section below for more details.
-  - `has_word("word")` or `contains("text")` or `has_text("text")`: Matches elements containing the exact text.
-  - `matches("regex")`: Matches elements using a regular expression.
-  - `has_tag("#tag")`: Matches elements containing the specified tag.
+  - `contains("text")`: Matches elements containing the specified text (case-sensitive). (Note: `has_word` and `has_text` are supported as backward-compatible aliases).
+  - `matches("regex")`: Matches elements using a regular expression (supports optional slash-delimited format with flags, e.g. `matches("/pattern/i")`).
+  - `has_tag("#tag")`: Matches elements containing the specified tag (fully tag-aware, case-insensitive, and matches subtags like `#tag/subtag`).
   - `is_completed()`: Matches only completed tasks (when `element` is `Task`).
   - `is_incomplete()`: Matches only incomplete tasks (when `element` is `Task`).
 - **`recursive`** *(optional)*: A boolean (`true` or `false`) that determines whether the search should include subfolders within the specified `folder`. If omitted, it defaults to `false`.
@@ -52,10 +52,10 @@ recursive: true
 The plugin's filter language supports rich composition, including boolean logic (`AND`, `OR`, `NOT`), grouping with parentheses, and checking frontmatter variables.
 
 - **Boolean Logic & Grouping**:
-  `has_tag("#todo") AND (has_word("urgent") OR is_incomplete())`
+  `has_tag("#todo") AND (contains("urgent") OR is_incomplete())`
 
 - **Negation**:
-  `has_tag("#project") AND NOT has_word("archived")`
+  `has_tag("#project") AND NOT contains("archived")`
 
 - **Frontmatter/Properties**:
   Use `properties(key == value)` to filter notes by their YAML frontmatter before extracting elements.

@@ -18,9 +18,7 @@ class FilterSuggest extends AbstractInputSuggest<string> {
         const currentWord = match ? match[1] : '';
 
         const suggestions = [
-            'has_word("")',
             'contains("")',
-            'has_text("")',
             'matches("")',
             'has_tag("")',
             'is_completed()',

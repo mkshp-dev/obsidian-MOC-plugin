@@ -1,6 +1,7 @@
 ---
 sidebar_position: 3
 ---
+# Examples
 
 ### Extracting Tasks Grouped by Folder
 Search the `Projects/` folder recursively for incomplete tasks, sorting notes by filename, and grouping the output by their parent folder path:

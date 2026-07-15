@@ -136,10 +136,20 @@ export function parsePrimitiveFilter(filterString: string): ParsedFilter | null 
 
     const strMatch = filterString.match(stringMatchPattern);
     if (strMatch) {
-        const type = strMatch[1] as FilterType;
+        let type = strMatch[1] as FilterType;
         const value = strMatch[2];
+        if (type === 'has_word' || type === 'has_text') {
+            type = 'contains';
+        }
         if (type === 'matches') {
             try {
+                if (value !== undefined) {
+                    const regexMatch = value.match(/^\/(.*)\/([a-zA-Z]*)$/);
+                    if (regexMatch) {
+                        const [, pattern, flags] = regexMatch;
+                        return { type, value, regex: new RegExp(pattern!, flags) };
+                    }
+                }
                 return { type, value, regex: new RegExp(value as string) };
             } catch {
                 return null;
@@ -171,8 +181,15 @@ export function evaluatePrimitiveFilter(text: string, filter: ParsedFilter, isCo
             return filter.value !== undefined ? text.includes(filter.value) : false;
         case 'matches':
             return filter.regex !== undefined ? filter.regex.test(text) : false;
-        case 'has_tag':
-            return filter.value !== undefined ? text.includes(filter.value) : false;
+        case 'has_tag': {
+            if (filter.value === undefined) return false;
+            let queryTag = filter.value.trim().toLowerCase();
+            if (!queryTag.startsWith('#')) {
+                queryTag = '#' + queryTag;
+            }
+            const extracted = extractTags(text).map(t => t.toLowerCase());
+            return extracted.some(t => t === queryTag || t.startsWith(queryTag + '/'));
+        }
         case 'is_completed':
             return isCompletedTask === true;
         case 'is_incomplete':
@@ -236,7 +253,10 @@ function extractTags(text: string): string[] {
     let match;
     while ((match = tagRegex.exec(text)) !== null) {
         if (match[1]) {
-            tags.add(match[1]);
+            const tag = match[1].replace(/[.,;:!?)"'\s]+$/, '');
+            if (tag.length > 1) {
+                tags.add(tag);
+            }
         }
     }
     return Array.from(tags);

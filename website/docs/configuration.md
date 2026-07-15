@@ -14,7 +14,7 @@ A basic `moc` code block looks like this:
 ```moc
 folder: Diary
 element: List
-filter: has_word("MOC")
+filter: contains("MOC")
 recursive: true
 ```
 ````
@@ -42,13 +42,13 @@ The matching condition applied to each candidate element. The filter property su
 
 **Primitive Condition Functions:**
 - **String & Text Matches**:
-  - `has_word("term")` or `contains("term")` or `has_text("term")`: Evaluates if the element text contains the specified word/string.
+  - `contains("term")`: Evaluates if the element text contains the specified substring (case-sensitive). (Note: `has_word` and `has_text` are supported as backward-compatible aliases).
   
     ![Extracting lists by keyword/phrase](/img/Showcase_3.png)
 - **Regular Expressions**:
-  - `matches("regex_pattern")`: Evaluates the element using a regular expression match.
+  - `matches("regex_pattern")`: Evaluates the element using a regular expression match. Supports optional slash-delimited format with flags (e.g., `matches("/pattern/i")`).
 - **Tags**:
-  - `has_tag("#tag")`: Evaluates if the element contains the specified hashtag.
+  - `has_tag("#tag")`: Evaluates if the element contains the specified hashtag (fully tag-aware, case-insensitive, and matches subtags like `#tag/subtag`).
 - **Tasks** (Only when `element` is `Task`):
   - `is_completed()`: Matches completed tasks.
   - `is_incomplete()`: Matches incomplete tasks.
@@ -63,7 +63,7 @@ The matching condition applied to each candidate element. The filter property su
 **Complex Logical Expressions:**
 You can combine primitive conditions using logical operators `AND`, `OR`, and `NOT`. You can also use parentheses `()` to enforce precedence.
 
-*Example*: `filter: has_word("MOC") AND NOT (is_completed() OR has_tag("#todo"))`
+*Example*: `filter: contains("MOC") AND NOT (is_completed() OR has_tag("#todo"))`
 
 ### `recursive` (Optional)
 A boolean determining whether subfolders of the target `folder` should also be searched.
@@ -123,7 +123,7 @@ For example, to list elements from the `Diary` folder that contain the current n
 ```moc
 folder: Diary
 element: List
-filter: has_word("{{this.filename}}")
+filter: contains("{{this.filename}}")
 recursive: true
 ```
 ````
@@ -132,57 +132,3 @@ recursive: true
 
 
 ---
-
-## Complete Examples
-
-### Extracting Tasks Grouped by Folder
-Search the `Projects/` folder recursively for incomplete tasks, sorting notes by filename, and grouping the output by their parent folder path:
-
-````yaml
-```moc
-folder: Projects
-element: Task
-filter: is_incomplete()
-recursive: true
-groupBy: folder
-sort: name asc
-```
-````
-
-### Extracting Headings Filtered by Tag and Grouped by Tag
-Search the entire vault for headings containing the hashtag `#review`, grouping them under their corresponding tag headings:
-
-````yaml
-```moc
-folder: ""
-element: Heading
-filter: has_tag("#review")
-recursive: true
-groupBy: tag
-```
-````
-
-### Advanced Frontmatter Property Filtering
-Extract lists from notes in the `Archive` folder that have the frontmatter property `archived: true`:
-
-````yaml
-```moc
-folder: Archive
-element: List
-filter: properties(archived == true)
-```
-````
-
-### Find & Replace Rules and Spacing Customization
-Extract paragraphs containing the word "meeting" from notes, applying a chain of two cleanup rules, setting empty lines between paragraphs from the same note, and divider lines between different note blocks:
-
-````yaml
-```moc
-folder: Meetings
-element: Paragraph
-filter: has_word("meeting")
-applyFnR: ["remove-redundancies", "clean-headers"]
-blockSeparator: newline
-noteSeparator: divider
-```
-````

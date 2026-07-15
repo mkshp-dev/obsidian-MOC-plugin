@@ -28,17 +28,46 @@ void describe('MOC Filter - Primitive Filters', () => {
     });
 
     void test('matches(...)', () => {
+        // Standard regex works as before (case-sensitive)
         const filter = parseFilter('matches("^[A-Z]+")');
         assert.ok(filter);
         assert.strictEqual(evaluateFilter('HELLO world', filter), true);
         assert.strictEqual(evaluateFilter('hello WORLD', filter), false); // Does not start with capital
+
+        // Slash-delimited regex with i flag (case-insensitive)
+        const filterCaseInsensitive = parseFilter('matches("/^[a-z]+/i")');
+        assert.ok(filterCaseInsensitive);
+        assert.strictEqual(evaluateFilter('HELLO world', filterCaseInsensitive), true);
+        assert.strictEqual(evaluateFilter('hello WORLD', filterCaseInsensitive), true);
+
+        // Invalid flags handle gracefully (parseFilter returns null)
+        const filterInvalidFlags = parseFilter('matches("/abc/xyz")');
+        assert.strictEqual(filterInvalidFlags, null);
     });
 
     void test('has_tag(...)', () => {
         const filter = parseFilter('has_tag("#project")');
         assert.ok(filter);
+        // Exact tag match
         assert.strictEqual(evaluateFilter('This is a #project task', filter), true);
-        assert.strictEqual(evaluateFilter('No tags here', filter), false);
+        // Subtag match
+        assert.strictEqual(evaluateFilter('This is a nested #project/phase-one subtag', filter), true);
+        assert.strictEqual(evaluateFilter('This is #project/sub/sub2 tag', filter), true);
+        // Case insensitivity
+        assert.strictEqual(evaluateFilter('This is #PROJECT tag', filter), true);
+        assert.strictEqual(evaluateFilter('This is #Project/Phase-One tag', filter), true);
+        // Query tag missing hash
+        const filterNoHash = parseFilter('has_tag("project")');
+        assert.ok(filterNoHash);
+        assert.strictEqual(evaluateFilter('This is a #project task', filterNoHash), true);
+
+        // False positives
+        assert.strictEqual(evaluateFilter('This is a #project-management task', filter), false);
+        assert.strictEqual(evaluateFilter('This has no tags', filter), false);
+        assert.strictEqual(evaluateFilter('This is a URL http://site.com#project tag', filter), false);
+        // Punctuation trimming
+        assert.strictEqual(evaluateFilter('This is a #project, indeed', filter), true);
+        assert.strictEqual(evaluateFilter('What about #project?', filter), true);
     });
 
     void test('is_completed(...)', () => {

@@ -11,7 +11,35 @@ permissions:
   attestations: write
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.check_tag.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' manifest.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "Tag exists. Skipping release finalization."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag does not exist. Proceeding with release."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
   release:
+    needs: check
+    if: needs.check.outputs.exists == 'false'
     runs-on: ubuntu-latest
 
     steps:
@@ -25,13 +53,6 @@ jobs:
           VERSION=$(jq -r '.version' manifest.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Check if tag exists
-        run: |
-          if git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
-            echo "Tag exists"
-            exit 1
-          fi
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -40,7 +61,7 @@ jobs:
       - run: npm run build
 
       - name: Generate artifact attestation
-        uses: actions/attest@v4
+        uses: actions/attest-build-provenance@v1
         with:
           subject-path: |
             main.js
@@ -99,7 +120,7 @@ jobs:
           with open("CHANGELOG.md") as f:
               text = f.read()
 
-          pattern = r"(## In-progress\s*\n)(.*?)(\n## )"
+          pattern = r"(## In-progress\s*\n)(.*?)(\n## |$)"
           m = re.search(pattern, text, re.S)
 
           if not m:
@@ -107,12 +128,13 @@ jobs:
               exit(1)
 
           notes = m.group(2).strip()
+          trailing = m.group(3)
 
           replacement = (
               "## In-progress\n\n"
               f"## {version} - {date}\n\n"
               f"{notes}\n\n"
-              "## "
+              f"{trailing}"
           )
 
           text = re.sub(pattern, replacement, text, count=1, flags=re.S)

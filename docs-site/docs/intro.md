@@ -5,7 +5,7 @@ slug: /
 
 # Introduction
 
-Welcome to the **Obsidian MOC Plugin** documentation.
+Welcome to the official **Obsidian MOC Plugin** documentation.
 
 ## What is it?
 

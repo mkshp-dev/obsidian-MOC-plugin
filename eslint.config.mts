@@ -29,6 +29,7 @@ export default defineConfig([
 			"docs-site/**",
 			"esbuild.config.mjs",
 			"eslint.config.js",
+			"eslint.config.mts",
 			"version-bump.mjs",
 			"versions.json",
 			"main.js",
@@ -36,6 +37,10 @@ export default defineConfig([
 			"obsidian-mock.js",
 			"test-runner.mjs",
 			"src/tests/**",
+			"package.json",
+			"package-lock.json",
+			"tsconfig.json",
+			"**/*.json",
 		],
 	},
 ]);

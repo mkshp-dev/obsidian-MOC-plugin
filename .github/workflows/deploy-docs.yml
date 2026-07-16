@@ -6,6 +6,8 @@ on:
       - Dev
     paths:
       - 'docs-site/**'
+      - 'CHANGELOG.md'
+      - '.github/workflows/deploy-docs.yml'
 
 permissions:
   contents: read

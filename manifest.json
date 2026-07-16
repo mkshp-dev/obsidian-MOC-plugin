@@ -4,7 +4,7 @@
 	"version": "1.3.3",
 	"minAppVersion": "1.4.10",
 	"description": "Dynamically generate Maps of Content (MOC) by extracting matching elements from notes in your vault.",
-	"author": "mkshp-dev",
+	"author": "mkshp",
 	"authorUrl": "https://github.com/mkshp-dev",
 	"isDesktopOnly": false,
 	"fundingUrl": {

@@ -40,7 +40,7 @@ jobs:
       - run: npm run build
 
       - name: Generate artifact attestation
-        uses: actions/attest@v4
+        uses: actions/attest-build-provenance@v1
         with:
           subject-path: |
             main.js
@@ -99,7 +99,7 @@ jobs:
           with open("CHANGELOG.md") as f:
               text = f.read()
 
-          pattern = r"(## In-progress\s*\n)(.*?)(\n## )"
+          pattern = r"(## In-progress\s*\n)(.*?)(\n## |$)"
           m = re.search(pattern, text, re.S)
 
           if not m:
@@ -107,12 +107,13 @@ jobs:
               exit(1)
 
           notes = m.group(2).strip()
+          trailing = m.group(3)
 
           replacement = (
               "## In-progress\n\n"
               f"## {version} - {date}\n\n"
               f"{notes}\n\n"
-              "## "
+              f"{trailing}"
           )
 
           text = re.sub(pattern, replacement, text, count=1, flags=re.S)

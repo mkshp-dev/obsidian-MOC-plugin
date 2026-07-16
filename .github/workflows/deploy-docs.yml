@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - Dev
+    paths:
+      - 'docs-site/**'
 
 permissions:
   contents: write
@@ -22,24 +24,34 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Copy CHANGELOG to docs
+        run: |
+          cat << 'EOF' > docs-site/docs/changelog.md
+          ---
+          title: Changelog
+          ---
+
+          EOF
+          cat CHANGELOG.md >> docs-site/docs/changelog.md
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
-          cache-dependency-path: website/package-lock.json
+          cache-dependency-path: docs-site/package-lock.json
 
       - name: Install dependencies
-        working-directory: website
+        working-directory: docs-site
         run: npm ci
 
       - name: Build Docusaurus
-        working-directory: website
+        working-directory: docs-site
         run: npm run build
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: website/build
+          publish_dir: docs-site/build
           publish_branch: gh-pages

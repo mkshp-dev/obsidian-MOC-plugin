@@ -4,17 +4,21 @@ on:
   push:
     branches:
       - Dev
+    paths:
+      - 'docs-site/**'
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build and deploy Docusaurus
+  build:
+    name: Build Docusaurus
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,24 +26,44 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Copy CHANGELOG to docs
+        run: |
+          cat << 'EOF' > docs-site/docs/changelog.md
+          ---
+          title: Changelog
+          ---
+
+          EOF
+          cat CHANGELOG.md >> docs-site/docs/changelog.md
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
-          cache-dependency-path: website/package-lock.json
+          cache-dependency-path: docs-site/package-lock.json
 
       - name: Install dependencies
-        working-directory: website
+        working-directory: docs-site
         run: npm ci
 
       - name: Build Docusaurus
-        working-directory: website
+        working-directory: docs-site
         run: npm run build
 
-      - name: Deploy to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: website/build
-          publish_branch: gh-pages
+          path: docs-site/build
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

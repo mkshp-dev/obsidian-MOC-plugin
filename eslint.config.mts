@@ -26,7 +26,7 @@ export default defineConfig([
 		ignores: [
 			"node_modules/**",
 			"dist/**",
-			"website/**",
+			"docs-site/**",
 			"esbuild.config.mjs",
 			"eslint.config.js",
 			"version-bump.mjs",

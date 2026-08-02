@@ -26,6 +26,11 @@ const config = {
         docs: {
           sidebarPath: "./sidebars.js",
           routeBasePath: "/",
+          versions: {
+            current: {
+              label: "In-Progress",
+            },
+          },
         },
         blog: false,
         theme: {
@@ -44,6 +49,11 @@ const config = {
           sidebarId: "docsSidebar",
           position: "left",
           label: "Docs",
+        },
+        {
+          type: "docsVersionDropdown",
+          position: "right",
+          dropdownActiveClassDisabled: true,
         },
         {
           href: "https://github.com/mkshp-dev/obsidian-MOC-plugin",

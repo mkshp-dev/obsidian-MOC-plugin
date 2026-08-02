@@ -7,7 +7,7 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"version": "node version-bump.mjs && git add manifest.json versions.json docs-site/versioned_docs docs-site/versioned_sidebars docs-site/versions.json",
 		"lint": "eslint .",
 		"test": "node test-runner.mjs"
 	},

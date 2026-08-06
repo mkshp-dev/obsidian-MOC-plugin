@@ -750,6 +750,34 @@ export async function generateMocMarkdown(
                 } else {
                     groupKeys.push("Untagged");
                 }
+            } else if (config.groupBy.startsWith('property(') && config.groupBy.endsWith(')')) {
+                const match = config.groupBy.match(/^property\((.*?)\)$/);
+                if (match && match[1]) {
+                    const key = match[1].trim();
+                    if (key) {
+                        const frontmatter = app.metadataCache.getFileCache(block.file)?.frontmatter;
+                        if (frontmatter) {
+                            const val = frontmatter[key] as unknown;
+                            if (val !== undefined && val !== null && val !== "") {
+                                if (Array.isArray(val)) {
+                                    groupKeys.push(val.map(v => String(v)).join(', '));
+                                } else if (typeof val === 'object') {
+                                    groupKeys.push(JSON.stringify(val));
+                                } else {
+                                    groupKeys.push(`${val as string | number | boolean}`);
+                                }
+                            } else {
+                                groupKeys.push("(none)");
+                            }
+                        } else {
+                            groupKeys.push("(none)");
+                        }
+                    } else {
+                        groupKeys.push("(none)");
+                    }
+                } else {
+                    groupKeys.push("(none)");
+                }
             } else {
                 groupKeys.push("Unknown");
             }

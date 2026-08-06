@@ -84,6 +84,7 @@ export class MocWizardModal extends Modal {
     sortField: string = '';
     sortDirection: string = 'asc';
     limit: string = '';
+    offset: string = '';
     plugin: MOCPlugin;
     applyFnR: string[] = [];
     blockSeparator: string = 'none';
@@ -196,6 +197,16 @@ export class MocWizardModal extends Modal {
                 .setValue(this.limit)
                 .onChange(value => {
                     this.limit = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Offset')
+            .setDesc('Number of results to skip (non-negative integer)')
+            .addText(text => text
+                .setPlaceholder('Example: 5')
+                .setValue(this.offset)
+                .onChange(value => {
+                    this.offset = value;
                 }));
 
         new Setting(contentEl)
@@ -355,6 +366,13 @@ export class MocWizardModal extends Modal {
                 }
             }
 
+            if (this.offset) {
+                if (!/^(0|[1-9]\d*)$/.test(this.offset)) {
+                    new Notice('Offset must be a non-negative integer');
+                    return;
+                }
+            }
+
             const yamlLines = [
                 '```moc',
                 `folder: ${this.folder}`,
@@ -380,6 +398,10 @@ export class MocWizardModal extends Modal {
 
             if (this.limit) {
                 yamlLines.push(`limit: ${this.limit}`);
+            }
+
+            if (this.offset) {
+                yamlLines.push(`offset: ${this.offset}`);
             }
 
             if (this.applyFnR.length > 0) {

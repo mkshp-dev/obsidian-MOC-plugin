@@ -298,6 +298,7 @@ export interface MocConfig {
     groupBy?: string;
     sort?: string;
     limit?: number;
+    offset?: number;
     applyFnR?: string | string[];
     blockSeparator?: 'none' | 'divider' | 'newline';
     noteSeparator?: 'none' | 'divider' | 'newline';
@@ -469,6 +470,12 @@ export async function generateMocMarkdown(
         }
     }
 
+    if (config.offset !== undefined) {
+        if (typeof config.offset !== 'number' || config.offset < 0 || !Number.isInteger(config.offset)) {
+            return { error: "Error: invalid 'offset' in moc block. Must be a non-negative integer.", cls: 'moc-error' };
+        }
+    }
+
     // 1. Find all matching files
     const allFiles = app.vault.getMarkdownFiles();
 
@@ -521,8 +528,10 @@ export async function generateMocMarkdown(
         });
     }
 
-    if (config.limit !== undefined) {
-        matchedFiles = matchedFiles.slice(0, config.limit);
+    if (config.offset !== undefined || config.limit !== undefined) {
+        const start = config.offset || 0;
+        const end = config.limit !== undefined ? start + config.limit : undefined;
+        matchedFiles = matchedFiles.slice(start, end);
     }
 
     // 2. Extract elements

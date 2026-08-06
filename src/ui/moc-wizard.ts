@@ -80,6 +80,7 @@ export class MocWizardModal extends Modal {
     recursive: boolean = false;
     filterString: string = '';
     groupBy: string = '';
+    propertyKey: string = '';
     sortField: string = '';
     sortDirection: string = 'asc';
     limit: string = '';
@@ -157,10 +158,15 @@ export class MocWizardModal extends Modal {
                 .addOption('tag', 'Tag')
                 .addOption('cday', 'Creation day')
                 .addOption('mday', 'Modification day')
+                .addOption('property', 'Property...')
                 .setValue(this.groupBy)
                 .onChange(value => {
                     this.groupBy = value;
+                    this.renderPropertySetting(propertySettingEl);
                 }));
+
+        const propertySettingEl = contentEl.createDiv();
+        this.renderPropertySetting(propertySettingEl);
 
         new Setting(contentEl)
             .setName('Sort')
@@ -229,6 +235,21 @@ export class MocWizardModal extends Modal {
                     this.insertMocBlock();
                     this.close();
                 }));
+    }
+
+    renderPropertySetting(containerEl: HTMLElement) {
+        containerEl.empty();
+        if (this.groupBy === 'property') {
+            new Setting(containerEl)
+                .setName('Property key')
+                .setDesc('Enter the frontmatter property key (e.g., status, project)')
+                .addText(text => text
+                    .setPlaceholder('Property key...')
+                    .setValue(this.propertyKey)
+                    .onChange(value => {
+                        this.propertyKey = value;
+                    }));
+        }
     }
 
     renderRuleChain(containerEl: HTMLElement) {
@@ -346,7 +367,11 @@ export class MocWizardModal extends Modal {
             }
 
             if (this.groupBy) {
-                yamlLines.push(`groupBy: ${this.groupBy}`);
+                if (this.groupBy === 'property' && this.propertyKey) {
+                    yamlLines.push(`groupBy: property(${this.propertyKey})`);
+                } else if (this.groupBy !== 'property') {
+                    yamlLines.push(`groupBy: ${this.groupBy}`);
+                }
             }
 
             if (this.sortField) {

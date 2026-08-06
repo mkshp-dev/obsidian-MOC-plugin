@@ -1,4 +1,4 @@
-import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, TFile } from 'obsidian';
+import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, TFile, debounce, TAbstractFile } from 'obsidian';
 import { MOCPluginSettings } from './settings';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
@@ -303,19 +303,102 @@ export interface MocConfig {
     noteSeparator?: 'none' | 'divider' | 'newline';
 }
 
-export async function processMocBlock(
+class MocRenderChild extends MarkdownRenderChild {
+    config: MocConfig;
+    app: App;
+    sourcePath: string;
+    settings: MOCPluginSettings;
+    folderPath: string;
+    isRecursive: boolean;
+    updateDebounced: () => void;
+    el: HTMLElement;
+    ctx: MarkdownPostProcessorContext;
+    wrapper: HTMLDivElement | null = null;
+    container: HTMLDivElement | null = null;
+
+    constructor(
+        containerEl: HTMLElement,
+        config: MocConfig,
+        app: App,
+        sourcePath: string,
+        settings: MOCPluginSettings,
+        folderPath: string,
+        isRecursive: boolean,
+        el: HTMLElement,
+        ctx: MarkdownPostProcessorContext
+    ) {
+        super(containerEl);
+        this.config = config;
+        this.app = app;
+        this.sourcePath = sourcePath;
+        this.settings = settings;
+        this.folderPath = folderPath;
+        this.isRecursive = isRecursive;
+        this.el = el;
+        this.ctx = ctx;
+
+        this.updateDebounced = debounce(async () => {
+            await this.renderMoc();
+        }, 500, true);
+    }
+
+    onload() {
+        // Register event listeners to update MOC on file changes
+        this.registerEvent(this.app.vault.on('modify', this.onFileChange.bind(this)));
+        this.registerEvent(this.app.vault.on('create', this.onFileChange.bind(this)));
+        this.registerEvent(this.app.vault.on('delete', this.onFileChange.bind(this)));
+
+        // Initial render is handled by processMocBlock
+    }
+
+    onFileChange(file: TAbstractFile) {
+        if (file instanceof TFile && file.extension === 'md') {
+            // Check if file is in the watched folder
+            const parentPath = file.parent ? file.parent.path : '';
+            const normalizedParent = parentPath.replace(/^\/+|\/+$/g, '');
+
+            let shouldUpdate = false;
+
+            if (normalizedParent === this.folderPath) {
+                shouldUpdate = true;
+            } else if (this.isRecursive) {
+                if (this.folderPath === '') {
+                    shouldUpdate = true;
+                } else if (normalizedParent.startsWith(this.folderPath + '/')) {
+                    shouldUpdate = true;
+                }
+            }
+
+            if (shouldUpdate) {
+                this.updateDebounced();
+            }
+        }
+    }
+
+    async renderMoc() {
+        const result = await generateMocMarkdown(this.config, this.app, this.sourcePath, this.settings);
+
+        if (this.container) {
+            this.container.empty();
+            if (result.error) {
+                this.container.createEl("div", { text: result.error, cls: result.cls || 'moc-error' });
+            } else if (result.markdownText) {
+                await MarkdownRenderer.render(this.app, result.markdownText, this.container, this.sourcePath, this);
+            }
+        }
+    }
+}
+
+export async function generateMocMarkdown(
     config: MocConfig,
-    el: HTMLElement,
-    ctx: MarkdownPostProcessorContext,
     app: App,
     sourcePath: string,
     settings: MOCPluginSettings
-) {
+): Promise<{ markdownText?: string; error?: string; cls?: string }> {
     const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
 
     if (!config.folder || typeof config.folder !== 'string') {
-        el.createEl("div", { text: "Error: invalid or missing 'folder' in moc block.", cls: 'moc-error' });
-        return;
+        return { error: "Error: invalid or missing 'folder' in moc block.", cls: 'moc-error' };
     }
 
     let expandedFolder = config.folder;
@@ -329,13 +412,11 @@ export async function processMocBlock(
 
     const validElements = ['List', 'Task', 'Heading', 'Paragraph', 'Blockquote'];
     if (!validElements.includes(config.element as string)) {
-        el.createEl("div", { text: `Error: element must be one of: ${validElements.join(', ')}.`, cls: 'moc-error' });
-        return;
+        return { error: `Error: element must be one of: ${validElements.join(', ')}.`, cls: 'moc-error' };
     }
 
     if (!config.filter || typeof config.filter !== 'string') {
-        el.createEl("div", { text: "Error: invalid or missing 'filter' in moc block.", cls: 'moc-error' });
-        return;
+        return { error: "Error: invalid or missing 'filter' in moc block.", cls: 'moc-error' };
     }
 
     let expandedFilter = config.filter;
@@ -351,8 +432,7 @@ export async function processMocBlock(
 
     const parsedFilter = parseFilter(expandedFilter);
     if (!parsedFilter) {
-        el.createEl("div", { text: `Error: unsupported or invalid filter format '${config.filter}'.`, cls: 'moc-error' });
-        return;
+        return { error: `Error: unsupported or invalid filter format '${config.filter}'.`, cls: 'moc-error' };
     }
 
     const folderPath = expandedFolder.trim().replace(/^\/+|\/+$/g, '');
@@ -362,8 +442,7 @@ export async function processMocBlock(
     let sortDirection = 'desc';
     if (config.sort !== undefined) {
         if (typeof config.sort !== 'string') {
-            el.createEl("div", { text: "Error: invalid 'sort' format in moc block.", cls: 'moc-error' });
-            return;
+            return { error: "Error: invalid 'sort' format in moc block.", cls: 'moc-error' };
         }
         const parts = config.sort.trim().split(/\s+/);
         if (parts.length > 0) {
@@ -375,21 +454,18 @@ export async function processMocBlock(
 
         const validSortFields = ['ctime', 'mtime', 'name'];
         if (!validSortFields.includes(sortField)) {
-            el.createEl("div", { text: `Error: invalid sort field '${sortField}'. Must be one of: ${validSortFields.join(', ')}.`, cls: 'moc-error' });
-            return;
+            return { error: `Error: invalid sort field '${sortField}'. Must be one of: ${validSortFields.join(', ')}.`, cls: 'moc-error' };
         }
 
         const validSortDirections = ['asc', 'desc'];
         if (!validSortDirections.includes(sortDirection)) {
-            el.createEl("div", { text: `Error: invalid sort direction '${sortDirection}'. Must be 'asc' or 'desc'.`, cls: 'moc-error' });
-            return;
+            return { error: `Error: invalid sort direction '${sortDirection}'. Must be 'asc' or 'desc'.`, cls: 'moc-error' };
         }
     }
 
     if (config.limit !== undefined) {
         if (typeof config.limit !== 'number' || config.limit <= 0) {
-            el.createEl("div", { text: "Error: invalid 'limit' in moc block. Must be a positive number.", cls: 'moc-error' });
-            return;
+            return { error: "Error: invalid 'limit' in moc block. Must be a positive number.", cls: 'moc-error' };
         }
     }
 
@@ -417,8 +493,7 @@ export async function processMocBlock(
     });
 
     if (matchedFiles.length === 0) {
-        el.createEl("div", { text: `No markdown files found in folder '${config.folder}'.`, cls: 'moc-empty' });
-        return;
+        return { error: `No markdown files found in folder '${config.folder}'.`, cls: 'moc-empty' };
     }
 
     if (config.sort !== undefined) {
@@ -465,11 +540,6 @@ export async function processMocBlock(
         const fileContent = await app.vault.cachedRead(file);
         const lines = fileContent.split(/\r?\n/);
 
-
-
-
-
-
         if (config.element === 'List' || config.element === 'Task') {
             if (!fileCache.listItems || fileCache.listItems.length === 0) continue;
 
@@ -488,7 +558,6 @@ export async function processMocBlock(
                 if (!lineContent) continue;
 
                 if (evaluateFilter(lineContent, parsedFilter, item.task !== undefined ? item.task !== ' ' : undefined)) {
-
 
                     let lastChildLine = item.position.start.line;
                     let j = i + 1;
@@ -513,7 +582,6 @@ export async function processMocBlock(
                     const baseIndentMatch = lines[startLine]?.match(/^(\s*)/);
                     const baseIndent = baseIndentMatch ? baseIndentMatch[1] : '';
 
-
                     const blockLines: string[] = [];
                     for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
                         let currentLine = lines[lineNum];
@@ -526,7 +594,6 @@ export async function processMocBlock(
                     }
                     const blockText = blockLines.join('\n');
                     matchedBlocks.push({ file, lines: blockLines, tags: extractTags(blockText) });
-
                 }
             }
         } else if (config.element === 'Heading') {
@@ -545,22 +612,18 @@ export async function processMocBlock(
 
                 if (evaluateFilter(heading.heading, parsedFilter)) {
 
-
                     const startLine = heading.position.start.line;
                     let endLine = lines.length - 1;
 
-                    // Find the next heading of same or higher level (lower number)
                     for (let j = i + 1; j < headings.length; j++) {
                         const nextHeading = headings[j];
                         if (nextHeading && nextHeading.level <= heading.level) {
-                            // If there is a next heading of same or higher level, end extraction right before it
                             endLine = nextHeading.position.start.line - 1;
                             break;
                         }
                     }
 
                     skipUntilLine = endLine;
-
 
                     const blockLines: string[] = [];
                     for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
@@ -570,13 +633,12 @@ export async function processMocBlock(
                     }
                     const blockText = blockLines.join('\n');
                     matchedBlocks.push({ file, lines: blockLines, tags: extractTags(blockText) });
-
                 }
             }
         } else if (config.element === 'Paragraph' || config.element === 'Blockquote') {
             if (!fileCache.sections || fileCache.sections.length === 0) continue;
 
-            const targetType = config.element.toLowerCase(); // 'paragraph' or 'blockquote'
+            const targetType = config.element.toLowerCase();
 
             for (const section of fileCache.sections) {
                 if (section.type !== targetType) continue;
@@ -584,7 +646,6 @@ export async function processMocBlock(
                 const startLine = section.position.start.line;
                 const endLine = section.position.end.line;
 
-                // Get the full text of the section to evaluate the filter
                 const sectionLines = [];
                 for (let i = startLine; i <= endLine; i++) {
                     if (lines[i] !== undefined) {
@@ -594,16 +655,12 @@ export async function processMocBlock(
                 const sectionText = sectionLines.join('\n');
 
                 if (evaluateFilter(sectionText, parsedFilter)) {
-
                     matchedBlocks.push({ file, lines: sectionLines as string[], tags: extractTags(sectionText) });
                 }
             }
         }
-
-        // matchedBlocks already updated
     }
 
-    // Apply find & replace to matched blocks if configured
     if (config.applyFnR) {
         const ruleNames = Array.isArray(config.applyFnR) ? config.applyFnR : [config.applyFnR];
         for (const ruleName of ruleNames) {
@@ -619,17 +676,13 @@ export async function processMocBlock(
         }
     }
 
-    // 3. Render output
     if (matchedBlocks.length === 0) {
-        el.createEl("div", { text: `No elements matching filter found in '${config.folder}'.`, cls: 'moc-empty' });
-        return;
+        return { error: `No elements matching filter found in '${config.folder}'.`, cls: 'moc-empty' };
     }
-
 
     const outputLines: string[] = [];
 
     if (!config.groupBy) {
-        // Default behavior: group by file
         const filesMap = new Map<string, MatchedBlock[]>();
         for (const block of matchedBlocks) {
             const filePath = block.file.path;
@@ -662,7 +715,6 @@ export async function processMocBlock(
                 }
             }
             
-            // Add note separator if not the last file
             if (idx < filePaths.length - 1) {
                 if (config.noteSeparator === 'divider') {
                     outputLines.push("");
@@ -671,7 +723,6 @@ export async function processMocBlock(
                 } else if (config.noteSeparator === 'none') {
                     // Do nothing
                 } else {
-                    // Default to newline
                     outputLines.push("");
                 }
             } else {
@@ -679,7 +730,6 @@ export async function processMocBlock(
             }
         }
     } else {
-        // Grouped behavior
         const groupsMap = new Map<string, MatchedBlock[]>();
 
         for (const block of matchedBlocks) {
@@ -712,7 +762,6 @@ export async function processMocBlock(
             }
         }
 
-        // Sort groups alphabetically (except Untagged which could go last, but simple sort is fine for now)
         const sortedGroups = Array.from(groupsMap.keys()).sort();
 
         for (const group of sortedGroups) {
@@ -752,7 +801,6 @@ export async function processMocBlock(
                     }
                 }
                 
-                // Add note separator if not the last file
                 if (idx < filePaths.length - 1) {
                     if (config.noteSeparator === 'divider') {
                         outputLines.push("");
@@ -761,7 +809,6 @@ export async function processMocBlock(
                     } else if (config.noteSeparator === 'none') {
                         // Do nothing
                     } else {
-                        // Default to newline
                         outputLines.push("");
                     }
                 } else {
@@ -772,7 +819,16 @@ export async function processMocBlock(
     }
 
     const markdownText = outputLines.join('\n');
-
+    return { markdownText };
+}
+export async function processMocBlock(
+    config: MocConfig,
+    el: HTMLElement,
+    ctx: MarkdownPostProcessorContext,
+    app: App,
+    sourcePath: string,
+    settings: MOCPluginSettings
+) {
     const wrapper = el.createDiv({ cls: 'moc-wrapper' });
 
     const bakeButton = wrapper.createEl('button', {
@@ -782,7 +838,38 @@ export async function processMocBlock(
     });
 
     const container = wrapper.createDiv({ cls: 'moc-container' });
-    const childComponent = new MarkdownRenderChild(container);
+
+    // Determine folderPath and isRecursive for the MocRenderChild
+    let folderPath = '';
+    let isRecursive = false;
+
+    if (config.folder && typeof config.folder === 'string') {
+        let expandedFolder = config.folder;
+        const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
+        if (sourceFile && sourceFile instanceof TFile) {
+            expandedFolder = expandedFolder.replace(/\{\{this\.filename\}\}/g, sourceFile.basename);
+            const folderName = sourceFile.parent ? sourceFile.parent.name : '';
+            expandedFolder = expandedFolder.replace(/\{\{this\.folder\}\}/g, folderName);
+            const pathNoExt = sourceFile.path.replace(/\.md$/, '');
+            expandedFolder = expandedFolder.replace(/\{\{this\.path\}\}/g, pathNoExt);
+        }
+        folderPath = expandedFolder.trim().replace(/^\/+|\/+$/g, '');
+        isRecursive = config.recursive === true;
+    }
+
+    const childComponent = new MocRenderChild(
+        container,
+        config,
+        app,
+        sourcePath,
+        settings,
+        folderPath,
+        isRecursive,
+        el,
+        ctx
+    );
+    childComponent.wrapper = wrapper;
+    childComponent.container = container;
     ctx.addChild(childComponent);
 
     bakeButton.onClickEvent(async (e) => {
@@ -792,19 +879,24 @@ export async function processMocBlock(
             new Notice("Could not determine section to bake");
             return;
         }
-
         const file = app.vault.getAbstractFileByPath(sourcePath);
         if (file instanceof TFile) {
-            await app.vault.process(file, (data) => {
-                const lines = data.split(/\r?\n/);
-                lines.splice(sectionInfo.lineStart, sectionInfo.lineEnd - sectionInfo.lineStart + 1, markdownText);
-                return lines.join('\n');
-            });
-            new Notice("Block baked");
+            const result = await generateMocMarkdown(config, app, sourcePath, settings);
+            if (result.markdownText) {
+                await app.vault.process(file, (data) => {
+                    const lines = data.split(/\r?\n/);
+                    lines.splice(sectionInfo.lineStart, sectionInfo.lineEnd - sectionInfo.lineStart + 1, result.markdownText as string);
+                    return lines.join('\n');
+                });
+                new Notice("Block baked");
+            } else {
+                new Notice("Could not bake block: " + (result.error || "Unknown error"));
+            }
         } else {
-            new Notice("Source file not found");
+             new Notice("Source file not found");
         }
     });
 
-    await MarkdownRenderer.render(app, markdownText, container, sourcePath, childComponent);
+    // Initial render
+    await childComponent.renderMoc();
 }

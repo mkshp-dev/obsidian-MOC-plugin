@@ -5,3 +5,5 @@ export const MarkdownRenderer = { render: async () => {} };
 export class MarkdownRenderChild {}
 export class MarkdownPostProcessorContext {}
 export class App {}
+export const debounce = (func) => func;
+export class TAbstractFile {}

@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Feature: Live auto-refresh of MOC blocks** — MOC blocks will now auto-refresh when any markdown file in the configured folder is created, modified, or deleted without the need to close and reopen the note.
 - **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.
 
 - **Feature: Standardized Filters & Aliases** — Consolidated redundant substring filters (`has_word`, `contains`, `has_text`) into a canonical `contains` filter, while retaining `has_word` and `has_text` as backward-compatible aliases.

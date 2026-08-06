@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- Feature: offset parameter for paginated MOC results — Add an `offset` parameter to MOC blocks to complement the existing `limit`, enabling paginated or windowed result sets.
 - Feature: groupBy: property(key) — group results by frontmatter property value
 - **Feature: Live auto-refresh of MOC blocks** — MOC blocks will now auto-refresh when any markdown file in the configured folder is created, modified, or deleted without the need to close and reopen the note.
 - **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.

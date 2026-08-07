@@ -302,6 +302,7 @@ export interface MocConfig {
     applyFnR?: string | string[];
     blockSeparator?: 'none' | 'divider' | 'newline';
     noteSeparator?: 'none' | 'divider' | 'newline';
+    showCount?: boolean;
 }
 
 class MocRenderChild extends MarkdownRenderChild {
@@ -802,10 +803,11 @@ export async function generateMocMarkdown(
         const sortedGroups = Array.from(groupsMap.keys()).sort();
 
         for (const group of sortedGroups) {
-            outputLines.push(`### ${group}`);
+            const blocks = groupsMap.get(group)!;
+            const headingText = config.showCount ? `### ${group} (${blocks.length})` : `### ${group}`;
+            outputLines.push(headingText);
             outputLines.push("");
 
-            const blocks = groupsMap.get(group)!;
             const filesMap = new Map<string, MatchedBlock[]>();
             for (const block of blocks) {
                 const filePath = block.file.path;
@@ -853,6 +855,16 @@ export async function generateMocMarkdown(
                 }
             }
         }
+    }
+
+    if (config.showCount) {
+        const totalBlocks = matchedBlocks.length;
+        const uniqueFiles = new Set(matchedBlocks.map(b => b.file.path)).size;
+        const resultText = totalBlocks === 1 ? 'result' : 'results';
+        const fileText = uniqueFiles === 1 ? 'file' : 'files';
+
+        outputLines.push("");
+        outputLines.push(`<div class="moc-count">${totalBlocks} ${resultText} in ${uniqueFiles} ${fileText}</div>`);
     }
 
     const markdownText = outputLines.join('\n');

@@ -89,6 +89,7 @@ export class MocWizardModal extends Modal {
     applyFnR: string[] = [];
     blockSeparator: string = 'none';
     noteSeparator: string = 'newline';
+    showCount: boolean = false;
 
     constructor(app: App, plugin: MOCPlugin) {
         super(app);
@@ -149,6 +150,15 @@ export class MocWizardModal extends Modal {
             });
 
         contentEl.createEl('h3', { text: 'Optional result shaping' });
+
+        new Setting(contentEl)
+            .setName('Show count')
+            .setDesc('Append a result count summary and show counts on group headings')
+            .addToggle(toggle => toggle
+                .setValue(this.showCount)
+                .onChange(value => {
+                    this.showCount = value;
+                }));
 
         new Setting(contentEl)
             .setName('Group by')
@@ -418,6 +428,10 @@ export class MocWizardModal extends Modal {
 
             if (this.noteSeparator && this.noteSeparator !== 'newline') {
                 yamlLines.push(`noteSeparator: ${this.noteSeparator}`);
+            }
+
+            if (this.showCount) {
+                yamlLines.push('showCount: true');
             }
 
             yamlLines.push('```\n');

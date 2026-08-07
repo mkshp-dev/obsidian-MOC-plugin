@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- Feature: showCount option to display result counts in MOC blocks — Add a `showCount: true` option to MOC blocks that appends a result count summary (e.g., "3 results" or "2 results in 1 file") and per-group counts when `groupBy` is active.
 - Feature: offset parameter for paginated MOC results — Add an `offset` parameter to MOC blocks to complement the existing `limit`, enabling paginated or windowed result sets.
 - Feature: groupBy: property(key) — group results by frontmatter property value
 - **Feature: Live auto-refresh of MOC blocks** — MOC blocks will now auto-refresh when any markdown file in the configured folder is created, modified, or deleted without the need to close and reopen the note.

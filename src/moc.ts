@@ -290,6 +290,16 @@ export function applyFindReplace(text: string, find?: string, replace?: string):
     return text.split(find).join(replacement);
 }
 
+export function applyTemplate(text: string, template: string, file: TFile): string {
+    return template.replace(/\{\{(content|file|path|link)\}\}/g, (match, p1) => {
+        if (p1 === 'content') return text;
+        if (p1 === 'file') return file.basename;
+        if (p1 === 'path') return file.path;
+        if (p1 === 'link') return `[[${file.path}|${file.basename}]]`;
+        return match;
+    });
+}
+
 export interface MocConfig {
     folder?: string;
     element?: string;
@@ -300,6 +310,7 @@ export interface MocConfig {
     limit?: number;
     offset?: number;
     applyFnR?: string | string[];
+    template?: string;
     blockSeparator?: 'none' | 'divider' | 'newline';
     noteSeparator?: 'none' | 'divider' | 'newline';
     showCount?: boolean;
@@ -709,6 +720,15 @@ export async function generateMocMarkdown(
                     block.tags = extractTags(replacedText);
                 }
             }
+        }
+    }
+
+    if (config.template) {
+        for (const block of matchedBlocks) {
+            const blockText = block.lines.join('\n');
+            const replacedText = applyTemplate(blockText, config.template, block.file);
+            block.lines = replacedText.split(/\r?\n/);
+            block.tags = extractTags(replacedText);
         }
     }
 

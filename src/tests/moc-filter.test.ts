@@ -1,6 +1,7 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace } from '../moc';
+import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate } from '../moc';
+import { TFile } from 'obsidian';
 
 void describe('MOC Filter - Primitive Filters', () => {
     void test('has_word(...)', () => {
@@ -238,5 +239,52 @@ void describe('MOC Find & Replace', () => {
     void test('Regex replacement edge cases (invalid pattern)', () => {
         const text = 'Regex pattern';
         assert.strictEqual(applyFindReplace(text, '/[invalid/', 'literal'), 'Regex pattern');
+    });
+});
+
+void describe('MOC Template', () => {
+    // Mock TFile for testing
+    const mockFile = {
+        basename: 'my-file',
+        path: 'folder/my-file.md'
+    } as TFile;
+
+    void test('template replacement', () => {
+        const text = '- [ ] Task 1';
+
+        // Single replacement
+        assert.strictEqual(
+            applyTemplate(text, '{{content}}', mockFile),
+            '- [ ] Task 1'
+        );
+
+        assert.strictEqual(
+            applyTemplate(text, '{{file}}', mockFile),
+            'my-file'
+        );
+
+        assert.strictEqual(
+            applyTemplate(text, '{{path}}', mockFile),
+            'folder/my-file.md'
+        );
+
+        assert.strictEqual(
+            applyTemplate(text, '{{link}}', mockFile),
+            '[[folder/my-file.md|my-file]]'
+        );
+
+        // Combined replacement
+        assert.strictEqual(
+            applyTemplate(text, '- {{content}} — [[{{path}}|{{file}}]]', mockFile),
+            '- - [ ] Task 1 — [[folder/my-file.md|my-file]]'
+        );
+    });
+
+    void test('unknown placeholders', () => {
+        const text = 'Sample content';
+        assert.strictEqual(
+            applyTemplate(text, '{{unknown}} {{content}}', mockFile),
+            '{{unknown}} Sample content'
+        );
     });
 });

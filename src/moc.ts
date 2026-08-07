@@ -959,7 +959,15 @@ export async function processMocBlock(
 ) {
     const wrapper = el.createDiv({ cls: 'moc-wrapper' });
 
-    const bakeButton = wrapper.createEl('button', {
+    const toolbar = wrapper.createDiv({ cls: 'moc-toolbar' });
+
+    const copyButton = toolbar.createEl('button', {
+        text: 'Copy',
+        cls: 'moc-bake-button',
+        title: 'Copy as Markdown'
+    });
+
+    const bakeButton = toolbar.createEl('button', {
         text: 'Bake',
         cls: 'moc-bake-button',
         title: 'Bake dynamic block to static Markdown'
@@ -999,6 +1007,17 @@ export async function processMocBlock(
     childComponent.wrapper = wrapper;
     childComponent.container = container;
     ctx.addChild(childComponent);
+
+    copyButton.onClickEvent(async (e) => {
+        e.preventDefault();
+        const result = await generateMocMarkdown(config, app, sourcePath, settings);
+        if (result.markdownText) {
+            await navigator.clipboard.writeText(result.markdownText);
+            new Notice("Copied to clipboard");
+        } else {
+            new Notice("Could not copy to clipboard: " + (result.error || "Unknown error"));
+        }
+    });
 
     bakeButton.onClickEvent(async (e) => {
         e.preventDefault();

@@ -20,12 +20,13 @@ export interface ParsedFilter {
     value?: string;
     regex?: RegExp;
     propKey?: string;
+    propOperator?: string;
     propValue?: unknown;
 }
 
 
 function tokenizeFilter(input: string): string[] | null {
-    const tokenRegex = /\s*(AND\b|OR\b|NOT\b|\(|\)|properties\(\s*[a-zA-Z0-9_-]+\s*==\s*(?:["'].*?["']|[^"\s)]+)\s*\)|(?:has_word|contains|has_text|matches|has_tag)\(\s*["'].*?["']\s*\)|(?:is_completed|is_incomplete)\(\s*\))\s*/iy;
+    const tokenRegex = /\s*(AND\b|OR\b|NOT\b|\(|\)|properties\(\s*[a-zA-Z0-9_-]+\s*(?:==|!=|>=|<=|>|<)\s*(?:["'].*?["']|[^"\s)]+)\s*\)|(?:has_word|contains|has_text|matches|has_tag)\(\s*["'].*?["']\s*\)|(?:is_completed|is_incomplete)\(\s*\))\s*/iy;
     let lastIndex = 0;
     const tokens: string[] = [];
     tokenRegex.lastIndex = 0;
@@ -121,13 +122,14 @@ class FilterParser {
 
 export function parsePrimitiveFilter(filterString: string): ParsedFilter | null {
 
-    const propertiesPattern = /^properties\(\s*([a-zA-Z0-9_-]+)\s*==\s*(?:["'](.*?)["']|([^"\s)]+))\s*\)$/;
+    const propertiesPattern = /^properties\(\s*([a-zA-Z0-9_-]+)\s*(==|!=|>=|<=|>|<)\s*(?:["'](.*?)["']|([^"\s)]+))\s*\)$/;
     const propMatch = filterString.match(propertiesPattern);
     if (propMatch) {
         return {
             type: 'properties',
             propKey: propMatch[1],
-            propValue: propMatch[2] !== undefined ? propMatch[2] : propMatch[3]
+            propOperator: propMatch[2] || '==',
+            propValue: propMatch[3] !== undefined ? propMatch[3] : propMatch[4]
         };
     }
 
@@ -224,7 +226,38 @@ export function evaluateFrontmatter(frontmatter: Record<string, unknown> | null 
         const condition = node.condition!;
         if (condition.type === 'properties') {
             if (!frontmatter) return false;
-            return frontmatter[condition.propKey as string] == condition.propValue;
+            if (!(condition.propKey as string in frontmatter)) return false;
+
+            const op = condition.propOperator || '==';
+            const frontmatterValue = frontmatter[condition.propKey as string];
+            const expectedValue = condition.propValue;
+
+            if (op === '==') return frontmatterValue == expectedValue;
+            if (op === '!=') return frontmatterValue != expectedValue;
+
+            let left: string | number | boolean = String(frontmatterValue);
+            let right: string | number | boolean = String(expectedValue);
+
+            const leftNum = Number(left);
+            const rightNum = Number(right);
+
+            if (!isNaN(leftNum) && !isNaN(rightNum) && left.trim() !== '' && right.trim() !== '') {
+                left = leftNum;
+                right = rightNum;
+            } else {
+                const leftDate = Date.parse(left);
+                const rightDate = Date.parse(right);
+                if (!isNaN(leftDate) && !isNaN(rightDate)) {
+                    left = leftDate;
+                    right = rightDate;
+                }
+            }
+
+            if (op === '>') return left > right;
+            if (op === '<') return left < right;
+            if (op === '>=') return left >= right;
+            if (op === '<=') return left <= right;
+            return false;
         }
         return null; // Not a property condition, cannot evaluate at file level
     }

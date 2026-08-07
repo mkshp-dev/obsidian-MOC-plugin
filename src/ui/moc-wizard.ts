@@ -90,6 +90,8 @@ export class MocWizardModal extends Modal {
     blockSeparator: string = 'none';
     noteSeparator: string = 'newline';
     showCount: boolean = false;
+    excludeFolder: string = '';
+    excludeFile: string = '';
 
     constructor(app: App, plugin: MOCPlugin) {
         super(app);
@@ -133,6 +135,26 @@ export class MocWizardModal extends Modal {
                 .setValue(this.recursive)
                 .onChange(value => {
                     this.recursive = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Exclude folder')
+            .setDesc('Folder(s) to exclude (comma separated)')
+            .addText(text => text
+                .setPlaceholder('Example: Archive, secret')
+                .setValue(this.excludeFolder)
+                .onChange(value => {
+                    this.excludeFolder = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Exclude file')
+            .setDesc('File(s) to exclude (comma separated)')
+            .addText(text => text
+                .setPlaceholder('Example: Templates/daily')
+                .setValue(this.excludeFile)
+                .onChange(value => {
+                    this.excludeFile = value;
                 }));
 
         new Setting(contentEl)
@@ -392,6 +414,24 @@ export class MocWizardModal extends Modal {
 
             if (this.recursive) {
                 yamlLines.push('recursive: true');
+            }
+
+            if (this.excludeFolder.trim() !== '') {
+                const parts = this.excludeFolder.split(',').map(s => s.trim()).filter(s => s !== '');
+                if (parts.length === 1) {
+                    yamlLines.push(`excludeFolder: ${parts[0]}`);
+                } else if (parts.length > 1) {
+                    yamlLines.push(`excludeFolder: ${JSON.stringify(parts)}`);
+                }
+            }
+
+            if (this.excludeFile.trim() !== '') {
+                const parts = this.excludeFile.split(',').map(s => s.trim()).filter(s => s !== '');
+                if (parts.length === 1) {
+                    yamlLines.push(`excludeFile: ${parts[0]}`);
+                } else if (parts.length > 1) {
+                    yamlLines.push(`excludeFile: ${JSON.stringify(parts)}`);
+                }
             }
 
             if (this.groupBy) {

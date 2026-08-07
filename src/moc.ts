@@ -303,6 +303,8 @@ export interface MocConfig {
     blockSeparator?: 'none' | 'divider' | 'newline';
     noteSeparator?: 'none' | 'divider' | 'newline';
     showCount?: boolean;
+    excludeFolder?: string | string[];
+    excludeFile?: string | string[];
 }
 
 class MocRenderChild extends MarkdownRenderChild {
@@ -499,6 +501,30 @@ export async function generateMocMarkdown(
 
         return false;
     });
+
+    if (config.excludeFolder) {
+        let excludeFolders = Array.isArray(config.excludeFolder) ? config.excludeFolder : [config.excludeFolder];
+        excludeFolders = excludeFolders.map(folder => folder.trim().replace(/^\/+|\/+$/g, ''));
+        matchedFiles = matchedFiles.filter(file => {
+            return !excludeFolders.some(exFolder => {
+                const parentPath = file.parent ? file.parent.path.replace(/^\/+|\/+$/g, '') : '';
+                return parentPath === exFolder || parentPath.startsWith(exFolder + '/');
+            });
+        });
+    }
+
+    if (config.excludeFile) {
+        let excludeFiles = Array.isArray(config.excludeFile) ? config.excludeFile : [config.excludeFile];
+        excludeFiles = excludeFiles.map(file => file.trim().replace(/^\/+|\/+$/g, ''));
+        matchedFiles = matchedFiles.filter(file => {
+            const normalizedPath = file.path.replace(/^\/+|\/+$/g, '');
+            return !excludeFiles.some(exFile => {
+                // If exFile doesn't have an extension, try appending .md for a match
+                const exFileWithExt = exFile.endsWith('.md') ? exFile : exFile + '.md';
+                return normalizedPath === exFile || normalizedPath === exFileWithExt;
+            });
+        });
+    }
 
     if (matchedFiles.length === 0) {
         return { error: `No markdown files found in folder '${config.folder}'.`, cls: 'moc-empty' };

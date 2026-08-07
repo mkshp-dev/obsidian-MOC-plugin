@@ -87,6 +87,7 @@ export class MocWizardModal extends Modal {
     offset: string = '';
     plugin: MOCPlugin;
     applyFnR: string[] = [];
+    template: string = '';
     blockSeparator: string = 'none';
     noteSeparator: string = 'newline';
     showCount: boolean = false;
@@ -263,6 +264,16 @@ export class MocWizardModal extends Modal {
                 .setValue(this.noteSeparator)
                 .onChange(value => {
                     this.noteSeparator = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Template (optional)')
+            .setDesc('Custom output format using handlebars-style placeholders')
+            .addTextArea(text => text
+                .setPlaceholder('- {{content}} — [[{{path}}|{{file}}]]')
+                .setValue(this.template)
+                .onChange(value => {
+                    this.template = value;
                 }));
 
         contentEl.createEl('h3', { text: 'Find and replace (optional)' });
@@ -460,6 +471,10 @@ export class MocWizardModal extends Modal {
                 } else {
                     yamlLines.push(`applyFnR: ${JSON.stringify(this.applyFnR)}`);
                 }
+            }
+
+            if (this.template) {
+                yamlLines.push(`template: ${JSON.stringify(this.template)}`);
             }
 
             if (this.blockSeparator && this.blockSeparator !== 'none') {

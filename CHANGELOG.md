@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- Feature: Copy as Markdown button to copy MOC output to clipboard without baking
 - Feature: properties() filter comparison operators (>, <, >=, <=, !=) for numeric and date filtering
 - Feature: template option for custom output formatting of matched elements — Add a `template` option to MOC blocks that lets users define a custom output format for each matched element using handlebars-style placeholders.
 - Feature: excludeFolder and excludeFile options to skip files from MOC results — Add `excludeFolder` and `excludeFile` config options to MOC blocks, allowing users to explicitly exclude specific folders or files from results even when they fall within the configured folder.

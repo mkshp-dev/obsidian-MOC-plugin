@@ -40,12 +40,21 @@
     position: relative;
 }
 
-.moc-bake-button {
+.moc-toolbar {
     position: absolute;
     top: 4px;
     right: 4px;
+    display: flex;
+    gap: 4px;
     opacity: 0;
     transition: opacity 0.2s ease-in-out;
+}
+
+.moc-wrapper:hover .moc-toolbar {
+    opacity: 1;
+}
+
+.moc-bake-button {
     padding: 4px 8px;
     font-size: var(--font-ui-small);
     border-radius: var(--radius-s);
@@ -53,10 +62,6 @@
     color: var(--text-muted);
     cursor: pointer;
     border: none;
-}
-
-.moc-wrapper:hover .moc-bake-button {
-    opacity: 1;
 }
 
 .moc-bake-button:hover {

@@ -173,6 +173,51 @@ void describe('MOC Filter - Property/Frontmatter Evaluation', () => {
         assert.strictEqual(evaluateFrontmatter({ status: "active", priority: "high" }, filter), true);
         assert.strictEqual(evaluateFrontmatter({ status: "active", priority: "low" }, filter), false);
     });
+
+    void test('Comparison operators - numeric', () => {
+        const filterGt = parseFilter('properties(score > 3)');
+        assert.ok(filterGt);
+        assert.strictEqual(evaluateFrontmatter({ score: 4 }, filterGt), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 3 }, filterGt), false);
+        assert.strictEqual(evaluateFrontmatter({ score: 2 }, filterGt), false);
+
+        const filterGte = parseFilter('properties(score >= 3)');
+        assert.ok(filterGte);
+        assert.strictEqual(evaluateFrontmatter({ score: 4 }, filterGte), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 3 }, filterGte), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 2 }, filterGte), false);
+
+        const filterLt = parseFilter('properties(score < 3)');
+        assert.ok(filterLt);
+        assert.strictEqual(evaluateFrontmatter({ score: 2 }, filterLt), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 3 }, filterLt), false);
+
+        const filterLte = parseFilter('properties(score <= 3)');
+        assert.ok(filterLte);
+        assert.strictEqual(evaluateFrontmatter({ score: 2 }, filterLte), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 3 }, filterLte), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 4 }, filterLte), false);
+    });
+
+    void test('Comparison operators - dates', () => {
+        const filterLtDate = parseFilter('properties(due <= "2026-01-01")');
+        assert.ok(filterLtDate);
+        assert.strictEqual(evaluateFrontmatter({ due: "2025-12-31" }, filterLtDate), true);
+        assert.strictEqual(evaluateFrontmatter({ due: "2026-01-01" }, filterLtDate), true);
+        assert.strictEqual(evaluateFrontmatter({ due: "2026-01-02" }, filterLtDate), false);
+
+        const filterGtDate = parseFilter('properties(due > "2026-01-01")');
+        assert.ok(filterGtDate);
+        assert.strictEqual(evaluateFrontmatter({ due: "2026-01-02" }, filterGtDate), true);
+        assert.strictEqual(evaluateFrontmatter({ due: "2026-01-01" }, filterGtDate), false);
+    });
+
+    void test('Comparison operators - string inequality', () => {
+        const filterNeq = parseFilter('properties(status != "done")');
+        assert.ok(filterNeq);
+        assert.strictEqual(evaluateFrontmatter({ status: "active" }, filterNeq), true);
+        assert.strictEqual(evaluateFrontmatter({ status: "done" }, filterNeq), false);
+    });
 });
 
 void describe('MOC Filter - Malformed Filter Handling', () => {

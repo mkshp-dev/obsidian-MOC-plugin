@@ -28,6 +28,11 @@ class FilterSuggest extends AbstractInputSuggest<string> {
             'has_tag("")',
             ...(isTaskOrList ? ['is_completed()', 'is_incomplete()'] : []),
             'properties( == "")',
+            'properties( != "")',
+            'properties( > "")',
+            'properties( >= "")',
+            'properties( < "")',
+            'properties( <= "")',
             'AND',
             'OR',
             'NOT'
@@ -62,8 +67,8 @@ class FilterSuggest extends AbstractInputSuggest<string> {
         let newCursorPos = start.length + suggestion.length;
         if (suggestion.endsWith('("")')) {
             newCursorPos -= 2; // put cursor between quotes
-        } else if (suggestion === 'properties( == "")') {
-            newCursorPos -= 7; // put cursor right before ==
+        } else if (suggestion.startsWith('properties(') && suggestion.endsWith(' "")')) {
+            newCursorPos = start.length + 11; // put cursor right after properties(
         }
 
         this.textInputEl.setSelectionRange(newCursorPos, newCursorPos);

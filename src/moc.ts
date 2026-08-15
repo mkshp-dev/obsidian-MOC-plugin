@@ -429,7 +429,7 @@ class MocRenderChild extends MarkdownRenderChild {
         if (this.container) {
             this.container.empty();
             if (result.error) {
-                this.container.createEl("div", { text: result.error, cls: result.cls || 'moc-error' });
+                this.container.createDiv({ text: result.error, cls: result.cls || 'moc-error' });
             } else if (result.markdownText) {
                 await MarkdownRenderer.render(this.app, result.markdownText, this.container, this.sourcePath, this);
             }

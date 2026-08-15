@@ -1,83 +1,13 @@
-import { App, Modal, Setting, MarkdownView, AbstractInputSuggest, Notice } from 'obsidian';
+import { App, Modal, Setting, MarkdownView, Notice } from 'obsidian';
 import MOCPlugin from '../main';
-
-class FilterSuggest extends AbstractInputSuggest<string> {
-    textInputEl: HTMLInputElement;
-    getElement: () => string;
-
-    constructor(app: App, textInputEl: HTMLInputElement, getElement: () => string) {
-        super(app, textInputEl);
-        this.textInputEl = textInputEl;
-        this.getElement = getElement;
-    }
-
-    getSuggestions(inputStr: string): string[] {
-        const cursorPosition = this.textInputEl.selectionStart || 0;
-        const textBeforeCursor = inputStr.substring(0, cursorPosition);
-
-        // Find the word we are currently typing (it might be part of an operator or function)
-        const match = textBeforeCursor.match(/([a-zA-Z_]+)$/);
-        const currentWord = match ? match[1] : '';
-
-        const element = this.getElement();
-        const isTaskOrList = element === 'Task' || element === 'List';
-
-        const suggestions = [
-            'contains("")',
-            'matches("")',
-            'has_tag("")',
-            ...(isTaskOrList ? ['is_completed()', 'is_incomplete()'] : []),
-            'properties( == "")',
-            'properties( != "")',
-            'properties( > "")',
-            'properties( >= "")',
-            'properties( < "")',
-            'properties( <= "")',
-            'AND',
-            'OR',
-            'NOT'
-        ];
-
-        if (!currentWord) {
-            return suggestions;
-        }
-
-        return suggestions.filter(s => s.toLowerCase().startsWith(currentWord.toLowerCase()));
-    }
-
-    renderSuggestion(suggestion: string, el: HTMLElement): void {
-        el.setText(suggestion);
-    }
-
-    selectSuggestion(suggestion: string): void {
-        const cursorPosition = this.textInputEl.selectionStart || 0;
-        const inputStr = this.textInputEl.value;
-        const textBeforeCursor = inputStr.substring(0, cursorPosition);
-
-        const match = textBeforeCursor.match(/([a-zA-Z_]+)$/);
-        const currentWordLength = match ? match[1]!.length : 0;
-
-        const start = inputStr.substring(0, cursorPosition - currentWordLength);
-        const end = inputStr.substring(cursorPosition);
-
-        const newValue = start + suggestion + end;
-        this.textInputEl.value = newValue;
-
-        // Adjust cursor position if there are quotes or parens
-        let newCursorPos = start.length + suggestion.length;
-        if (suggestion.endsWith('("")')) {
-            newCursorPos -= 2; // put cursor between quotes
-        } else if (suggestion.startsWith('properties(') && suggestion.endsWith(' "")')) {
-            newCursorPos = start.length + 11; // put cursor right after properties(
-        }
-
-        this.textInputEl.setSelectionRange(newCursorPos, newCursorPos);
-
-        // Trigger input event so the setting value gets updated
-        this.textInputEl.dispatchEvent(new Event('input'));
-    }
-}
-
+import {
+    FolderSuggest,
+    MultiTokenFolderSuggest,
+    MultiTokenFileSuggest,
+    PropertyKeySuggest,
+    TemplateSuggest,
+    FilterSuggest,
+} from './moc-wizard-suggests';
 
 export class MocWizardModal extends Modal {
     folder: string = '';
@@ -112,13 +42,15 @@ export class MocWizardModal extends Modal {
 
         new Setting(contentEl)
             .setName('Folder')
-            .setDesc('The vault folder to search in')
-            .addText(text => text
-                .setPlaceholder('Example: diary')
-                .setValue(this.folder)
-                .onChange(value => {
-                    this.folder = value;
-                }));
+            .setDesc('The vault folder to search in (autocomplete supported)')
+            .addText(text => {
+                text.setPlaceholder('Example: diary (leave blank for entire vault)')
+                    .setValue(this.folder)
+                    .onChange(value => {
+                        this.folder = value;
+                    });
+                new FolderSuggest(this.app, text.inputEl);
+            });
 
         new Setting(contentEl)
             .setName('Element')
@@ -145,27 +77,31 @@ export class MocWizardModal extends Modal {
 
         new Setting(contentEl)
             .setName('Exclude folder')
-            .setDesc('Folder(s) to exclude (comma separated)')
-            .addText(text => text
-                .setPlaceholder('Example: Archive, secret')
-                .setValue(this.excludeFolder)
-                .onChange(value => {
-                    this.excludeFolder = value;
-                }));
+            .setDesc('Folder(s) to exclude (comma separated, autocomplete supported)')
+            .addText(text => {
+                text.setPlaceholder('Example: Archive, secret')
+                    .setValue(this.excludeFolder)
+                    .onChange(value => {
+                        this.excludeFolder = value;
+                    });
+                new MultiTokenFolderSuggest(this.app, text.inputEl, () => this.folder);
+            });
 
         new Setting(contentEl)
             .setName('Exclude file')
-            .setDesc('File(s) to exclude (comma separated)')
-            .addText(text => text
-                .setPlaceholder('Example: Templates/daily')
-                .setValue(this.excludeFile)
-                .onChange(value => {
-                    this.excludeFile = value;
-                }));
+            .setDesc('File(s) to exclude (comma separated, autocomplete supported)')
+            .addText(text => {
+                text.setPlaceholder('Example: Templates/daily')
+                    .setValue(this.excludeFile)
+                    .onChange(value => {
+                        this.excludeFile = value;
+                    });
+                new MultiTokenFileSuggest(this.app, text.inputEl, () => this.folder);
+            });
 
         new Setting(contentEl)
             .setName('Filter string')
-            .setDesc('Type the complex logical filter condition')
+            .setDesc('Filter condition with context-aware autocomplete for functions, tags & frontmatter properties')
             .addText(text => {
                 text.setPlaceholder('Example: has_word("moc")');
                 text.setValue(this.filterString);
@@ -173,8 +109,12 @@ export class MocWizardModal extends Modal {
                     this.filterString = value;
                 });
 
-                // Add autocomplete suggester
-                new FilterSuggest(this.app, text.inputEl, () => this.element);
+                new FilterSuggest(
+                    this.app,
+                    text.inputEl,
+                    () => this.element,
+                    () => this.folder
+                );
             });
 
         contentEl.createEl('h3', { text: 'Optional result shaping' });
@@ -187,6 +127,8 @@ export class MocWizardModal extends Modal {
                 .onChange(value => {
                     this.showCount = value;
                 }));
+
+        const propertySettingEl = contentEl.createDiv();
 
         new Setting(contentEl)
             .setName('Group by')
@@ -204,7 +146,6 @@ export class MocWizardModal extends Modal {
                     this.renderPropertySetting(propertySettingEl);
                 }));
 
-        const propertySettingEl = contentEl.createDiv();
         this.renderPropertySetting(propertySettingEl);
 
         new Setting(contentEl)
@@ -273,13 +214,15 @@ export class MocWizardModal extends Modal {
 
         new Setting(contentEl)
             .setName('Template (optional)')
-            .setDesc('Custom output format using handlebars-style placeholders')
-            .addTextArea(text => text
-                .setPlaceholder('- {{content}} — [[{{path}}|{{file}}]]')
-                .setValue(this.template)
-                .onChange(value => {
-                    this.template = value;
-                }));
+            .setDesc('Custom output format using placeholders (type {{ for suggestions)')
+            .addText(text => {
+                text.setPlaceholder('- {{content}} — [[{{path}}|{{file}}]]')
+                    .setValue(this.template)
+                    .onChange(value => {
+                        this.template = value;
+                    });
+                new TemplateSuggest(this.app, text.inputEl);
+            });
 
         contentEl.createEl('h3', { text: 'Find and replace (optional)' });
 
@@ -301,13 +244,15 @@ export class MocWizardModal extends Modal {
         if (this.groupBy === 'property') {
             new Setting(containerEl)
                 .setName('Property key')
-                .setDesc('Enter the frontmatter property key (e.g., status, project)')
-                .addText(text => text
-                    .setPlaceholder('Property key...')
-                    .setValue(this.propertyKey)
-                    .onChange(value => {
-                        this.propertyKey = value;
-                    }));
+                .setDesc('Enter or select frontmatter property key (e.g., status, project)')
+                .addText(text => {
+                    text.setPlaceholder('Property key...')
+                        .setValue(this.propertyKey)
+                        .onChange(value => {
+                            this.propertyKey = value;
+                        });
+                    new PropertyKeySuggest(this.app, text.inputEl, () => this.folder);
+                });
         }
     }
 
@@ -332,9 +277,9 @@ export class MocWizardModal extends Modal {
 
                 const row = selectedList.createDiv({ cls: 'moc-rule-chain-item' });
 
-                const nameSpan = row.createEl('span', { cls: 'moc-rule-chain-name' });
+                const nameSpan = row.createSpan({ cls: 'moc-rule-chain-name' });
                 nameSpan.createEl('strong', { text: `${i + 1}. ${rule.name}` });
-                nameSpan.createEl('span', { text: ` (Find: "${rule.find}" ➔ Replace: "${rule.replace}")`, cls: 'moc-rule-chain-details' });
+                nameSpan.createSpan({ text: ` (Find: "${rule.find}" ➔ Replace: "${rule.replace}")`, cls: 'moc-rule-chain-details' });
 
                 const buttons = row.createDiv({ cls: 'moc-rule-chain-buttons' });
 
@@ -398,8 +343,6 @@ export class MocWizardModal extends Modal {
                     }));
         }
     }
-
-
 
     insertMocBlock() {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);

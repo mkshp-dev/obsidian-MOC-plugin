@@ -29,34 +29,51 @@ export class MOCSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Find and replace rules')
-			.setHeading();
-
-		containerEl.createEl('p', {text: 'Define reusable find and replace rules that can be applied to MOC blocks via `applyFnR`.'});
+			.setHeading()
+			.setDesc('Define reusable find and replace rules that can be applied to blocks via find and replace settings.');
 
 		// 1. Render existing rules list
 		const rules = this.plugin.settings.rules || [];
 		if (rules.length === 0) {
-			containerEl.createEl('p', {text: 'No rules defined yet.', cls: 'moc-no-rules'});
+			const emptyBox = containerEl.createDiv({cls: 'moc-settings-empty-state'});
+			emptyBox.createSpan({cls: 'moc-settings-empty-icon', text: '🔍'});
+			emptyBox.createEl('p', {text: 'No rules created yet. Use the form below to add your first find and replace rule.'});
 		} else {
-			const listContainer = containerEl.createDiv({cls: 'moc-rules-list'});
+			const listContainer = containerEl.createDiv({cls: 'moc-rules-cards-container'});
 			for (let i = 0; i < rules.length; i++) {
 				const rule = rules[i];
 				if (!rule) continue;
 
-				const ruleRow = listContainer.createDiv({cls: 'moc-rule-row'});
+				const ruleCard = listContainer.createDiv({cls: 'moc-rule-card'});
 
-				const infoDiv = ruleRow.createDiv({cls: 'moc-rule-info'});
-				infoDiv.createEl('strong', {text: rule.name});
-				infoDiv.createEl('span', {text: ` (Find: "${rule.find}" ➔ Replace: "${rule.replace}")` });
+				const header = ruleCard.createDiv({cls: 'moc-rule-card-header'});
+				const titleGroup = header.createDiv({cls: 'moc-rule-card-title-group'});
+				titleGroup.createSpan({cls: 'moc-rule-card-badge', text: `${i + 1}`});
+				titleGroup.createEl('strong', {cls: 'moc-rule-card-name', text: rule.name});
 
-				const actionDiv = ruleRow.createDiv({cls: 'moc-rule-actions'});
-				const deleteBtn = actionDiv.createEl('button', {text: 'Delete', cls: 'mod-warning'});
+				const isRegex = rule.find.startsWith('/') && rule.find.length > 2;
+				if (isRegex) {
+					titleGroup.createSpan({cls: 'moc-rule-card-type-badge', text: 'Regex'});
+				}
+
+				const actionDiv = header.createDiv({cls: 'moc-rule-card-actions'});
+				const deleteBtn = actionDiv.createEl('button', {text: 'Delete', cls: 'mod-warning moc-rule-delete-btn'});
 				deleteBtn.onClickEvent(async (e) => {
 					e.preventDefault();
 					this.plugin.settings.rules.splice(i, 1);
 					await this.plugin.saveSettings();
-					(this as unknown as { display(): void }).display(); // Refresh settings tab
+					(this as unknown as { display(): void }).display();
 				});
+
+				const details = ruleCard.createDiv({cls: 'moc-rule-card-details'});
+				
+				const findRow = details.createDiv({cls: 'moc-rule-detail-row'});
+				findRow.createSpan({cls: 'moc-rule-detail-label', text: 'Find:'});
+				findRow.createEl('code', {cls: 'moc-rule-detail-code', text: rule.find || '(empty)'});
+
+				const replaceRow = details.createDiv({cls: 'moc-rule-detail-row'});
+				replaceRow.createSpan({cls: 'moc-rule-detail-label', text: 'Replace:'});
+				replaceRow.createEl('code', {cls: 'moc-rule-detail-code', text: rule.replace !== '' ? rule.replace : '(nothing)'});
 			}
 		}
 
@@ -69,7 +86,9 @@ export class MOCSettingTab extends PluginSettingTab {
 		let newFind = '';
 		let newReplace = '';
 
-		new Setting(containerEl)
+		const formContainer = containerEl.createDiv({cls: 'moc-add-rule-form-container'});
+
+		new Setting(formContainer)
 			.setName('Rule name')
 			.setDesc('A unique name to reference in code blocks (for example, clean-headers)')
 			.addText(text => text
@@ -78,25 +97,25 @@ export class MOCSettingTab extends PluginSettingTab {
 					newName = value.trim();
 				}));
 
-		new Setting(containerEl)
+		new Setting(formContainer)
 			.setName('Find pattern')
-			.setDesc('Text or regex pattern (for example, /^#\\s+/gm)')
+			.setDesc('Literal text or regex pattern (e.g. /^#+\\s+/gm or #todo)')
 			.addText(text => text
 				.setPlaceholder('Pattern to search for')
 				.onChange(value => {
 					newFind = value;
 				}));
 
-		new Setting(containerEl)
+		new Setting(formContainer)
 			.setName('Replace with')
-			.setDesc('Text to replace the pattern with')
+			.setDesc('Text to replace the pattern with (leave blank to remove matches)')
 			.addText(text => text
-				.setPlaceholder('Replacement text (can be empty)')
+				.setPlaceholder('Replacement text')
 				.onChange(value => {
 					newReplace = value;
 				}));
 
-		new Setting(containerEl)
+		new Setting(formContainer)
 			.addButton(btn => btn
 				.setButtonText('Add rule')
 				.setCta()
@@ -120,8 +139,29 @@ export class MOCSettingTab extends PluginSettingTab {
 
 					await this.plugin.saveSettings();
 					new Notice(`Rule "${newName}" added`);
-					(this as unknown as { display(): void }).display(); // Re-render setting tab
+					(this as unknown as { display(): void }).display();
 				}));
+	}
+
+	getSettingDefinitions() {
+		return [
+			{
+				name: 'Find and replace rules',
+				description: 'Define reusable find and replace rules that can be applied to blocks via find and replace settings.',
+			},
+			{
+				name: 'Rule name',
+				description: 'A unique name to reference in code blocks (for example, clean-headers)',
+			},
+			{
+				name: 'Find pattern',
+				description: 'Literal text or regex pattern (e.g. /^#+\\s+/gm or #todo)',
+			},
+			{
+				name: 'Replace with',
+				description: 'Text to replace the pattern with (leave blank to remove matches)',
+			},
+		];
 	}
 }
 

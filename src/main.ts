@@ -36,7 +36,7 @@ export default class MOCPlugin extends Plugin {
 				await processMocBlock(config, el, ctx, this.app, ctx.sourcePath, this.settings);
 			} catch (e) {
 				const errorMessage = e instanceof Error ? e.message : String(e);
-				el.createEl("div", { text: "Error parsing YAML in moc block:\n" + errorMessage, cls: 'moc-error' });
+				el.createDiv({ text: "Error parsing YAML in moc block:\n" + errorMessage, cls: 'moc-error' });
 			}
 		});
 

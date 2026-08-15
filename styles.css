@@ -134,3 +134,137 @@
     font-style: italic;
     border-top: 1px solid var(--background-modifier-border);
 }
+
+/* Settings Tab UI Enhancements */
+
+.moc-settings-desc {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.moc-settings-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background-color: var(--background-secondary);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-m);
+    margin-bottom: 24px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.moc-settings-empty-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.moc-rules-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.moc-rule-card {
+    background-color: var(--background-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-m);
+    padding: 12px 16px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.moc-rule-card:hover {
+    border-color: var(--interactive-accent);
+}
+
+.moc-rule-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.moc-rule-card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.moc-rule-card-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: var(--font-ui-smaller);
+    font-weight: bold;
+}
+
+.moc-rule-card-name {
+    font-size: var(--font-ui-medium);
+    color: var(--text-normal);
+}
+
+.moc-rule-card-type-badge {
+    font-size: var(--font-ui-smaller);
+    text-transform: uppercase;
+    background-color: rgba(var(--interactive-accent-rgb), 0.15);
+    color: var(--interactive-accent);
+    padding: 2px 6px;
+    border-radius: var(--radius-s);
+    font-weight: 600;
+}
+
+.moc-rule-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.moc-rule-detail-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: var(--font-ui-small);
+}
+
+.moc-rule-detail-label {
+    color: var(--text-muted);
+    font-weight: 500;
+    min-width: 55px;
+}
+
+.moc-rule-detail-code {
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    padding: 2px 6px;
+    border-radius: var(--radius-s);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    color: var(--text-accent);
+    word-break: break-all;
+}
+
+.moc-rule-delete-btn {
+    font-size: var(--font-ui-small);
+    padding: 4px 10px;
+    border-radius: var(--radius-s);
+}
+
+.moc-add-rule-form-container {
+    background-color: var(--background-secondary-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-m);
+    padding: 8px 16px;
+    margin-top: 8px;
+}

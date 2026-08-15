@@ -4,6 +4,7 @@ import { themes as prismThemes } from "prism-react-renderer";
 const config = {
   title: "Maps of Content",
   tagline: "Smart Map of Content for Obsidian",
+  favicon: "img/favicon.png",
 
   url: "https://mkshp-dev.github.io",
   baseUrl: "/obsidian-MOC-plugin/",

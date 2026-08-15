@@ -1,24 +1,47 @@
 # Maps of Content
 
-This plugin provides a dynamic way to extract elements (like lists, tasks, headings, paragraphs, or blockquotes) from your Markdown files that match a specific word filter, automatically generating Map of Content (MOC) indexes in your vault.
+Dynamically generate **Map of Content (MOC)** indexes by extracting matching elements (lists, tasks, headings, paragraphs, blockquotes) from notes in your vault — powered by a simple code block.
 
-The plugin supports dynamic MOCs generated from a folder + filter configuration, multiple output styles/element types, advanced filter expressions, grouping, sorting, and limiting results. It also includes an interactive MOC Creation Wizard and the ability to bake dynamic results into static markdown.
+📖 **[Full documentation →](https://mkshp-dev.github.io/obsidian-MOC-plugin/)**
 
-It accomplishes this by adding a new `moc` markdown code block processor.
+---
 
-## Features
+## Highlights
 
-- **Dynamic Output**: Automatically generated Map of Content indexes in your vault based on live queries.
-- **Multiple Element Types**: Extract entire lists, tasks, headings, paragraphs, or blockquotes.
-- **Advanced Filtering**: Use logical operators (`AND`, `OR`, `NOT`, parentheses) and property/frontmatter-based filters (`properties(...)`).
-- **Result Shaping**: Structure output by using `groupBy`, `sort`, and `limit` options.
-- **MOC Creation Wizard**: Easily generate your MOC queries via a visual interface.
-- **Bake to Markdown**: Replace a dynamic `moc` block with the permanently rendered static markdown content.
+**Live, auto-updating indexes** — `moc` blocks re-render automatically when files in the watched folder change. No refreshing needed.
 
+**Powerful filter DSL** — Boolean logic (`AND`, `OR`, `NOT`), text matching, tag matching, regex, and frontmatter property comparisons with full numeric/date operator support (`>`, `<`, `>=`, `<=`, `!=`).
+
+**MOC Creation Wizard** — Generate `moc` blocks visually from the Command Palette. No YAML required.
+
+**Flexible output shaping** — Group by folder, tag, date, or any frontmatter property. Sort, limit, paginate with `offset`, and count results with `showCount`.
+
+**Templates** — Format each matched element with `{{content}}`, `{{file}}`, `{{path}}`, `{{link}}` placeholders.
+
+**Exclude options** — Skip specific folders or files even inside a recursive scan.
+
+**Copy & Bake** — Copy rendered Markdown to clipboard, or permanently bake a dynamic block into static Markdown in-place.
+
+**Create showcase** — Run **Maps of Content: Create showcase** from the Command Palette to generate a ready-to-explore demo folder covering every feature.
+
+---
+
+## Quick start
+
+````markdown
+```moc
+folder: diary
+element: List
+filter: has_tag("#todo")
+recursive: true
+```
+````
+
+→ See the [full block reference](https://mkshp-dev.github.io/obsidian-MOC-plugin/) in the docs.
+
+---
 
 ## Support
-
-If you find this plugin helpful, consider supporting its development!
 
 <a href="https://buymeacoffee.com/mkshp" target="_blank">
   <img

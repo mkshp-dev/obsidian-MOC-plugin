@@ -7,20 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
-- Feature: Copy as Markdown button to copy MOC output to clipboard without baking
-- Feature: properties() filter comparison operators (>, <, >=, <=, !=) for numeric and date filtering
-- Feature: template option for custom output formatting of matched elements — Add a `template` option to MOC blocks that lets users define a custom output format for each matched element using handlebars-style placeholders.
-- Feature: excludeFolder and excludeFile options to skip files from MOC results — Add `excludeFolder` and `excludeFile` config options to MOC blocks, allowing users to explicitly exclude specific folders or files from results even when they fall within the configured folder.
-- Feature: showCount option to display result counts in MOC blocks — Add a `showCount: true` option to MOC blocks that appends a result count summary (e.g., "3 results" or "2 results in 1 file") and per-group counts when `groupBy` is active.
-- Feature: offset parameter for paginated MOC results — Add an `offset` parameter to MOC blocks to complement the existing `limit`, enabling paginated or windowed result sets.
-- Feature: groupBy: property(key) — group results by frontmatter property value
-- **Feature: Live auto-refresh of MOC blocks** — MOC blocks will now auto-refresh when any markdown file in the configured folder is created, modified, or deleted without the need to close and reopen the note.
+- **Feature: Copy as Markdown** — Added a Copy button to the MOC block toolbar that copies the rendered Markdown output to the clipboard without modifying the note.
+- **Feature: `properties()` comparison operators** — Added `>`, `<`, `>=`, `<=`, `!=` operators to `properties()` filters for numeric and date comparisons (e.g. `properties(priority <= 2)`, `properties(date >= "2024-01-01")`).
+- **Feature: `template` option** — Custom output formatting for each matched element using `{{content}}`, `{{file}}`, `{{path}}`, and `{{link}}` handlebars-style placeholders.
+- **Feature: `excludeFolder` and `excludeFile` options** — Explicitly exclude specific folders or files from MOC results even when they fall within the configured scan folder. Accepts a single string or JSON array.
+- **Feature: `showCount` option** — Appends a result count summary (e.g. "3 results in 2 files") and adds per-group counts when `groupBy` is active.
+- **Feature: `offset` parameter** — Skip a number of files at the start of the result set, complementing `limit` for paginated or windowed result sets.
+- **Feature: `groupBy: property(key)`** — Group matched results by an arbitrary frontmatter property value.
+- **Feature: Live auto-refresh** — MOC blocks automatically re-render (debounced 500 ms) when any Markdown file in the configured folder is created, modified, or deleted.
+- **Feature: Create showcase command** — New "Create showcase" command generates a `MOC Showcase` folder at the vault root with sample notes and pre-built `moc` blocks covering every feature.
+- **Feature: Standardized filters & aliases** — Consolidated `has_word`, `contains`, `has_text` into canonical `contains`; `has_word` and `has_text` remain as backward-compatible aliases.
+- **Feature: Robust tag-aware matching** — `has_tag()` matches exact tags case-insensitively and nested subtags, preventing false positives.
+- **Feature: Enhanced `matches()` with regex flags** — Slash-delimited patterns with flags: `matches("/pattern/i")`.
+- **Feature: Context-aware autocomplete** — The MOC Creation Wizard hides task-only filters (`is_completed`, `is_incomplete`) when a non-task element type is selected.
 - **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.
 
-- **Feature: Standardized Filters & Aliases** — Consolidated redundant substring filters (`has_word`, `contains`, `has_text`) into a canonical `contains` filter, while retaining `has_word` and `has_text` as backward-compatible aliases.
-- **Feature: Robust Tag-Aware Matching** — Re-implemented `has_tag` to match exact tags (case-insensitively) and nested subtags (e.g., `#project/subtag`), preventing false positives from longer substring tags and URL fragments.
-- **Feature: Enhanced `matches()` with Regex Flags** — Added support for slash-delimited regular expression patterns with flags in `matches()` (e.g., `matches("/pattern/i")` for case-insensitive matching).
-- **Feature: Context-Aware Autocomplete suggestions** — Updated the MOC Creation Wizard to dynamically adjust autocomplete suggestions based on the selected target element, hiding task filters (`is_completed()` and `is_incomplete()`) for non-task elements like `Heading`, `Paragraph`, or `Blockquote`.
 ## 1.3.3 - 2026-06-30
 
 ## 1.3.2 - 2026-06-30

@@ -2,6 +2,7 @@ import { MocWizardModal } from "./ui/moc-wizard";
 import { Plugin, parseYaml } from 'obsidian';
 import { DEFAULT_SETTINGS, MOCPluginSettings, MOCSettingTab } from "./settings";
 import { processMocBlock, MocConfig } from "./moc";
+import { createShowcase } from "./commands/create-showcase";
 
 export default class MOCPlugin extends Plugin {
 	settings: MOCPluginSettings;
@@ -21,6 +22,13 @@ export default class MOCPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'create-moc-showcase',
+			name: 'Create showcase',
+			callback: () => {
+				void createShowcase(this.app);
+			}
+		});
 
 		this.registerMarkdownCodeBlockProcessor("moc", async (source, el, ctx) => {
 			try {

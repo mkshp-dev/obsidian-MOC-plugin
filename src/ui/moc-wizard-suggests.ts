@@ -114,7 +114,8 @@ export class MultiTokenFolderSuggest extends AbstractInputSuggest<string> {
 
     private currentToken(value: string): string {
         const parts = value.split(',');
-        return (parts[parts.length - 1] ?? '').trimStart();
+        const lastPart = parts.pop() ?? '';
+        return lastPart.trimStart();
     }
 
     getSuggestions(query: string): string[] {
@@ -170,7 +171,8 @@ export class MultiTokenFileSuggest extends AbstractInputSuggest<string> {
 
     private currentToken(value: string): string {
         const parts = value.split(',');
-        return (parts[parts.length - 1] ?? '').trimStart();
+        const lastPart = parts.pop() ?? '';
+        return lastPart.trimStart();
     }
 
     getSuggestions(query: string): string[] {
@@ -335,25 +337,30 @@ export class FilterSuggest extends AbstractInputSuggest<string> {
         const propKeys = getFrontmatterKeys(this.app, this.getFolder());
 
         // Build properties() suggestions using real keys if available
-        const propSuggestions = propKeys.length > 0
-            ? propKeys.flatMap(k => [
-                `properties(${k} == "")`,
-                `properties(${k} != "")`,
-                `properties(${k} > "")`,
-                `properties(${k} >= "")`,
-                `properties(${k} < "")`,
-                `properties(${k} <= "")`,
-            ])
-            : [
+        const propSuggestions: string[] = [];
+        if (propKeys.length > 0) {
+            for (const key of propKeys) {
+                propSuggestions.push(
+                    `properties(${key} == "")`,
+                    `properties(${key} != "")`,
+                    `properties(${key} > "")`,
+                    `properties(${key} >= "")`,
+                    `properties(${key} < "")`,
+                    `properties(${key} <= "")`,
+                );
+            }
+        } else {
+            propSuggestions.push(
                 'properties( == "")',
                 'properties( != "")',
                 'properties( > "")',
                 'properties( >= "")',
                 'properties( < "")',
                 'properties( <= "")',
-            ];
+            );
+        }
 
-        const suggestions = [
+        const suggestions: string[] = [
             'contains("")',
             'matches("")',
             'has_tag("")',

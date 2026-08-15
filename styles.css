@@ -651,9 +651,355 @@
 }
 
 .moc-add-rule-form-container {
-    background-color: var(--background-secondary-alt);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-m);
-    padding: 8px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.moc-add-rule-form-container.moc-collapsed {
+    display: none;
+}
+
+/* ===== Settings Page Styling ===== */
+.moc-settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.moc-settings-container .setting-item.setting-item-heading {
+    border: none;
+    padding: 16px 0;
+    margin: 0;
+}
+
+.moc-settings-container .setting-item.setting-item-heading:not(:first-child) {
+    margin-top: 16px;
+    padding-top: 0;
+    border-top: 1px solid var(--divider-color);
+    padding-top: 16px;
+}
+
+.moc-settings-container .setting-item-heading .setting-item-name {
+    font-size: var(--font-ui-large);
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+}
+
+.moc-settings-container h3 {
+    font-size: var(--font-ui-large);
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+    margin: 0;
+}
+
+.moc-settings-label {
+    font-size: var(--font-ui-small);
+    font-weight: 500;
+    color: var(--text-normal);
+    margin-bottom: 8px;
+    cursor: help;
+}
+
+.moc-settings-label span:hover {
+    color: var(--text-accent);
+}
+
+.moc-settings-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 8px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    margin-bottom: 16px;
+}
+
+.moc-settings-input:focus {
+    outline: none;
+    border-color: var(--text-accent);
+    box-shadow: 0 0 0 2px rgba(var(--color-accent-rgb), 0.1);
+}
+
+.moc-settings-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* ===== Template Folder Control ===== */
+.moc-template-folder-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.moc-template-folder-control .moc-settings-input {
+    flex: 1;
+    margin-bottom: 0;
+    min-width: 200px;
+}
+
+.moc-template-folder-control .moc-settings-input:read-only {
+    background-color: var(--background-modifier-form-neutral);
+    cursor: not-allowed;
+}
+
+.moc-control-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-secondary);
+    color: var(--text-normal);
+    font-weight: 500;
+    font-size: var(--font-ui-small);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.moc-control-btn:hover {
+    background-color: var(--background-modifier-hover);
+    border-color: var(--text-accent);
+}
+
+.moc-control-edit-btn:hover {
+    color: var(--text-accent);
+}
+
+.moc-control-save-btn {
+    background-color: var(--text-accent);
+    color: var(--background-primary);
+    border-color: var(--text-accent);
+}
+
+.moc-control-save-btn:hover {
+    background-color: var(--text-accent);
+    opacity: 0.85;
+}
+
+.moc-hidden {
+    display: none;
+}
+
+/* ===== Rules List Compact ===== */
+.moc-rules-list-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.moc-rule-item-compact {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-secondary);
+    overflow: hidden;
+}
+
+.moc-rule-item-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.moc-rule-item-header:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.moc-rule-toggle-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    width: 16px;
+    flex-shrink: 0;
+    transition: color 0.2s;
+}
+
+.moc-rule-toggle-btn:hover {
+    color: var(--text-normal);
+}
+
+.moc-rule-item-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text-normal);
+}
+
+.moc-rule-type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background-color: var(--background-accent);
+    color: var(--text-accent);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.moc-rule-item-delete-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.moc-rule-item-delete-btn:hover {
+    opacity: 1;
+}
+
+.moc-rule-item-edit-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.moc-rule-item-edit-btn:hover {
+    opacity: 1;
+}
+
+.moc-rule-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background-color: var(--background-primary);
+    border-top: 1px solid var(--background-modifier-border);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.moc-rule-item-details.moc-collapsed {
+    display: none;
+}
+
+.moc-rule-detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.moc-rule-detail-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.moc-rule-detail-code {
+    padding: 6px 8px;
+    background-color: var(--background-secondary);
+    color: var(--text-normal);
+    border-radius: 3px;
+    font-family: var(--font-monospace);
+    font-size: 12px;
+    word-break: break-all;
+}
+
+/* ===== Add Rule Button ===== */
+.moc-add-rule-button-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+}
+
+.moc-add-rule-btn {
+    padding: 10px 18px;
+    background: linear-gradient(135deg, var(--text-accent) 0%, var(--background-accent) 100%);
+    color: var(--background-primary);
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: var(--font-ui-small);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.3px;
+}
+
+.moc-add-rule-btn:hover {
+    background: linear-gradient(135deg, var(--background-accent) 0%, var(--text-accent) 100%);
+    box-shadow: 0 4px 12px rgba(var(--color-accent-rgb), 0.2);
+    transform: translateY(-1px);
+}
+
+.moc-add-rule-btn:active {
+    transform: translateY(0);
+}
+
+.moc-add-rule-btn.moc-active {
+    background: linear-gradient(135deg, var(--text-error-hover) 0%, var(--text-error) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.2);
+}
+
+.moc-add-rule-btn.moc-active:hover {
+    box-shadow: 0 6px 16px rgba(255, 0, 0, 0.3);
+}
+
+/* ===== Form Buttons ===== */
+.moc-form-buttons {
+    display: flex;
+    gap: 8px;
     margin-top: 8px;
+}
+
+.moc-form-submit-btn,
+.moc-form-cancel-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: var(--font-ui-small);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.moc-form-submit-btn {
+    background-color: var(--text-accent);
+    color: var(--background-primary);
+}
+
+.moc-form-submit-btn:hover {
+    background-color: var(--text-accent-hover);
+}
+
+.moc-form-cancel-btn {
+    background-color: var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+.moc-form-cancel-btn:hover {
+    background-color: var(--text-muted);
+    color: var(--background-primary);
+}
+
+.moc-settings-empty-state {
+    padding: 20px 12px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
 }

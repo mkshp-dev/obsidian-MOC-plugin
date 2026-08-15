@@ -232,8 +232,9 @@ export function evaluateFrontmatter(frontmatter: Record<string, unknown> | null 
             const frontmatterValue = frontmatter[condition.propKey as string];
             const expectedValue = condition.propValue;
 
-            if (op === '==') return frontmatterValue == expectedValue;
-            if (op === '!=') return frontmatterValue != expectedValue;
+            const valuesEqual = areFrontmatterValuesEqual(frontmatterValue, expectedValue);
+            if (op === '==') return valuesEqual;
+            if (op === '!=') return !valuesEqual;
 
             let left: string | number | boolean = String(frontmatterValue);
             let right: string | number | boolean = String(expectedValue);
@@ -262,6 +263,21 @@ export function evaluateFrontmatter(frontmatter: Record<string, unknown> | null 
         return null; // Not a property condition, cannot evaluate at file level
     }
     return null;
+}
+
+function areFrontmatterValuesEqual(frontmatterValue: unknown, expectedValue: unknown): boolean {
+    if (typeof frontmatterValue === 'boolean') {
+        return typeof expectedValue === 'string' &&
+            (expectedValue === 'true' || expectedValue === 'false') &&
+            frontmatterValue === (expectedValue === 'true');
+    }
+
+    if (typeof frontmatterValue === 'number') {
+        const expectedNumber = Number(expectedValue);
+        return Number.isFinite(expectedNumber) && frontmatterValue === expectedNumber;
+    }
+
+    return String(frontmatterValue) === String(expectedValue);
 }
 
 export function evaluateFilter(text: string, node: ASTNode, isCompletedTask?: boolean): boolean {
@@ -757,9 +773,47 @@ export async function generateMocMarkdown(
     }
 
     if (config.template) {
+        // Template must refer to a file in settings.templateFolder
+        const templateFolder = (settings.templateFolder || '').trim().replace(/^\/+|\/+$/g, '');
+        
+        if (templateFolder === '') {
+            return { error: "Error: Template folder not configured in settings.", cls: 'moc-error' };
+        }
+
+        let templateFile: TFile | null = null;
+
+        // Try to find the template file
+        const pathWithExt = `${templateFolder}/${config.template}.md`;
+        const pathDirect = `${templateFolder}/${config.template}`;
+        const fileDirect = app.vault.getAbstractFileByPath(pathWithExt) || app.vault.getAbstractFileByPath(pathDirect);
+        if (fileDirect instanceof TFile) {
+            templateFile = fileDirect;
+        }
+
+        if (!templateFile) {
+            // Search by basename in templateFolder
+            const files = app.vault.getMarkdownFiles();
+            const matchedFile = files.find(f => {
+                const parentPath = f.parent ? f.parent.path.replace(/^\/+|\/+$/g, '') : '';
+                if (parentPath !== templateFolder && !parentPath.startsWith(templateFolder + '/')) {
+                    return false;
+                }
+                return f.basename === config.template || f.path === config.template || f.path === `${config.template}.md`;
+            });
+            if (matchedFile) {
+                templateFile = matchedFile;
+            }
+        }
+
+        if (!templateFile) {
+            return { error: `Error: Template file '${config.template}' not found in template folder '${templateFolder}'.`, cls: 'moc-error' };
+        }
+
+        const templateContent = await app.vault.cachedRead(templateFile);
+
         for (const block of matchedBlocks) {
             const blockText = block.lines.join('\n');
-            const replacedText = applyTemplate(blockText, config.template, block.file);
+            const replacedText = applyTemplate(blockText, templateContent, block.file);
             block.lines = replacedText.split(/\r?\n/);
             block.tags = extractTags(replacedText);
         }

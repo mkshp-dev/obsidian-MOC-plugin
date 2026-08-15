@@ -1,5 +1,6 @@
-import {App, Notice, PluginSettingTab, Setting} from "obsidian";
+import {App, Notice, PluginSettingTab, Setting, SettingDefinition} from "obsidian";
 import MOCPlugin from "./main";
+import { FolderSuggest } from "./ui/moc-wizard-suggests";
 
 export interface FindReplaceRule {
 	name: string;
@@ -9,10 +10,12 @@ export interface FindReplaceRule {
 
 export interface MOCPluginSettings {
 	rules: FindReplaceRule[];
+	templateFolder: string;
 }
 
 export const DEFAULT_SETTINGS: MOCPluginSettings = {
-	rules: []
+	rules: [],
+	templateFolder: "",
 }
 
 export class MOCSettingTab extends PluginSettingTab {
@@ -26,6 +29,24 @@ export class MOCSettingTab extends PluginSettingTab {
 	display(): void {
 		const {containerEl} = this;
 		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName('Templates')
+			.setHeading()
+			.setDesc('Configure templates for custom block formatting.');
+
+		new Setting(containerEl)
+			.setName('Template folder')
+			.setDesc('Vault folder containing your template files (for example: templates)')
+			.addText(text => {
+				text.setPlaceholder('Example: templates')
+					.setValue(this.plugin.settings.templateFolder || '')
+					.onChange(async value => {
+						this.plugin.settings.templateFolder = value.trim();
+						await this.plugin.saveSettings();
+					});
+				new FolderSuggest(this.app, text.inputEl, { allowVaultRoot: false, allowDynamic: false });
+			});
 
 		new Setting(containerEl)
 			.setName('Find and replace rules')
@@ -143,25 +164,8 @@ export class MOCSettingTab extends PluginSettingTab {
 				}));
 	}
 
-	getSettingDefinitions() {
-		return [
-			{
-				name: 'Find and replace rules',
-				description: 'Define reusable find and replace rules that can be applied to blocks via find and replace settings.',
-			},
-			{
-				name: 'Rule name',
-				description: 'A unique name to reference in code blocks (for example, clean-headers)',
-			},
-			{
-				name: 'Find pattern',
-				description: 'Literal text or regex pattern (e.g. /^#+\\s+/gm or #todo)',
-			},
-			{
-				name: 'Replace with',
-				description: 'Text to replace the pattern with (leave blank to remove matches)',
-			},
-		];
+	getSettingDefinitions(): SettingDefinition[] {
+		return [];
 	}
 }
 

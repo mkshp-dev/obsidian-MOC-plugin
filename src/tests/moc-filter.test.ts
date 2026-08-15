@@ -218,6 +218,23 @@ void describe('MOC Filter - Property/Frontmatter Evaluation', () => {
         assert.strictEqual(evaluateFrontmatter({ status: "active" }, filterNeq), true);
         assert.strictEqual(evaluateFrontmatter({ status: "done" }, filterNeq), false);
     });
+
+    void test('Comparison operators - boolean/checkbox values', () => {
+        const filterTrue = parseFilter('properties(archived == true)');
+        assert.ok(filterTrue);
+        assert.strictEqual(evaluateFrontmatter({ archived: true }, filterTrue), true);
+        assert.strictEqual(evaluateFrontmatter({ archived: false }, filterTrue), false);
+
+        const filterFalse = parseFilter('properties(archived == false)');
+        assert.ok(filterFalse);
+        assert.strictEqual(evaluateFrontmatter({ archived: false }, filterFalse), true);
+        assert.strictEqual(evaluateFrontmatter({ archived: true }, filterFalse), false);
+
+        const filterNeq = parseFilter('properties(archived != true)');
+        assert.ok(filterNeq);
+        assert.strictEqual(evaluateFrontmatter({ archived: false }, filterNeq), true);
+        assert.strictEqual(evaluateFrontmatter({ archived: true }, filterNeq), false);
+    });
 });
 
 void describe('MOC Filter - Malformed Filter Handling', () => {
@@ -322,6 +339,15 @@ void describe('MOC Template', () => {
         assert.strictEqual(
             applyTemplate(text, '- {{content}} — [[{{path}}|{{file}}]]', mockFile),
             '- - [ ] Task 1 — [[folder/my-file.md|my-file]]'
+        );
+    });
+
+    void test('multi-line template replacement', () => {
+        const text = 'Block quote content';
+        const multilineTemplate = `> {{content}}\n> — [[{{path}}|{{file}}]]`;
+        assert.strictEqual(
+            applyTemplate(text, multilineTemplate, mockFile),
+            `> Block quote content\n> — [[folder/my-file.md|my-file]]`
         );
     });
 

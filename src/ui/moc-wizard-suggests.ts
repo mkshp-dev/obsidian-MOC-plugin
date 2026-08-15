@@ -1,4 +1,5 @@
-import { App, AbstractInputSuggest, TFolder } from 'obsidian';
+import { App, AbstractInputSuggest, setIcon, TFolder } from 'obsidian';
+import { FilterPropertyValueType } from './moc-filter-builder';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -21,6 +22,49 @@ export function getFrontmatterKeys(app: App, folderPath: string): string[] {
         }
     }
     return Array.from(keys).sort();
+}
+
+export interface FrontmatterPropertyOption {
+    key: string;
+    type: FilterPropertyValueType;
+}
+
+export function getFrontmatterPropertyOptions(app: App, folderPath: string): FrontmatterPropertyOption[] {
+    const options = new Map<string, FrontmatterPropertyOption>();
+    const normalized = folderPath.trim().replace(/^\/+|\/+$/g, '');
+
+    for (const file of app.vault.getMarkdownFiles()) {
+        const parentPath = file.parent ? file.parent.path.replace(/^\/+|\/+$/g, '') : '';
+        const inFolder = normalized === '' || parentPath === normalized || parentPath.startsWith(normalized + '/');
+        if (!inFolder) continue;
+
+        const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
+        if (!frontmatter) continue;
+
+        for (const [key, value] of Object.entries(frontmatter)) {
+            if (key === 'position') continue;
+            const type = getFrontmatterValueType(value);
+            if (!type) continue;
+            options.set(`${key}\u0000${type}`, { key, type });
+        }
+    }
+
+    return Array.from(options.values()).sort((left, right) =>
+        left.key.localeCompare(right.key) || left.type.localeCompare(right.type)
+    );
+}
+
+function getFrontmatterValueType(value: unknown): FilterPropertyValueType | null {
+    if (typeof value === 'boolean') return 'checkbox';
+    if (typeof value === 'number' && Number.isFinite(value)) return 'number';
+    if (typeof value !== 'string') return null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return 'date';
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(value)) {
+        return 'datetime';
+    }
+
+    return 'text';
 }
 
 export function getKnownTags(app: App): string[] {
@@ -54,24 +98,51 @@ export function getKnownTags(app: App): string[] {
     return Array.from(tags).sort();
 }
 
-// ─── FolderSuggest ───────────────────────────────────────────────────────────
-// Used on the main "folder" field. Suggests all vault folders.
+const DYNAMIC_FOLDER_PARAMETERS = [
+    '{{this.folder}}',
+];
+
+export interface FolderSuggestOptions {
+    allowVaultRoot?: boolean;
+    allowDynamic?: boolean;
+}
 
 export class FolderSuggest extends AbstractInputSuggest<string> {
     private inputEl: HTMLInputElement;
+    private options: FolderSuggestOptions;
 
-    constructor(app: App, inputEl: HTMLInputElement) {
+    constructor(app: App, inputEl: HTMLInputElement, options?: FolderSuggestOptions) {
         super(app, inputEl);
         this.inputEl = inputEl;
+        this.options = Object.assign({ allowVaultRoot: true, allowDynamic: true }, options);
     }
 
     getSuggestions(query: string): string[] {
         const lower = query.toLowerCase();
+        const cursor = this.inputEl.selectionStart ?? query.length;
+        const before = query.substring(0, cursor);
+        const openBrace = before.lastIndexOf('{{');
+
+        // If user typed {{, suggest dynamic parameters if allowed
+        if (this.options.allowDynamic && openBrace !== -1 && before.indexOf('}}', openBrace) === -1) {
+            const partial = before.substring(openBrace).toLowerCase();
+            return DYNAMIC_FOLDER_PARAMETERS.filter(p => p.toLowerCase().startsWith(partial));
+        }
+
         const results: string[] = [];
 
-        // Include vault root option when query is empty or matches
-        if (lower === '' || '(entire vault)'.includes(lower)) {
+        // Include vault root option when query is empty or matches and allowed
+        if (this.options.allowVaultRoot && (lower === '' || '(entire vault)'.includes(lower))) {
             results.push('');
+        }
+
+        // Include dynamic parameter options when relevant and allowed
+        if (this.options.allowDynamic) {
+            for (const param of DYNAMIC_FOLDER_PARAMETERS) {
+                if (lower === '' || param.toLowerCase().contains(lower)) {
+                    results.push(param);
+                }
+            }
         }
 
         for (const f of this.app.vault.getAllLoadedFiles()) {
@@ -83,16 +154,40 @@ export class FolderSuggest extends AbstractInputSuggest<string> {
         return results.sort((a, b) => {
             if (a === '') return -1;
             if (b === '') return 1;
+            const aIsDynamic = a.startsWith('{{');
+            const bIsDynamic = b.startsWith('{{');
+            if (aIsDynamic && !bIsDynamic) return -1;
+            if (!aIsDynamic && bIsDynamic) return 1;
             return a.localeCompare(b);
         });
     }
 
     renderSuggestion(value: string, el: HTMLElement): void {
-        el.setText(value || '/ (entire vault)');
+        if (value === '') {
+            el.setText('/ (entire vault)');
+        } else if (value.startsWith('{{')) {
+            el.createSpan({ text: value, cls: 'moc-dynamic-parameter-suggestion' });
+            el.createSpan({ text: ' (current note)', cls: 'moc-dynamic-parameter-desc' });
+        } else {
+            el.setText(value);
+        }
     }
 
     selectSuggestion(value: string): void {
-        this.inputEl.value = value;
+        const cursor = this.inputEl.selectionStart ?? this.inputEl.value.length;
+        const full = this.inputEl.value;
+        const before = full.substring(0, cursor);
+        const openBrace = before.lastIndexOf('{{');
+
+        if (openBrace !== -1 && before.indexOf('}}', openBrace) === -1) {
+            const newValue = full.substring(0, openBrace) + value + full.substring(cursor);
+            this.inputEl.value = newValue;
+            const newCursor = openBrace + value.length;
+            this.inputEl.setSelectionRange(newCursor, newCursor);
+        } else {
+            this.inputEl.value = value;
+        }
+
         this.inputEl.dispatchEvent(new Event('input'));
         this.close();
     }
@@ -115,7 +210,7 @@ export class MultiTokenFolderSuggest extends AbstractInputSuggest<string> {
     private currentToken(value: string): string {
         const parts = value.split(',');
         const lastPart = parts.pop() ?? '';
-        return lastPart.trimStart();
+        return lastPart.replace(/^\s+/, '');
     }
 
     getSuggestions(query: string): string[] {
@@ -172,7 +267,7 @@ export class MultiTokenFileSuggest extends AbstractInputSuggest<string> {
     private currentToken(value: string): string {
         const parts = value.split(',');
         const lastPart = parts.pop() ?? '';
-        return lastPart.trimStart();
+        return lastPart.replace(/^\s+/, '');
     }
 
     getSuggestions(query: string): string[] {
@@ -240,13 +335,155 @@ export class PropertyKeySuggest extends AbstractInputSuggest<string> {
     }
 }
 
-// ─── TemplateSuggest ─────────────────────────────────────────────────────────
-// Used on the template textarea. Triggers when the user types {{ and suggests
-// the four available placeholders.
+// ─── TypedPropertySuggest ───────────────────────────────────────────────────
+// Used by the visual filter builder. It keeps a key/type pair so the UI can
+// select an appropriate control without relying on Obsidian private APIs.
 
-const TEMPLATE_PLACEHOLDERS = ['{{content}}', '{{file}}', '{{path}}', '{{link}}'];
+export class TypedPropertySuggest extends AbstractInputSuggest<FrontmatterPropertyOption> {
+    private inputEl: HTMLInputElement;
+    private getFolder: () => string;
+    private onSelectCallback: (option: FrontmatterPropertyOption) => void;
+
+    constructor(
+        app: App,
+        inputEl: HTMLInputElement,
+        getFolder: () => string,
+        onSelectCallback: (option: FrontmatterPropertyOption) => void,
+    ) {
+        super(app, inputEl);
+        this.inputEl = inputEl;
+        this.getFolder = getFolder;
+        this.onSelectCallback = onSelectCallback;
+    }
+
+    getSuggestions(query: string): FrontmatterPropertyOption[] {
+        const lower = query.toLowerCase();
+        return getFrontmatterPropertyOptions(this.app, this.getFolder())
+            .filter(option => option.key.toLowerCase().contains(lower));
+    }
+
+    renderSuggestion(option: FrontmatterPropertyOption, el: HTMLElement): void {
+        const iconEl = el.createSpan({ cls: 'moc-property-suggest-icon' });
+        setIcon(iconEl, getPropertyTypeIcon(option.type));
+        el.createSpan({ text: option.key });
+    }
+
+    selectSuggestion(option: FrontmatterPropertyOption): void {
+        this.inputEl.value = option.key;
+        this.onSelectCallback(option);
+        this.inputEl.dispatchEvent(new Event('input'));
+        this.close();
+    }
+}
+
+export function getPropertyTypeLabel(type: FilterPropertyValueType): string {
+    const labels: Record<FilterPropertyValueType, string> = {
+        text: 'Text',
+        number: 'Number',
+        date: 'Date',
+        datetime: 'Date and time',
+        checkbox: 'Checkbox',
+    };
+    return labels[type];
+}
+
+function getPropertyTypeIcon(type: FilterPropertyValueType): string {
+    const icons: Record<FilterPropertyValueType, string> = {
+        text: 'lucide-align-left',
+        number: 'binary',
+        date: 'calendar',
+        datetime: 'clock',
+        checkbox: 'check-square',
+    };
+    return icons[type];
+}
+
+// ─── TagSuggest ──────────────────────────────────────────────────────────────
+// Used by the visual filter builder. Suggests real tags from the metadata cache.
+
+export class TagSuggest extends AbstractInputSuggest<string> {
+    private inputEl: HTMLInputElement;
+
+    constructor(app: App, inputEl: HTMLInputElement) {
+        super(app, inputEl);
+        this.inputEl = inputEl;
+    }
+
+    getSuggestions(query: string): string[] {
+        const lower = query.toLowerCase();
+        return getKnownTags(this.app)
+            .filter(tag => tag.toLowerCase().contains(lower));
+    }
+
+    renderSuggestion(value: string, el: HTMLElement): void {
+        el.setText(value);
+    }
+
+    selectSuggestion(value: string): void {
+        this.inputEl.value = value;
+        this.inputEl.dispatchEvent(new Event('input'));
+        this.close();
+    }
+}
+
+// ─── TemplateSuggest ─────────────────────────────────────────────────────────
+// Used on the template field. Suggests template files from the configured template folder.
 
 export class TemplateSuggest extends AbstractInputSuggest<string> {
+    private inputEl: HTMLInputElement;
+    private getTemplateFolder: () => string;
+
+    constructor(app: App, inputEl: HTMLInputElement, getTemplateFolder: () => string) {
+        super(app, inputEl);
+        this.inputEl = inputEl;
+        this.getTemplateFolder = getTemplateFolder;
+    }
+
+    getSuggestions(query: string): string[] {
+        // Suggest template files from the configured templateFolder
+        const lower = query.toLowerCase().trim();
+        const templateFolder = this.getTemplateFolder().trim().replace(/^\/+|\/+$/g, '');
+        const files: string[] = [];
+
+        if (templateFolder === '') {
+            // If no template folder is configured, don't suggest anything
+            return [];
+        }
+
+        for (const file of this.app.vault.getMarkdownFiles()) {
+            const parentPath = file.parent ? file.parent.path.replace(/^\/+|\/+$/g, '') : '';
+            if (parentPath !== templateFolder && !parentPath.startsWith(templateFolder + '/')) {
+                continue;
+            }
+            const name = file.basename;
+            if (lower === '' || name.toLowerCase().includes(lower) || file.path.toLowerCase().includes(lower)) {
+                files.push(name);
+            }
+        }
+
+        return Array.from(new Set(files)).sort((a, b) => a.localeCompare(b));
+    }
+
+    renderSuggestion(value: string, el: HTMLElement): void {
+        const iconEl = el.createSpan({ cls: 'moc-property-suggest-icon' });
+        setIcon(iconEl, 'file-text');
+        el.createSpan({ text: value });
+    }
+
+    selectSuggestion(value: string): void {
+        this.inputEl.value = value;
+        this.inputEl.dispatchEvent(new Event('input'));
+        this.close();
+    }
+}
+
+const DYNAMIC_FILTER_PARAMETERS = [
+    '{{this.filename}}',
+    '{{this.folder}}',
+    '{{this.path}}',
+];
+
+export class DynamicParameterSuggest extends AbstractInputSuggest<string> {
     private inputEl: HTMLInputElement;
 
     constructor(app: App, inputEl: HTMLInputElement) {
@@ -259,16 +496,14 @@ export class TemplateSuggest extends AbstractInputSuggest<string> {
         const before = query.substring(0, cursor);
         const openBrace = before.lastIndexOf('{{');
         if (openBrace === -1) return [];
-        // Don't suggest if already closed
         if (before.indexOf('}}', openBrace) !== -1) return [];
-        const partial = before.substring(openBrace + 2).toLowerCase();
-        return TEMPLATE_PLACEHOLDERS.filter(p =>
-            p.replace(/^\{\{|\}\}$/g, '').toLowerCase().startsWith(partial)
-        );
+        const partial = before.substring(openBrace).toLowerCase();
+        return DYNAMIC_FILTER_PARAMETERS.filter(p => p.toLowerCase().startsWith(partial));
     }
 
     renderSuggestion(value: string, el: HTMLElement): void {
-        el.setText(value);
+        el.createSpan({ text: value, cls: 'moc-dynamic-parameter-suggestion' });
+        el.createSpan({ text: ' (current note)', cls: 'moc-dynamic-parameter-desc' });
     }
 
     selectSuggestion(value: string): void {
@@ -312,6 +547,13 @@ export class FilterSuggest extends AbstractInputSuggest<string> {
     getSuggestions(inputStr: string): string[] {
         const cursor = this.inputEl.selectionStart ?? inputStr.length;
         const before = inputStr.substring(0, cursor);
+
+        // Context 0: dynamic parameters inside {{
+        const openBrace = before.lastIndexOf('{{');
+        if (openBrace !== -1 && before.indexOf('}}', openBrace) === -1) {
+            const partial = before.substring(openBrace).toLowerCase();
+            return DYNAMIC_FILTER_PARAMETERS.filter(p => p.toLowerCase().startsWith(partial));
+        }
 
         // Context 1: completing a property key inside properties(key...
         const propKeyMatch = before.match(/properties\(\s*([a-zA-Z0-9_-]*)$/);
@@ -376,13 +618,29 @@ export class FilterSuggest extends AbstractInputSuggest<string> {
     }
 
     renderSuggestion(suggestion: string, el: HTMLElement): void {
-        el.setText(suggestion);
+        if (suggestion.startsWith('{{')) {
+            el.createSpan({ text: suggestion, cls: 'moc-dynamic-parameter-suggestion' });
+            el.createSpan({ text: ' (current note)', cls: 'moc-dynamic-parameter-desc' });
+        } else {
+            el.setText(suggestion);
+        }
     }
 
     selectSuggestion(suggestion: string): void {
         const cursor = this.inputEl.selectionStart ?? this.inputEl.value.length;
         const inputStr = this.inputEl.value;
         const before = inputStr.substring(0, cursor);
+
+        // Context 0: dynamic parameters inside {{
+        const openBrace = before.lastIndexOf('{{');
+        if (openBrace !== -1 && before.indexOf('}}', openBrace) === -1 && suggestion.startsWith('{{')) {
+            const newValue = inputStr.substring(0, openBrace) + suggestion + inputStr.substring(cursor);
+            this.inputEl.value = newValue;
+            const newPos = openBrace + suggestion.length;
+            this.inputEl.setSelectionRange(newPos, newPos);
+            this.inputEl.dispatchEvent(new Event('input'));
+            return;
+        }
 
         // Context 1: splice a property key into properties(
         const propKeyMatch = before.match(/^(.*properties\(\s*)([a-zA-Z0-9_-]*)$/);

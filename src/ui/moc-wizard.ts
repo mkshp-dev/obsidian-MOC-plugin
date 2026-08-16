@@ -52,15 +52,29 @@ export class MocWizardModal extends Modal {
         this.plugin = plugin;
     }
 
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.empty();
+    createWizardSection(containerEl: HTMLElement, icon: string, title: string): { body: HTMLElement; titleEl: HTMLElement } {
+        const section = containerEl.createDiv({ cls: 'moc-wizard-section' });
+        const header = section.createDiv({ cls: 'moc-wizard-section-header' });
 
-        contentEl.createEl('h2', { text: 'Create map of content block' });
+        const iconEl = header.createDiv({ cls: 'moc-wizard-section-icon' });
+        setIcon(iconEl, icon);
+
+        const titleEl = header.createDiv({ cls: 'moc-wizard-section-title', text: title });
+
+        const body = section.createDiv({ cls: 'moc-wizard-section-body' });
+        return { body, titleEl };
+    }
+
+    onOpen() {
+        const { contentEl, modalEl } = this;
+        contentEl.empty();
+        modalEl.addClass('moc-wizard-modal');
+
+        contentEl.createDiv({ cls: 'moc-wizard-title', text: 'Create map of content block' });
 
         // Source section
-        contentEl.createEl('h3', { text: 'Source' });
-        const sourceContainer = contentEl.createDiv({ cls: 'moc-source-container' });
+        const { body: sourceContainer } = this.createWizardSection(contentEl, 'folder', 'Source');
+        sourceContainer.addClass('moc-source-container');
 
         // Folder row with Recursive toggle
         const folderRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
@@ -144,20 +158,17 @@ export class MocWizardModal extends Modal {
         };
         new MultiTokenFileSuggest(this.app, excludeFileInput, () => this.folder);
 
-        const filtersHeading = contentEl.createEl('h3', { text: 'Filters' });
-        filtersHeading.createSpan({ text: ' *', cls: 'moc-mandatory-marker' });
-        const filterBuilderContainer = contentEl.createDiv();
+        const { body: filterBuilderContainer, titleEl: filtersTitleEl } = this.createWizardSection(contentEl, 'list-filter', 'Filters');
+        filtersTitleEl.createSpan({ text: ' *', cls: 'moc-mandatory-marker' });
         this.renderFilterBuilder(filterBuilderContainer);
 
-        contentEl.createEl('h3', { text: 'Shaping' });
-
-        const resultShapingContainer = contentEl.createDiv({ cls: 'moc-result-shaping-container' });
+        const { body: resultShapingContainer } = this.createWizardSection(contentEl, 'sliders-horizontal', 'Shaping');
+        resultShapingContainer.addClass('moc-result-shaping-container');
         this.renderResultShaping(resultShapingContainer);
 
-        contentEl.createEl('h3', { text: 'Result manipulations' });
-        
-        const resultManipContainer = contentEl.createDiv({ cls: 'moc-result-manip-container' });
-        
+        const { body: resultManipContainer } = this.createWizardSection(contentEl, 'wand-2', 'Result manipulations');
+        resultManipContainer.addClass('moc-result-manip-container');
+
         // Template row
         const templateRow = resultManipContainer.createDiv({ cls: 'moc-shaping-row' });
         const templateLabel = templateRow.createSpan({ text: 'Template', cls: 'moc-shaping-title' });
@@ -218,7 +229,8 @@ export class MocWizardModal extends Modal {
         const ruleChainContainer = resultManipContainer.createDiv({ cls: 'moc-rule-chain-container' });
         this.renderRuleChain(ruleChainContainer);
 
-        new Setting(contentEl)
+        const footerEl = contentEl.createDiv({ cls: 'moc-wizard-footer' });
+        new Setting(footerEl)
             .addButton(btn => btn
                 .setButtonText('Insert block')
                 .setCta()
@@ -410,9 +422,11 @@ export class MocWizardModal extends Modal {
         });
 
         const toggleButton = toolbarEl.createEl('button', {
-            text: this.isRawFilterMode ? 'Visual mode' : 'Code mode',
             cls: 'moc-filter-builder-toggle',
         });
+        const toggleIcon = toggleButton.createSpan({ cls: 'moc-btn-icon' });
+        setIcon(toggleIcon, this.isRawFilterMode ? 'sliders-horizontal' : 'code-2');
+        toggleButton.createSpan({ text: this.isRawFilterMode ? 'Visual mode' : 'Code mode' });
         toggleButton.onClickEvent((event) => {
             event.preventDefault();
             if (!this.isRawFilterMode) {
@@ -469,9 +483,10 @@ export class MocWizardModal extends Modal {
 
         if (!isRoot) {
             const deleteButton = headerEl.createEl('button', {
-                text: 'Delete group',
-                cls: 'moc-filter-delete-button',
+                cls: 'clickable-icon moc-filter-delete-button',
+                attr: { 'aria-label': 'Delete group' },
             });
+            setIcon(deleteButton, 'trash-2');
             deleteButton.onClickEvent((event) => {
                 event.preventDefault();
                 this.removeFilterNode(this.filterRoot, group.id);
@@ -493,9 +508,11 @@ export class MocWizardModal extends Modal {
 
         const actionsEl = groupEl.createDiv({ cls: 'moc-filter-group-actions' });
         const addFilterButton = actionsEl.createEl('button', {
-            text: '+ add filter',
             cls: 'moc-filter-action-button',
         });
+        const addFilterIcon = addFilterButton.createSpan({ cls: 'moc-btn-icon' });
+        setIcon(addFilterIcon, 'plus');
+        addFilterButton.createSpan({ text: 'Add filter' });
         addFilterButton.onClickEvent((event) => {
             event.preventDefault();
             group.children.push(createDefaultFilterRule());
@@ -503,9 +520,11 @@ export class MocWizardModal extends Modal {
         });
 
         const addGroupButton = actionsEl.createEl('button', {
-            text: '+ add filter group',
             cls: 'moc-filter-action-button',
         });
+        const addGroupIcon = addGroupButton.createSpan({ cls: 'moc-btn-icon' });
+        setIcon(addGroupIcon, 'plus');
+        addGroupButton.createSpan({ text: 'Add filter group' });
         addGroupButton.onClickEvent((event) => {
             event.preventDefault();
             group.children.push(createDefaultFilterGroup());
@@ -588,9 +607,10 @@ export class MocWizardModal extends Modal {
         codeEl.toggleClass('is-empty', this.compileRulePreview(rule) === '');
 
         const deleteButton = rowEl.createEl('button', {
-            text: 'Delete',
-            cls: 'moc-filter-delete-button',
+            cls: 'clickable-icon moc-filter-delete-button',
+            attr: { 'aria-label': 'Delete filter' },
         });
+        setIcon(deleteButton, 'trash-2');
         deleteButton.onClickEvent((event) => {
             event.preventDefault();
             parent.children = parent.children.filter(child => child.id !== rule.id);

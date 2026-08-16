@@ -29,9 +29,10 @@ without writing a single line of YAML manually.
 | [[06 - Grouping and sorting]] | \`groupBy\`, \`sort\`, \`showCount\` |
 | [[07 - Limit offset and pagination]] | \`limit\`, \`offset\` |
 | [[08 - Exclude folders and files]] | \`excludeFolder\`, \`excludeFile\` |
-| [[09 - Template output formatting]] | \`template\` placeholders |
+| [[09 - Template output formatting]] | \`template\` (template notes) |
 | [[10 - Find and replace rules]] | \`applyFnR\`, settings rules |
 | [[11 - Copy Bake and live refresh]] | Toolbar buttons, auto-refresh |
+| [[12 - Separators and dynamic parameters]] | \`blockSeparator\`, \`noteSeparator\`, \`{{this.folder}}\` |
 `,
     },
 
@@ -137,6 +138,18 @@ This note lives in a subfolder that is excluded in the showcase examples.
 - Neither should this one
 
 `,
+    },
+
+    // -----------------------------------------------------------------------
+    // Template notes (used by the `template` option, see note 09)
+    // -----------------------------------------------------------------------
+    {
+        path: `${SHOWCASE_FOLDER}/templates/bullet-link.md`,
+        content: `- {{content}} — {{link}}\n`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/templates/compact-table.md`,
+        content: `| {{file}} | {{content}} |\n`,
     },
 
     // -----------------------------------------------------------------------
@@ -438,10 +451,12 @@ excludeFile: ["${SHOWCASE_FOLDER}/data/Meeting Notes Gamma"]
         path: `${SHOWCASE_FOLDER}/09 - Template output formatting.md`,
         content: `# 09 — Template output formatting
 
-The \`template\` option lets you customise how each matched element is rendered,
+The \`template\` option lets you customise how each matched element is rendered.
+Unlike other options, \`template\` does **not** take inline text — it takes the
+**name of a template note**, and that note's content is the format string,
 using \`{{placeholder}}\` syntax.
 
-Available placeholders:
+Available placeholders (used inside the template note):
 
 | Placeholder | Value |
 |-------------|-------|
@@ -450,6 +465,17 @@ Available placeholders:
 | \`{{path}}\` | Source file path (relative to vault root) |
 | \`{{link}}\` | Wiki-link to the source file |
 
+## Set up the template folder first
+
+Before the blocks below work, point the plugin at this showcase's template notes:
+
+1. Open **Settings → Maps of Content**.
+2. Set **Template folder** to \`${SHOWCASE_FOLDER}/templates\`.
+
+Two template notes were already created for you:
+- [[bullet-link]] — contains \`- {{content}} — {{link}}\`
+- [[compact-table]] — contains \`| {{file}} | {{content}} |\`
+
 ### Render each match as a linked bullet
 
 \`\`\`moc
@@ -457,7 +483,7 @@ folder: ${SHOWCASE_FOLDER}/data
 element: Blockquote
 filter: has_tag("#decision")
 recursive: true
-template: "- {{content}} — {{link}}"
+template: bullet-link
 \`\`\`
 
 ### Compact table-style output
@@ -467,10 +493,11 @@ folder: ${SHOWCASE_FOLDER}/data
 element: Paragraph
 filter: contains("approved") OR contains("archived")
 recursive: true
-template: "| {{file}} | {{content}} |"
+template: compact-table
 \`\`\`
 
 **What to notice:**
+- \`template\` references a note by name, resolved inside the configured **Template folder**.
 - \`template\` is applied after \`applyFnR\` find-and-replace rules.
 - Multi-line elements are passed as a single string to the template.
 `,
@@ -488,11 +515,11 @@ and can be reused across multiple MOC blocks.
 Before the blocks below work, you need to define a rule in settings:
 
 1. Open **Settings → Maps of Content**.
-2. Under **Add new rule**, fill in:
+2. Under **Find and replace**, select **+ Add rule** and fill in:
    - **Rule name**: \`strip-hashes\`
    - **Find pattern**: \`/^#{1,6}\\s+/gm\`
    - **Replace with**: *(leave empty)*
-3. Select **Add rule**.
+3. Select **Add rule** to save it.
 
 ## Apply a single rule
 
@@ -565,6 +592,67 @@ folder is created, modified, or deleted — no need to close and reopen the note
 4. Save. Watch the block above update within half a second.
 
 > The refresh is debounced (500 ms) to avoid flickering on rapid saves.
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/12 - Separators and dynamic parameters.md`,
+        content: `# 12 — Separators and dynamic parameters
+
+## Block & note separators
+
+\`blockSeparator\` controls the spacing between multiple matched blocks from the
+**same** note. \`noteSeparator\` controls the spacing between blocks from
+**different** notes.
+
+### Block separator: divider between blocks in the same note
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+blockSeparator: divider
+\`\`\`
+
+### Note separator: no extra spacing between notes
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+noteSeparator: none
+\`\`\`
+
+**What to notice:**
+- \`blockSeparator\` values: \`none\` (default), \`divider\` (\`---\`), \`newline\` (blank line).
+- \`noteSeparator\` values: \`newline\` (default), \`divider\` (\`---\`), \`none\`.
+- "Meeting Notes Alpha" has two incomplete tasks, so it's the easiest note to see \`blockSeparator\` on.
+
+## Dynamic parameters
+
+Dynamic parameters let a \`moc\` block adapt to the note it's placed in — handy
+when reusing the same block template across many notes (e.g. one MOC note per
+project folder).
+
+- \`{{this.filename}}\` → current note's name (without \`.md\`)
+- \`{{this.folder}}\` → name of the folder containing the current note
+- \`{{this.path}}\` → current note's full path (without \`.md\`)
+
+This note lives directly inside \`${SHOWCASE_FOLDER}\`, so \`{{this.folder}}\`
+expands to \`${SHOWCASE_FOLDER}\` — the block below resolves to the same
+\`data\` folder used throughout this showcase:
+
+\`\`\`moc
+folder: {{this.folder}}/data
+element: List
+filter: contains("Action items")
+recursive: true
+\`\`\`
+
+**What to notice:**
+- Dynamic parameters work inside both \`folder\` and \`filter\`.
+- They're expanded relative to whichever note the \`moc\` block lives in, not the showcase notes specifically.
 `,
     },
 ];

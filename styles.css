@@ -69,31 +69,6 @@
     color: var(--text-normal);
 }
 
-.moc-rule-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background-color: var(--background-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-s);
-    margin-bottom: 8px;
-}
-
-.moc-rule-info {
-    flex-grow: 1;
-    font-size: var(--font-ui-small);
-}
-
-.moc-rule-actions {
-    margin-left: 12px;
-}
-
-.moc-no-rules {
-    color: var(--text-muted);
-    font-style: italic;
-}
-
 .moc-rule-chain-compact {
     display: flex;
     flex-direction: column;
@@ -154,6 +129,89 @@
     color: var(--text-error) !important;
 }
 
+/* ===== Wizard Modal Shell ===== */
+.moc-wizard-modal {
+    width: min(640px, 92vw);
+}
+
+.moc-wizard-modal .modal-content {
+    padding-top: 8px;
+}
+
+.moc-wizard-title {
+    font-size: var(--font-ui-larger);
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+    margin-bottom: 16px;
+}
+
+.moc-wizard-section {
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 14px;
+}
+
+.moc-wizard-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.moc-wizard-section-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background-color: rgba(var(--interactive-accent-rgb), 0.12);
+    color: var(--interactive-accent);
+}
+
+.moc-wizard-section-icon svg {
+    width: 15px;
+    height: 15px;
+}
+
+.moc-wizard-section-title {
+    font-size: var(--font-ui-medium);
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+}
+
+.moc-wizard-section-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.moc-wizard-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+    padding-top: 16px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.moc-wizard-footer .setting-item {
+    border: none;
+    padding: 0;
+    width: 100%;
+}
+
+.moc-btn-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.moc-btn-icon svg {
+    width: 13px;
+    height: 13px;
+}
+
 .moc-result-manip-container {
     display: flex;
     flex-direction: column;
@@ -192,18 +250,6 @@
     font-size: var(--font-ui-small);
     font-weight: 500;
     color: var(--text-normal);
-}
-
-.moc-fnr-heading {
-    margin-top: 8px;
-    margin-bottom: 8px;
-    font-size: var(--font-ui-medium);
-    font-weight: var(--font-semibold);
-    color: var(--text-normal);
-}
-
-.moc-optional-marker {
-    margin-left: 2px;
 }
 
 .moc-count {
@@ -256,18 +302,6 @@
     flex-direction: column;
     gap: 12px;
     margin: 12px 0;
-}
-
-.moc-shaping-section {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.moc-shaping-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
 }
 
 .moc-shaping-title {
@@ -420,7 +454,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .moc-filter-builder-title {
@@ -430,22 +464,42 @@
 }
 
 .moc-filter-builder-toggle,
-.moc-filter-action-button,
-.moc-filter-delete-button {
+.moc-filter-action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: var(--font-ui-small);
-    padding: 4px 8px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-muted);
+    cursor: pointer;
+    box-shadow: none;
+    transition: all 0.15s ease;
+}
+
+.moc-filter-builder-toggle:hover,
+.moc-filter-action-button:hover {
+    color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+    background-color: rgba(var(--interactive-accent-rgb), 0.08);
 }
 
 .moc-filter-group {
     border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-s);
-    padding: 10px;
-    margin: 8px 0;
-    background: var(--background-secondary);
+    border-radius: 9px;
+    padding: 12px;
+    margin: 10px 0;
+    background: var(--background-primary);
 }
 
 .moc-filter-group.is-root {
     background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
 }
 
 .moc-filter-group-header {
@@ -453,7 +507,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .moc-filter-group-mode {
@@ -494,8 +548,8 @@
 .moc-filter-rule-code,
 .moc-filter-builder-preview {
     border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-s);
-    background: var(--background-primary);
+    border-radius: 6px;
+    background: var(--background-secondary);
     color: var(--text-accent);
     font-family: var(--font-monospace);
     font-size: var(--font-ui-smaller);
@@ -509,7 +563,7 @@
 
 .moc-filter-builder-preview {
     display: block;
-    margin-top: 8px;
+    margin-top: 10px;
     white-space: normal;
     word-break: break-word;
 }
@@ -517,193 +571,96 @@
 .moc-filter-group-actions {
     display: flex;
     gap: 8px;
-    margin-top: 8px;
+    margin-top: 10px;
 }
 
 .moc-filter-delete-button {
-    color: var(--text-muted);
-}
-
-/* Settings Tab UI Enhancements */
-
-.moc-settings-desc {
-    color: var(--text-muted);
-    font-size: var(--font-ui-small);
-    margin-bottom: 16px;
-    line-height: 1.5;
-}
-
-.moc-settings-empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 24px 16px;
-    background-color: var(--background-secondary);
-    border: 1px dashed var(--border-color);
-    border-radius: var(--radius-m);
-    margin-bottom: 24px;
-    text-align: center;
-    color: var(--text-muted);
-}
-
-.moc-settings-empty-icon {
-    font-size: 24px;
-    margin-bottom: 8px;
-}
-
-.moc-rules-cards-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 24px;
-}
-
-.moc-rule-card {
-    background-color: var(--background-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-m);
-    padding: 12px 16px;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.moc-rule-card:hover {
-    border-color: var(--interactive-accent);
-}
-
-.moc-rule-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.moc-rule-card-title-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.moc-rule-card-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background-color: var(--interactive-accent);
-    color: var(--text-on-accent);
-    font-size: var(--font-ui-smaller);
-    font-weight: bold;
+    flex-shrink: 0;
+    color: var(--text-faint);
+    border-radius: 6px;
+    transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.moc-rule-card-name {
-    font-size: var(--font-ui-medium);
-    color: var(--text-normal);
+.moc-filter-delete-button:hover {
+    color: var(--text-error);
+    background-color: rgba(var(--color-red-rgb), 0.12);
 }
 
-.moc-rule-card-type-badge {
-    font-size: var(--font-ui-smaller);
-    text-transform: uppercase;
-    background-color: rgba(var(--interactive-accent-rgb), 0.15);
-    color: var(--interactive-accent);
-    padding: 2px 6px;
-    border-radius: var(--radius-s);
-    font-weight: 600;
-}
-
-.moc-rule-card-details {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding-top: 6px;
-    border-top: 1px solid var(--background-modifier-border);
-}
-
-.moc-rule-detail-row {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-size: var(--font-ui-small);
-}
-
-.moc-rule-detail-label {
-    color: var(--text-muted);
-    font-weight: 500;
-    min-width: 55px;
-}
-
-.moc-rule-detail-code {
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    padding: 2px 6px;
-    border-radius: var(--radius-s);
-    font-family: var(--font-monospace);
-    font-size: var(--font-ui-smaller);
-    color: var(--text-accent);
-    word-break: break-all;
-}
-
-.moc-rule-delete-btn {
-    font-size: var(--font-ui-small);
-    padding: 4px 10px;
-    border-radius: var(--radius-s);
-}
-
-.moc-add-rule-form-container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    background-color: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    margin-bottom: 12px;
-}
-
-.moc-add-rule-form-container.moc-collapsed {
-    display: none;
-}
-
-/* ===== Settings Page Styling ===== */
+/* ===== Settings Tab ===== */
 .moc-settings-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
+    padding-bottom: 8px;
 }
 
-.moc-settings-container .setting-item.setting-item-heading {
-    border: none;
-    padding: 16px 0;
-    margin: 0;
+.moc-settings-section {
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s ease;
 }
 
-.moc-settings-container .setting-item.setting-item-heading:not(:first-child) {
-    margin-top: 16px;
-    padding-top: 0;
-    border-top: 1px solid var(--divider-color);
-    padding-top: 16px;
+.moc-settings-section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
 }
 
-.moc-settings-container .setting-item-heading .setting-item-name {
-    font-size: var(--font-ui-large);
+.moc-settings-section-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    background-color: rgba(var(--interactive-accent-rgb), 0.12);
+    color: var(--interactive-accent);
+}
+
+.moc-settings-section-icon svg {
+    width: 17px;
+    height: 17px;
+}
+
+.moc-settings-section-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-top: 2px;
+}
+
+.moc-settings-section-title {
+    font-size: var(--font-ui-medium);
     font-weight: var(--font-semibold);
     color: var(--text-normal);
+    line-height: 1.3;
 }
 
-.moc-settings-container h3 {
-    font-size: var(--font-ui-large);
-    font-weight: var(--font-semibold);
-    color: var(--text-normal);
-    margin: 0;
+.moc-settings-section-desc {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.moc-settings-section-body {
+    display: flex;
+    flex-direction: column;
 }
 
 .moc-settings-label {
     font-size: var(--font-ui-small);
     font-weight: 500;
     color: var(--text-normal);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     cursor: help;
+    width: fit-content;
 }
 
 .moc-settings-label span:hover {
@@ -712,84 +669,101 @@
 
 .moc-settings-input {
     width: 100%;
-    max-width: 400px;
     padding: 8px 12px;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
+    border-radius: 7px;
     background-color: var(--background-primary);
     color: var(--text-normal);
     font-size: var(--font-ui-small);
-    margin-bottom: 16px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .moc-settings-input:focus {
     outline: none;
-    border-color: var(--text-accent);
-    box-shadow: 0 0 0 2px rgba(var(--color-accent-rgb), 0.1);
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 3px rgba(var(--interactive-accent-rgb), 0.15);
 }
 
 .moc-settings-input::placeholder {
+    color: var(--text-faint);
+}
+
+/* ===== Icon buttons ===== */
+.moc-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
     color: var(--text-muted);
+    transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.moc-icon-btn:hover:not(:disabled) {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+.moc-icon-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.moc-icon-btn-accent {
+    color: var(--interactive-accent);
+}
+
+.moc-icon-btn-accent:hover:not(:disabled) {
+    color: var(--interactive-accent);
+    background-color: rgba(var(--interactive-accent-rgb), 0.14);
+}
+
+.moc-icon-btn-danger:hover:not(:disabled) {
+    color: var(--text-error);
+    background-color: rgba(var(--color-red-rgb), 0.12);
 }
 
 /* ===== Template Folder Control ===== */
 .moc-template-folder-control {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: 6px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 7px;
+    padding: 3px 4px 3px 12px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.moc-template-folder-control:focus-within {
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 3px rgba(var(--interactive-accent-rgb), 0.15);
 }
 
 .moc-template-folder-control .moc-settings-input {
     flex: 1;
-    margin-bottom: 0;
-    min-width: 200px;
+    min-width: 160px;
+    border: none;
+    background: transparent;
+    padding: 5px 0;
+}
+
+.moc-template-folder-control .moc-settings-input:focus {
+    box-shadow: none;
 }
 
 .moc-template-folder-control .moc-settings-input:read-only {
-    background-color: var(--background-modifier-form-neutral);
-    cursor: not-allowed;
+    color: var(--text-muted);
+    cursor: default;
 }
 
-.moc-control-btn {
-    padding: 6px 14px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    background-color: var(--background-secondary);
-    color: var(--text-normal);
-    font-weight: 500;
-    font-size: var(--font-ui-small);
-    cursor: pointer;
-    transition: all 0.2s;
+.moc-control-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
     flex-shrink: 0;
-    white-space: nowrap;
 }
 
-.moc-control-btn:hover {
-    background-color: var(--background-modifier-hover);
-    border-color: var(--text-accent);
-}
-
-.moc-control-edit-btn:hover {
-    color: var(--text-accent);
-}
-
-.moc-control-save-btn {
-    background-color: var(--text-accent);
-    color: var(--background-primary);
-    border-color: var(--text-accent);
-}
-
-.moc-control-save-btn:hover {
-    background-color: var(--text-accent);
-    opacity: 0.85;
-}
-
-.moc-hidden {
-    display: none;
-}
-
-/* ===== Rules List Compact ===== */
+/* ===== Rules List ===== */
 .moc-rules-list-compact {
     display: flex;
     flex-direction: column;
@@ -799,94 +773,75 @@
 
 .moc-rule-item-compact {
     border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    background-color: var(--background-secondary);
+    border-radius: 9px;
+    background-color: var(--background-primary);
     overflow: hidden;
+    transition: border-color 0.15s ease;
+}
+
+.moc-rule-item-compact:hover {
+    border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
 }
 
 .moc-rule-item-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: 8px;
+    padding: 8px 10px;
     cursor: pointer;
     user-select: none;
-    transition: background-color 0.2s;
-}
-
-.moc-rule-item-header:hover {
-    background-color: var(--background-modifier-hover);
 }
 
 .moc-rule-toggle-btn {
-    background: none;
-    border: none;
-    padding: 0;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 12px;
-    width: 16px;
+    color: var(--text-faint);
     flex-shrink: 0;
-    transition: color 0.2s;
+    transition: transform 0.2s ease, color 0.15s ease;
 }
 
-.moc-rule-toggle-btn:hover {
-    color: var(--text-normal);
+.moc-rule-toggle-btn-expanded {
+    transform: rotate(90deg);
+}
+
+.moc-rule-item-header:hover .moc-rule-toggle-btn {
+    color: var(--text-muted);
 }
 
 .moc-rule-item-name {
     flex: 1;
     font-weight: 500;
+    font-size: var(--font-ui-small);
     color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .moc-rule-type-badge {
     display: inline-block;
     padding: 2px 8px;
-    background-color: var(--background-accent);
-    color: var(--text-accent);
-    border-radius: 12px;
-    font-size: 11px;
+    background-color: rgba(var(--interactive-accent-rgb), 0.14);
+    color: var(--interactive-accent);
+    border-radius: 999px;
+    font-size: 10px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
     flex-shrink: 0;
 }
 
-.moc-rule-item-delete-btn {
-    background: none;
-    border: none;
-    padding: 4px 8px;
-    cursor: pointer;
-    font-size: 14px;
-    opacity: 0.6;
-    transition: opacity 0.2s;
+.moc-rule-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
     flex-shrink: 0;
-}
-
-.moc-rule-item-delete-btn:hover {
-    opacity: 1;
-}
-
-.moc-rule-item-edit-btn {
-    background: none;
-    border: none;
-    padding: 4px 8px;
-    cursor: pointer;
-    font-size: 14px;
-    opacity: 0.6;
-    transition: opacity 0.2s;
-    flex-shrink: 0;
-}
-
-.moc-rule-item-edit-btn:hover {
-    opacity: 1;
 }
 
 .moc-rule-item-details {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    background-color: var(--background-primary);
+    gap: 8px;
+    padding: 10px 12px 12px 34px;
+    background-color: var(--background-secondary);
     border-top: 1px solid var(--background-modifier-border);
     max-height: 200px;
     overflow-y: auto;
@@ -903,103 +858,132 @@
 }
 
 .moc-rule-detail-label {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-faint);
     text-transform: uppercase;
+    letter-spacing: 0.4px;
 }
 
 .moc-rule-detail-code {
     padding: 6px 8px;
-    background-color: var(--background-secondary);
-    color: var(--text-normal);
-    border-radius: 3px;
+    background-color: var(--background-primary);
+    color: var(--text-accent);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 5px;
     font-family: var(--font-monospace);
     font-size: 12px;
     word-break: break-all;
 }
 
-/* ===== Add Rule Button ===== */
-.moc-add-rule-button-wrapper {
-    display: flex;
-    justify-content: flex-end;
+.moc-settings-empty-state {
+    padding: 20px 12px;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: var(--font-ui-small);
+    border: 1px dashed var(--background-modifier-border);
+    border-radius: 9px;
     margin-bottom: 16px;
 }
 
+/* ===== Add Rule Button ===== */
 .moc-add-rule-btn {
-    padding: 10px 18px;
-    background: linear-gradient(135deg, var(--text-accent) 0%, var(--background-accent) 100%);
-    color: var(--background-primary);
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px 16px;
+    background-color: transparent;
+    color: var(--text-muted);
+    border: 1px dashed var(--background-modifier-border);
+    border-radius: 8px;
+    font-weight: 500;
     font-size: var(--font-ui-small);
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    letter-spacing: 0.3px;
+    transition: all 0.15s ease;
+}
+
+.moc-add-rule-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.moc-add-rule-icon svg {
+    width: 14px;
+    height: 14px;
 }
 
 .moc-add-rule-btn:hover {
-    background: linear-gradient(135deg, var(--background-accent) 0%, var(--text-accent) 100%);
-    box-shadow: 0 4px 12px rgba(var(--color-accent-rgb), 0.2);
-    transform: translateY(-1px);
-}
-
-.moc-add-rule-btn:active {
-    transform: translateY(0);
+    color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+    background-color: rgba(var(--interactive-accent-rgb), 0.08);
 }
 
 .moc-add-rule-btn.moc-active {
-    background: linear-gradient(135deg, var(--text-error-hover) 0%, var(--text-error) 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.2);
+    color: var(--text-normal);
+    border-style: solid;
+    border-color: var(--background-modifier-border);
+    background-color: var(--background-modifier-hover);
 }
 
-.moc-add-rule-btn.moc-active:hover {
-    box-shadow: 0 6px 16px rgba(255, 0, 0, 0.3);
+/* ===== Add/Edit Rule Form ===== */
+.moc-add-rule-form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    margin-top: 10px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 9px;
 }
 
-/* ===== Form Buttons ===== */
+.moc-add-rule-form-container.moc-collapsed {
+    display: none;
+}
+
+.moc-form-title {
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+    margin-bottom: 4px;
+}
+
 .moc-form-buttons {
     display: flex;
+    justify-content: flex-end;
     gap: 8px;
-    margin-top: 8px;
+    margin-top: 6px;
 }
 
 .moc-form-submit-btn,
 .moc-form-cancel-btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
+    padding: 7px 16px;
+    border: 1px solid transparent;
+    border-radius: 6px;
     font-weight: 500;
     font-size: var(--font-ui-small);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.15s ease;
 }
 
 .moc-form-submit-btn {
-    background-color: var(--text-accent);
-    color: var(--background-primary);
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
 }
 
 .moc-form-submit-btn:hover {
-    background-color: var(--text-accent-hover);
+    background-color: var(--interactive-accent-hover);
 }
 
 .moc-form-cancel-btn {
-    background-color: var(--background-modifier-border);
-    color: var(--text-normal);
+    background-color: transparent;
+    border-color: var(--background-modifier-border);
+    color: var(--text-muted);
 }
 
 .moc-form-cancel-btn:hover {
-    background-color: var(--text-muted);
-    color: var(--background-primary);
-}
-
-.moc-settings-empty-state {
-    padding: 20px 12px;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: var(--font-ui-small);
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
 }

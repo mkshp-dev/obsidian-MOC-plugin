@@ -137,9 +137,14 @@ Explicitly excludes one or more files from the search results. Paths are relativ
 ---
 
 ### `template` (Optional)
-Defines a custom output format for each matched element using handlebars-style `{{placeholder}}` syntax. The template is applied after any `applyFnR` transformations.
+The **name of a template note** (not inline text) used to define a custom output format for each matched element. The template is applied after any `applyFnR` transformations.
 
-Available placeholders:
+Templates are resolved against the **Template folder** configured in **Settings → Maps of Content**. To use a template:
+1. Set a **Template folder** in the plugin settings (e.g. `Templates`).
+2. Create a note inside that folder whose *content* is the format string, using handlebars-style `{{placeholder}}` syntax — for example a note named `bullet-link.md` containing `- {{content}} — [[{{path}}|{{file}}]]`.
+3. Reference the note's basename (without `.md`) in the `template` key: `template: bullet-link`.
+
+Available placeholders (used inside the template note's content):
 
 | Placeholder | Value |
 |-------------|-------|
@@ -148,7 +153,7 @@ Available placeholders:
 | `{{path}}` | Source file path relative to vault root |
 | `{{link}}` | Wiki-link to the source file: `[[path\|basename]]` |
 
-- *Example*: `template: "- {{content}} — [[{{path}}|{{file}}]]"`
+- *Example*: `template: bullet-link` (where `Templates/bullet-link.md` contains `- {{content}} — [[{{path}}|{{file}}]]`)
 
 ---
 

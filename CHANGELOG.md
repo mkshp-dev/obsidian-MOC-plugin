@@ -9,17 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Feature: Copy as Markdown** — Added a Copy button to the MOC block toolbar that copies the rendered Markdown output to the clipboard without modifying the note.
 - **Feature: `properties()` comparison operators** — Added `>`, `<`, `>=`, `<=`, `!=` operators to `properties()` filters for numeric and date comparisons (e.g. `properties(priority <= 2)`, `properties(date >= "2024-01-01")`).
-- **Feature: `template` option** — Custom output formatting for each matched element using `{{content}}`, `{{file}}`, `{{path}}`, and `{{link}}` handlebars-style placeholders.
+- **Feature: `template` option** — Custom output formatting for each matched element by referencing a template note (configured via the **Template folder** setting) whose content uses `{{content}}`, `{{file}}`, `{{path}}`, and `{{link}}` handlebars-style placeholders.
 - **Feature: `excludeFolder` and `excludeFile` options** — Explicitly exclude specific folders or files from MOC results even when they fall within the configured scan folder. Accepts a single string or JSON array.
 - **Feature: `showCount` option** — Appends a result count summary (e.g. "3 results in 2 files") and adds per-group counts when `groupBy` is active.
 - **Feature: `offset` parameter** — Skip a number of files at the start of the result set, complementing `limit` for paginated or windowed result sets.
 - **Feature: `groupBy: property(key)`** — Group matched results by an arbitrary frontmatter property value.
 - **Feature: Live auto-refresh** — MOC blocks automatically re-render (debounced 500 ms) when any Markdown file in the configured folder is created, modified, or deleted.
-- **Feature: Create showcase command** — New "Create showcase" command generates a `MOC Showcase` folder at the vault root with sample notes and pre-built `moc` blocks covering every feature.
+- **Feature: Create showcase command** — New "Create showcase" command generates a `MOC Showcase` folder at the vault root with sample notes and pre-built `moc` blocks covering every feature, including a dedicated note for `blockSeparator`/`noteSeparator` spacing and dynamic parameters.
 - **Feature: Standardized filters & aliases** — Consolidated `has_word`, `contains`, `has_text` into canonical `contains`; `has_word` and `has_text` remain as backward-compatible aliases.
 - **Feature: Robust tag-aware matching** — `has_tag()` matches exact tags case-insensitively and nested subtags, preventing false positives.
 - **Feature: Enhanced `matches()` with regex flags** — Slash-delimited patterns with flags: `matches("/pattern/i")`.
 - **Feature: Context-aware autocomplete** — The MOC Creation Wizard hides task-only filters (`is_completed`, `is_incomplete`) when a non-task element type is selected.
+- **UI: Redesigned settings tab** — Icon-driven card layout for Templates and Find & Replace, native Obsidian icon buttons in place of emoji, and a cleaner add/edit rule form.
+- **UI: Redesigned MOC Creation Wizard** — Wizard sections (Source, Filters, Shaping, Result manipulations) now use the same icon-driven card layout, with icon buttons replacing text/emoji controls throughout the filter builder and rule chain.
+- **Fix: `template` option documentation and showcase example** — The `template` key takes the *name* of a template note (resolved against the Template folder setting), not inline placeholder text. Corrected the showcase's template note (09) and all docs/README references that previously showed inline `template: "..."` strings that would fail to resolve.
 - **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.
 
 ## 1.3.3 - 2026-06-30

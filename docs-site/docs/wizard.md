@@ -87,15 +87,17 @@ Select the spacing or divider format to apply between sections representing **di
 - **None**: Renders note sections adjacent to each other without extra spacing.
 
 ### 14. Template (optional)
-Enter a custom output format for each matched element using `{{placeholder}}` syntax. Available placeholders: `{{content}}`, `{{file}}`, `{{path}}`, `{{link}}`.
-- *Example*: `- {{content}} — {{link}}`
+Enter the **name of a template note** to apply a custom output format to each matched element. The wizard autocompletes note names from the **Template folder** configured in **Settings → Maps of Content**.
+
+The referenced note's content defines the format using `{{placeholder}}` syntax. Available placeholders: `{{content}}`, `{{file}}`, `{{path}}`, `{{link}}`.
+- *Example*: Set the Template field to `bullet-link`, where `Templates/bullet-link.md` contains `- {{content}} — {{link}}`.
 
 ### 15. Find and replace (optional)
 Manage a sequence of Find & Replace text transformations to execute on the extracted block texts. Rules must first be defined in **Settings → Maps of Content**.
 
 - **Add rule**: Select any defined rule from the dropdown to append it to the active transformation chain.
-- **Order rules**: Use the **▲** and **▼** buttons to adjust execution order. Rules are applied sequentially — the output of each rule becomes the input of the next.
-- **Remove rules**: Click **Remove** next to any rule to remove it from the chain.
+- **Order rules**: Use the up/down arrow icon buttons next to a rule to adjust execution order. Rules are applied sequentially — the output of each rule becomes the input of the next.
+- **Remove rules**: Click the trash icon button next to a rule to remove it from the chain.
 
 ---
 

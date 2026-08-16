@@ -16,7 +16,7 @@ Dynamically generate **Map of Content (MOC)** indexes by extracting matching ele
 
 **Flexible output shaping** — Group by folder, tag, date, or any frontmatter property. Sort, limit, paginate with `offset`, and count results with `showCount`.
 
-**Templates** — Format each matched element with `{{content}}`, `{{file}}`, `{{path}}`, `{{link}}` placeholders.
+**Templates** — Format each matched element using a reusable template note with `{{content}}`, `{{file}}`, `{{path}}`, `{{link}}` placeholders.
 
 **Exclude options** — Skip specific folders or files even inside a recursive scan.
 

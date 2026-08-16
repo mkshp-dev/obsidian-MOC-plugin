@@ -110,7 +110,13 @@ excludeFile: Meetings/Template
 ````
 
 ### Custom template output
-Render each matched blockquote as a linked bullet point:
+Render each matched blockquote as a linked bullet point. First set a **Template folder** (e.g. `Templates`) in **Settings → Maps of Content**, then create a note at `Templates/bullet-link.md` containing:
+
+```
+- {{content}} — {{link}}
+```
+
+Reference it by name in the `moc` block:
 
 ````yaml
 ```moc
@@ -118,7 +124,7 @@ folder: Meetings
 element: Blockquote
 filter: has_tag("#decision")
 recursive: true
-template: "- {{content}} — {{link}}"
+template: bullet-link
 ```
 ````
 

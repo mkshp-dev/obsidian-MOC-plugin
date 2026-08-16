@@ -1,4 +1,4 @@
-import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, TFile } from 'obsidian';
+import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, TFile, debounce, TAbstractFile } from 'obsidian';
 import { MOCPluginSettings } from './settings';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
@@ -20,12 +20,13 @@ export interface ParsedFilter {
     value?: string;
     regex?: RegExp;
     propKey?: string;
+    propOperator?: string;
     propValue?: unknown;
 }
 
 
 function tokenizeFilter(input: string): string[] | null {
-    const tokenRegex = /\s*(AND\b|OR\b|NOT\b|\(|\)|properties\(\s*[a-zA-Z0-9_-]+\s*==\s*(?:["'].*?["']|[^"\s)]+)\s*\)|(?:has_word|contains|has_text|matches|has_tag)\(\s*["'].*?["']\s*\)|(?:is_completed|is_incomplete)\(\s*\))\s*/iy;
+    const tokenRegex = /\s*(AND\b|OR\b|NOT\b|\(|\)|properties\(\s*[a-zA-Z0-9_-]+\s*(?:==|!=|>=|<=|>|<)\s*(?:["'].*?["']|[^"\s)]+)\s*\)|(?:has_word|contains|has_text|matches|has_tag)\(\s*["'].*?["']\s*\)|(?:is_completed|is_incomplete)\(\s*\))\s*/iy;
     let lastIndex = 0;
     const tokens: string[] = [];
     tokenRegex.lastIndex = 0;
@@ -121,13 +122,14 @@ class FilterParser {
 
 export function parsePrimitiveFilter(filterString: string): ParsedFilter | null {
 
-    const propertiesPattern = /^properties\(\s*([a-zA-Z0-9_-]+)\s*==\s*(?:["'](.*?)["']|([^"\s)]+))\s*\)$/;
+    const propertiesPattern = /^properties\(\s*([a-zA-Z0-9_-]+)\s*(==|!=|>=|<=|>|<)\s*(?:["'](.*?)["']|([^"\s)]+))\s*\)$/;
     const propMatch = filterString.match(propertiesPattern);
     if (propMatch) {
         return {
             type: 'properties',
             propKey: propMatch[1],
-            propValue: propMatch[2] !== undefined ? propMatch[2] : propMatch[3]
+            propOperator: propMatch[2] || '==',
+            propValue: propMatch[3] !== undefined ? propMatch[3] : propMatch[4]
         };
     }
 
@@ -224,11 +226,58 @@ export function evaluateFrontmatter(frontmatter: Record<string, unknown> | null 
         const condition = node.condition!;
         if (condition.type === 'properties') {
             if (!frontmatter) return false;
-            return frontmatter[condition.propKey as string] == condition.propValue;
+            if (!(condition.propKey as string in frontmatter)) return false;
+
+            const op = condition.propOperator || '==';
+            const frontmatterValue = frontmatter[condition.propKey as string];
+            const expectedValue = condition.propValue;
+
+            const valuesEqual = areFrontmatterValuesEqual(frontmatterValue, expectedValue);
+            if (op === '==') return valuesEqual;
+            if (op === '!=') return !valuesEqual;
+
+            let left: string | number | boolean = String(frontmatterValue);
+            let right: string | number | boolean = String(expectedValue);
+
+            const leftNum = Number(left);
+            const rightNum = Number(right);
+
+            if (!isNaN(leftNum) && !isNaN(rightNum) && left.trim() !== '' && right.trim() !== '') {
+                left = leftNum;
+                right = rightNum;
+            } else {
+                const leftDate = Date.parse(left);
+                const rightDate = Date.parse(right);
+                if (!isNaN(leftDate) && !isNaN(rightDate)) {
+                    left = leftDate;
+                    right = rightDate;
+                }
+            }
+
+            if (op === '>') return left > right;
+            if (op === '<') return left < right;
+            if (op === '>=') return left >= right;
+            if (op === '<=') return left <= right;
+            return false;
         }
         return null; // Not a property condition, cannot evaluate at file level
     }
     return null;
+}
+
+function areFrontmatterValuesEqual(frontmatterValue: unknown, expectedValue: unknown): boolean {
+    if (typeof frontmatterValue === 'boolean') {
+        return typeof expectedValue === 'string' &&
+            (expectedValue === 'true' || expectedValue === 'false') &&
+            frontmatterValue === (expectedValue === 'true');
+    }
+
+    if (typeof frontmatterValue === 'number') {
+        const expectedNumber = Number(expectedValue);
+        return Number.isFinite(expectedNumber) && frontmatterValue === expectedNumber;
+    }
+
+    return String(frontmatterValue) === String(expectedValue);
 }
 
 export function evaluateFilter(text: string, node: ASTNode, isCompletedTask?: boolean): boolean {
@@ -290,6 +339,16 @@ export function applyFindReplace(text: string, find?: string, replace?: string):
     return text.split(find).join(replacement);
 }
 
+export function applyTemplate(text: string, template: string, file: TFile): string {
+    return template.replace(/\{\{(content|file|path|link)\}\}/g, (match, p1) => {
+        if (p1 === 'content') return text;
+        if (p1 === 'file') return file.basename;
+        if (p1 === 'path') return file.path;
+        if (p1 === 'link') return `[[${file.path}|${file.basename}]]`;
+        return match;
+    });
+}
+
 export interface MocConfig {
     folder?: string;
     element?: string;
@@ -298,24 +357,112 @@ export interface MocConfig {
     groupBy?: string;
     sort?: string;
     limit?: number;
+    offset?: number;
     applyFnR?: string | string[];
+    template?: string;
     blockSeparator?: 'none' | 'divider' | 'newline';
     noteSeparator?: 'none' | 'divider' | 'newline';
+    showCount?: boolean;
+    excludeFolder?: string | string[];
+    excludeFile?: string | string[];
 }
 
-export async function processMocBlock(
+class MocRenderChild extends MarkdownRenderChild {
+    config: MocConfig;
+    app: App;
+    sourcePath: string;
+    settings: MOCPluginSettings;
+    folderPath: string;
+    isRecursive: boolean;
+    updateDebounced: () => void;
+    el: HTMLElement;
+    ctx: MarkdownPostProcessorContext;
+    wrapper: HTMLDivElement | null = null;
+    container: HTMLDivElement | null = null;
+
+    constructor(
+        containerEl: HTMLElement,
+        config: MocConfig,
+        app: App,
+        sourcePath: string,
+        settings: MOCPluginSettings,
+        folderPath: string,
+        isRecursive: boolean,
+        el: HTMLElement,
+        ctx: MarkdownPostProcessorContext
+    ) {
+        super(containerEl);
+        this.config = config;
+        this.app = app;
+        this.sourcePath = sourcePath;
+        this.settings = settings;
+        this.folderPath = folderPath;
+        this.isRecursive = isRecursive;
+        this.el = el;
+        this.ctx = ctx;
+
+        this.updateDebounced = debounce(async () => {
+            await this.renderMoc();
+        }, 500, true);
+    }
+
+    onload() {
+        // Register event listeners to update MOC on file changes
+        this.registerEvent(this.app.vault.on('modify', this.onFileChange.bind(this)));
+        this.registerEvent(this.app.vault.on('create', this.onFileChange.bind(this)));
+        this.registerEvent(this.app.vault.on('delete', this.onFileChange.bind(this)));
+
+        // Initial render is handled by processMocBlock
+    }
+
+    onFileChange(file: TAbstractFile) {
+        if (file instanceof TFile && file.extension === 'md') {
+            // Check if file is in the watched folder
+            const parentPath = file.parent ? file.parent.path : '';
+            const normalizedParent = parentPath.replace(/^\/+|\/+$/g, '');
+
+            let shouldUpdate = false;
+
+            if (normalizedParent === this.folderPath) {
+                shouldUpdate = true;
+            } else if (this.isRecursive) {
+                if (this.folderPath === '') {
+                    shouldUpdate = true;
+                } else if (normalizedParent.startsWith(this.folderPath + '/')) {
+                    shouldUpdate = true;
+                }
+            }
+
+            if (shouldUpdate) {
+                this.updateDebounced();
+            }
+        }
+    }
+
+    async renderMoc() {
+        const result = await generateMocMarkdown(this.config, this.app, this.sourcePath, this.settings);
+
+        if (this.container) {
+            this.container.empty();
+            if (result.error) {
+                this.container.createDiv({ text: result.error, cls: result.cls || 'moc-error' });
+            } else if (result.markdownText) {
+                await MarkdownRenderer.render(this.app, result.markdownText, this.container, this.sourcePath, this);
+            }
+        }
+    }
+}
+
+export async function generateMocMarkdown(
     config: MocConfig,
-    el: HTMLElement,
-    ctx: MarkdownPostProcessorContext,
     app: App,
     sourcePath: string,
     settings: MOCPluginSettings
-) {
+): Promise<{ markdownText?: string; error?: string; cls?: string }> {
     const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
 
     if (!config.folder || typeof config.folder !== 'string') {
-        el.createEl("div", { text: "Error: invalid or missing 'folder' in moc block.", cls: 'moc-error' });
-        return;
+        return { error: "Error: invalid or missing 'folder' in moc block.", cls: 'moc-error' };
     }
 
     let expandedFolder = config.folder;
@@ -329,13 +476,11 @@ export async function processMocBlock(
 
     const validElements = ['List', 'Task', 'Heading', 'Paragraph', 'Blockquote'];
     if (!validElements.includes(config.element as string)) {
-        el.createEl("div", { text: `Error: element must be one of: ${validElements.join(', ')}.`, cls: 'moc-error' });
-        return;
+        return { error: `Error: element must be one of: ${validElements.join(', ')}.`, cls: 'moc-error' };
     }
 
     if (!config.filter || typeof config.filter !== 'string') {
-        el.createEl("div", { text: "Error: invalid or missing 'filter' in moc block.", cls: 'moc-error' });
-        return;
+        return { error: "Error: invalid or missing 'filter' in moc block.", cls: 'moc-error' };
     }
 
     let expandedFilter = config.filter;
@@ -351,8 +496,7 @@ export async function processMocBlock(
 
     const parsedFilter = parseFilter(expandedFilter);
     if (!parsedFilter) {
-        el.createEl("div", { text: `Error: unsupported or invalid filter format '${config.filter}'.`, cls: 'moc-error' });
-        return;
+        return { error: `Error: unsupported or invalid filter format '${config.filter}'.`, cls: 'moc-error' };
     }
 
     const folderPath = expandedFolder.trim().replace(/^\/+|\/+$/g, '');
@@ -362,8 +506,7 @@ export async function processMocBlock(
     let sortDirection = 'desc';
     if (config.sort !== undefined) {
         if (typeof config.sort !== 'string') {
-            el.createEl("div", { text: "Error: invalid 'sort' format in moc block.", cls: 'moc-error' });
-            return;
+            return { error: "Error: invalid 'sort' format in moc block.", cls: 'moc-error' };
         }
         const parts = config.sort.trim().split(/\s+/);
         if (parts.length > 0) {
@@ -375,21 +518,24 @@ export async function processMocBlock(
 
         const validSortFields = ['ctime', 'mtime', 'name'];
         if (!validSortFields.includes(sortField)) {
-            el.createEl("div", { text: `Error: invalid sort field '${sortField}'. Must be one of: ${validSortFields.join(', ')}.`, cls: 'moc-error' });
-            return;
+            return { error: `Error: invalid sort field '${sortField}'. Must be one of: ${validSortFields.join(', ')}.`, cls: 'moc-error' };
         }
 
         const validSortDirections = ['asc', 'desc'];
         if (!validSortDirections.includes(sortDirection)) {
-            el.createEl("div", { text: `Error: invalid sort direction '${sortDirection}'. Must be 'asc' or 'desc'.`, cls: 'moc-error' });
-            return;
+            return { error: `Error: invalid sort direction '${sortDirection}'. Must be 'asc' or 'desc'.`, cls: 'moc-error' };
         }
     }
 
     if (config.limit !== undefined) {
         if (typeof config.limit !== 'number' || config.limit <= 0) {
-            el.createEl("div", { text: "Error: invalid 'limit' in moc block. Must be a positive number.", cls: 'moc-error' });
-            return;
+            return { error: "Error: invalid 'limit' in moc block. Must be a positive number.", cls: 'moc-error' };
+        }
+    }
+
+    if (config.offset !== undefined) {
+        if (typeof config.offset !== 'number' || config.offset < 0 || !Number.isInteger(config.offset)) {
+            return { error: "Error: invalid 'offset' in moc block. Must be a non-negative integer.", cls: 'moc-error' };
         }
     }
 
@@ -416,9 +562,32 @@ export async function processMocBlock(
         return false;
     });
 
+    if (config.excludeFolder) {
+        let excludeFolders = Array.isArray(config.excludeFolder) ? config.excludeFolder : [config.excludeFolder];
+        excludeFolders = excludeFolders.map(folder => folder.trim().replace(/^\/+|\/+$/g, ''));
+        matchedFiles = matchedFiles.filter(file => {
+            return !excludeFolders.some(exFolder => {
+                const parentPath = file.parent ? file.parent.path.replace(/^\/+|\/+$/g, '') : '';
+                return parentPath === exFolder || parentPath.startsWith(exFolder + '/');
+            });
+        });
+    }
+
+    if (config.excludeFile) {
+        let excludeFiles = Array.isArray(config.excludeFile) ? config.excludeFile : [config.excludeFile];
+        excludeFiles = excludeFiles.map(file => file.trim().replace(/^\/+|\/+$/g, ''));
+        matchedFiles = matchedFiles.filter(file => {
+            const normalizedPath = file.path.replace(/^\/+|\/+$/g, '');
+            return !excludeFiles.some(exFile => {
+                // If exFile doesn't have an extension, try appending .md for a match
+                const exFileWithExt = exFile.endsWith('.md') ? exFile : exFile + '.md';
+                return normalizedPath === exFile || normalizedPath === exFileWithExt;
+            });
+        });
+    }
+
     if (matchedFiles.length === 0) {
-        el.createEl("div", { text: `No markdown files found in folder '${config.folder}'.`, cls: 'moc-empty' });
-        return;
+        return { error: `No markdown files found in folder '${config.folder}'.`, cls: 'moc-empty' };
     }
 
     if (config.sort !== undefined) {
@@ -446,8 +615,10 @@ export async function processMocBlock(
         });
     }
 
-    if (config.limit !== undefined) {
-        matchedFiles = matchedFiles.slice(0, config.limit);
+    if (config.offset !== undefined || config.limit !== undefined) {
+        const start = config.offset || 0;
+        const end = config.limit !== undefined ? start + config.limit : undefined;
+        matchedFiles = matchedFiles.slice(start, end);
     }
 
     // 2. Extract elements
@@ -464,11 +635,6 @@ export async function processMocBlock(
 
         const fileContent = await app.vault.cachedRead(file);
         const lines = fileContent.split(/\r?\n/);
-
-
-
-
-
 
         if (config.element === 'List' || config.element === 'Task') {
             if (!fileCache.listItems || fileCache.listItems.length === 0) continue;
@@ -488,7 +654,6 @@ export async function processMocBlock(
                 if (!lineContent) continue;
 
                 if (evaluateFilter(lineContent, parsedFilter, item.task !== undefined ? item.task !== ' ' : undefined)) {
-
 
                     let lastChildLine = item.position.start.line;
                     let j = i + 1;
@@ -513,7 +678,6 @@ export async function processMocBlock(
                     const baseIndentMatch = lines[startLine]?.match(/^(\s*)/);
                     const baseIndent = baseIndentMatch ? baseIndentMatch[1] : '';
 
-
                     const blockLines: string[] = [];
                     for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
                         let currentLine = lines[lineNum];
@@ -526,7 +690,6 @@ export async function processMocBlock(
                     }
                     const blockText = blockLines.join('\n');
                     matchedBlocks.push({ file, lines: blockLines, tags: extractTags(blockText) });
-
                 }
             }
         } else if (config.element === 'Heading') {
@@ -545,22 +708,18 @@ export async function processMocBlock(
 
                 if (evaluateFilter(heading.heading, parsedFilter)) {
 
-
                     const startLine = heading.position.start.line;
                     let endLine = lines.length - 1;
 
-                    // Find the next heading of same or higher level (lower number)
                     for (let j = i + 1; j < headings.length; j++) {
                         const nextHeading = headings[j];
                         if (nextHeading && nextHeading.level <= heading.level) {
-                            // If there is a next heading of same or higher level, end extraction right before it
                             endLine = nextHeading.position.start.line - 1;
                             break;
                         }
                     }
 
                     skipUntilLine = endLine;
-
 
                     const blockLines: string[] = [];
                     for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
@@ -570,13 +729,12 @@ export async function processMocBlock(
                     }
                     const blockText = blockLines.join('\n');
                     matchedBlocks.push({ file, lines: blockLines, tags: extractTags(blockText) });
-
                 }
             }
         } else if (config.element === 'Paragraph' || config.element === 'Blockquote') {
             if (!fileCache.sections || fileCache.sections.length === 0) continue;
 
-            const targetType = config.element.toLowerCase(); // 'paragraph' or 'blockquote'
+            const targetType = config.element.toLowerCase();
 
             for (const section of fileCache.sections) {
                 if (section.type !== targetType) continue;
@@ -584,7 +742,6 @@ export async function processMocBlock(
                 const startLine = section.position.start.line;
                 const endLine = section.position.end.line;
 
-                // Get the full text of the section to evaluate the filter
                 const sectionLines = [];
                 for (let i = startLine; i <= endLine; i++) {
                     if (lines[i] !== undefined) {
@@ -594,16 +751,12 @@ export async function processMocBlock(
                 const sectionText = sectionLines.join('\n');
 
                 if (evaluateFilter(sectionText, parsedFilter)) {
-
                     matchedBlocks.push({ file, lines: sectionLines as string[], tags: extractTags(sectionText) });
                 }
             }
         }
-
-        // matchedBlocks already updated
     }
 
-    // Apply find & replace to matched blocks if configured
     if (config.applyFnR) {
         const ruleNames = Array.isArray(config.applyFnR) ? config.applyFnR : [config.applyFnR];
         for (const ruleName of ruleNames) {
@@ -619,17 +772,60 @@ export async function processMocBlock(
         }
     }
 
-    // 3. Render output
-    if (matchedBlocks.length === 0) {
-        el.createEl("div", { text: `No elements matching filter found in '${config.folder}'.`, cls: 'moc-empty' });
-        return;
+    if (config.template) {
+        // Template must refer to a file in settings.templateFolder
+        const templateFolder = (settings.templateFolder || '').trim().replace(/^\/+|\/+$/g, '');
+        
+        if (templateFolder === '') {
+            return { error: "Error: Template folder not configured in settings.", cls: 'moc-error' };
+        }
+
+        let templateFile: TFile | null = null;
+
+        // Try to find the template file
+        const pathWithExt = `${templateFolder}/${config.template}.md`;
+        const pathDirect = `${templateFolder}/${config.template}`;
+        const fileDirect = app.vault.getAbstractFileByPath(pathWithExt) || app.vault.getAbstractFileByPath(pathDirect);
+        if (fileDirect instanceof TFile) {
+            templateFile = fileDirect;
+        }
+
+        if (!templateFile) {
+            // Search by basename in templateFolder
+            const files = app.vault.getMarkdownFiles();
+            const matchedFile = files.find(f => {
+                const parentPath = f.parent ? f.parent.path.replace(/^\/+|\/+$/g, '') : '';
+                if (parentPath !== templateFolder && !parentPath.startsWith(templateFolder + '/')) {
+                    return false;
+                }
+                return f.basename === config.template || f.path === config.template || f.path === `${config.template}.md`;
+            });
+            if (matchedFile) {
+                templateFile = matchedFile;
+            }
+        }
+
+        if (!templateFile) {
+            return { error: `Error: Template file '${config.template}' not found in template folder '${templateFolder}'.`, cls: 'moc-error' };
+        }
+
+        const templateContent = await app.vault.cachedRead(templateFile);
+
+        for (const block of matchedBlocks) {
+            const blockText = block.lines.join('\n');
+            const replacedText = applyTemplate(blockText, templateContent, block.file);
+            block.lines = replacedText.split(/\r?\n/);
+            block.tags = extractTags(replacedText);
+        }
     }
 
+    if (matchedBlocks.length === 0) {
+        return { error: `No elements matching filter found in '${config.folder}'.`, cls: 'moc-empty' };
+    }
 
     const outputLines: string[] = [];
 
     if (!config.groupBy) {
-        // Default behavior: group by file
         const filesMap = new Map<string, MatchedBlock[]>();
         for (const block of matchedBlocks) {
             const filePath = block.file.path;
@@ -662,7 +858,6 @@ export async function processMocBlock(
                 }
             }
             
-            // Add note separator if not the last file
             if (idx < filePaths.length - 1) {
                 if (config.noteSeparator === 'divider') {
                     outputLines.push("");
@@ -671,7 +866,6 @@ export async function processMocBlock(
                 } else if (config.noteSeparator === 'none') {
                     // Do nothing
                 } else {
-                    // Default to newline
                     outputLines.push("");
                 }
             } else {
@@ -679,7 +873,6 @@ export async function processMocBlock(
             }
         }
     } else {
-        // Grouped behavior
         const groupsMap = new Map<string, MatchedBlock[]>();
 
         for (const block of matchedBlocks) {
@@ -700,6 +893,34 @@ export async function processMocBlock(
                 } else {
                     groupKeys.push("Untagged");
                 }
+            } else if (config.groupBy.startsWith('property(') && config.groupBy.endsWith(')')) {
+                const match = config.groupBy.match(/^property\((.*?)\)$/);
+                if (match && match[1]) {
+                    const key = match[1].trim();
+                    if (key) {
+                        const frontmatter = app.metadataCache.getFileCache(block.file)?.frontmatter;
+                        if (frontmatter) {
+                            const val = frontmatter[key] as unknown;
+                            if (val !== undefined && val !== null && val !== "") {
+                                if (Array.isArray(val)) {
+                                    groupKeys.push(val.map(v => String(v)).join(', '));
+                                } else if (typeof val === 'object') {
+                                    groupKeys.push(JSON.stringify(val));
+                                } else {
+                                    groupKeys.push(`${val as string | number | boolean}`);
+                                }
+                            } else {
+                                groupKeys.push("(none)");
+                            }
+                        } else {
+                            groupKeys.push("(none)");
+                        }
+                    } else {
+                        groupKeys.push("(none)");
+                    }
+                } else {
+                    groupKeys.push("(none)");
+                }
             } else {
                 groupKeys.push("Unknown");
             }
@@ -712,14 +933,14 @@ export async function processMocBlock(
             }
         }
 
-        // Sort groups alphabetically (except Untagged which could go last, but simple sort is fine for now)
         const sortedGroups = Array.from(groupsMap.keys()).sort();
 
         for (const group of sortedGroups) {
-            outputLines.push(`### ${group}`);
+            const blocks = groupsMap.get(group)!;
+            const headingText = config.showCount ? `### ${group} (${blocks.length})` : `### ${group}`;
+            outputLines.push(headingText);
             outputLines.push("");
 
-            const blocks = groupsMap.get(group)!;
             const filesMap = new Map<string, MatchedBlock[]>();
             for (const block of blocks) {
                 const filePath = block.file.path;
@@ -752,7 +973,6 @@ export async function processMocBlock(
                     }
                 }
                 
-                // Add note separator if not the last file
                 if (idx < filePaths.length - 1) {
                     if (config.noteSeparator === 'divider') {
                         outputLines.push("");
@@ -761,7 +981,6 @@ export async function processMocBlock(
                     } else if (config.noteSeparator === 'none') {
                         // Do nothing
                     } else {
-                        // Default to newline
                         outputLines.push("");
                     }
                 } else {
@@ -771,19 +990,88 @@ export async function processMocBlock(
         }
     }
 
-    const markdownText = outputLines.join('\n');
+    if (config.showCount) {
+        const totalBlocks = matchedBlocks.length;
+        const uniqueFiles = new Set(matchedBlocks.map(b => b.file.path)).size;
+        const resultText = totalBlocks === 1 ? 'result' : 'results';
+        const fileText = uniqueFiles === 1 ? 'file' : 'files';
 
+        outputLines.push("");
+        outputLines.push(`<div class="moc-count">${totalBlocks} ${resultText} in ${uniqueFiles} ${fileText}</div>`);
+    }
+
+    const markdownText = outputLines.join('\n');
+    return { markdownText };
+}
+export async function processMocBlock(
+    config: MocConfig,
+    el: HTMLElement,
+    ctx: MarkdownPostProcessorContext,
+    app: App,
+    sourcePath: string,
+    settings: MOCPluginSettings
+) {
     const wrapper = el.createDiv({ cls: 'moc-wrapper' });
 
-    const bakeButton = wrapper.createEl('button', {
+    const toolbar = wrapper.createDiv({ cls: 'moc-toolbar' });
+
+    const copyButton = toolbar.createEl('button', {
+        text: 'Copy',
+        cls: 'moc-bake-button',
+        title: 'Copy as Markdown'
+    });
+
+    const bakeButton = toolbar.createEl('button', {
         text: 'Bake',
         cls: 'moc-bake-button',
         title: 'Bake dynamic block to static Markdown'
     });
 
     const container = wrapper.createDiv({ cls: 'moc-container' });
-    const childComponent = new MarkdownRenderChild(container);
+
+    // Determine folderPath and isRecursive for the MocRenderChild
+    let folderPath = '';
+    let isRecursive = false;
+
+    if (config.folder && typeof config.folder === 'string') {
+        let expandedFolder = config.folder;
+        const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
+        if (sourceFile && sourceFile instanceof TFile) {
+            expandedFolder = expandedFolder.replace(/\{\{this\.filename\}\}/g, sourceFile.basename);
+            const folderName = sourceFile.parent ? sourceFile.parent.name : '';
+            expandedFolder = expandedFolder.replace(/\{\{this\.folder\}\}/g, folderName);
+            const pathNoExt = sourceFile.path.replace(/\.md$/, '');
+            expandedFolder = expandedFolder.replace(/\{\{this\.path\}\}/g, pathNoExt);
+        }
+        folderPath = expandedFolder.trim().replace(/^\/+|\/+$/g, '');
+        isRecursive = config.recursive === true;
+    }
+
+    const childComponent = new MocRenderChild(
+        container,
+        config,
+        app,
+        sourcePath,
+        settings,
+        folderPath,
+        isRecursive,
+        el,
+        ctx
+    );
+    childComponent.wrapper = wrapper;
+    childComponent.container = container;
     ctx.addChild(childComponent);
+
+    copyButton.onClickEvent(async (e) => {
+        e.preventDefault();
+        const result = await generateMocMarkdown(config, app, sourcePath, settings);
+        if (result.markdownText) {
+            await navigator.clipboard.writeText(result.markdownText);
+            new Notice("Copied to clipboard");
+        } else {
+            new Notice("Could not copy to clipboard: " + (result.error || "Unknown error"));
+        }
+    });
 
     bakeButton.onClickEvent(async (e) => {
         e.preventDefault();
@@ -792,19 +1080,24 @@ export async function processMocBlock(
             new Notice("Could not determine section to bake");
             return;
         }
-
         const file = app.vault.getAbstractFileByPath(sourcePath);
         if (file instanceof TFile) {
-            await app.vault.process(file, (data) => {
-                const lines = data.split(/\r?\n/);
-                lines.splice(sectionInfo.lineStart, sectionInfo.lineEnd - sectionInfo.lineStart + 1, markdownText);
-                return lines.join('\n');
-            });
-            new Notice("Block baked");
+            const result = await generateMocMarkdown(config, app, sourcePath, settings);
+            if (result.markdownText) {
+                await app.vault.process(file, (data) => {
+                    const lines = data.split(/\r?\n/);
+                    lines.splice(sectionInfo.lineStart, sectionInfo.lineEnd - sectionInfo.lineStart + 1, result.markdownText as string);
+                    return lines.join('\n');
+                });
+                new Notice("Block baked");
+            } else {
+                new Notice("Could not bake block: " + (result.error || "Unknown error"));
+            }
         } else {
-            new Notice("Source file not found");
+             new Notice("Source file not found");
         }
     });
 
-    await MarkdownRenderer.render(app, markdownText, container, sourcePath, childComponent);
+    // Initial render
+    await childComponent.renderMoc();
 }

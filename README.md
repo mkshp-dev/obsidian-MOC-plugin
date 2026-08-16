@@ -1,138 +1,47 @@
 # Maps of Content
 
-This plugin provides a dynamic way to extract elements (like lists, tasks, headings, paragraphs, or blockquotes) from your Markdown files that match a specific word filter, automatically generating Map of Content (MOC) indexes in your vault.
+Dynamically generate **Map of Content (MOC)** indexes by extracting matching elements (lists, tasks, headings, paragraphs, blockquotes) from notes in your vault — powered by a simple code block.
 
-The plugin supports dynamic MOCs generated from a folder + filter configuration, multiple output styles/element types, advanced filter expressions, grouping, sorting, and limiting results. It also includes an interactive MOC Creation Wizard and the ability to bake dynamic results into static markdown.
+📖 **[Full documentation →](https://mkshp-dev.github.io/obsidian-MOC-plugin/)**
 
-It accomplishes this by adding a new `moc` markdown code block processor.
+---
 
-## Features
+## Highlights
 
-- **Dynamic Output**: Automatically generated Map of Content indexes in your vault based on live queries.
-- **Multiple Element Types**: Extract entire lists, tasks, headings, paragraphs, or blockquotes.
-- **Advanced Filtering**: Use logical operators (`AND`, `OR`, `NOT`, parentheses) and property/frontmatter-based filters (`properties(...)`).
-- **Result Shaping**: Structure output by using `groupBy`, `sort`, and `limit` options.
-- **MOC Creation Wizard**: Easily generate your MOC queries via a visual interface.
-- **Bake to Markdown**: Replace a dynamic `moc` block with the permanently rendered static markdown content.
+**Live, auto-updating indexes** — `moc` blocks re-render automatically when files in the watched folder change. No refreshing needed.
 
-## How to use
+**Powerful filter DSL** — Boolean logic (`AND`, `OR`, `NOT`), text matching, tag matching, regex, and frontmatter property comparisons with full numeric/date operator support (`>`, `<`, `>=`, `<=`, `!=`).
 
-In any of your notes, add a code block with the language set to `moc` and provide a YAML-based configuration.
+**MOC Creation Wizard** — Generate `moc` blocks visually from the Command Palette. No YAML required.
 
-Here is an example:
+**Flexible output shaping** — Group by folder, tag, date, or any frontmatter property. Sort, limit, paginate with `offset`, and count results with `showCount`.
 
-<pre>
+**Templates** — Format each matched element using a reusable template note with `{{content}}`, `{{file}}`, `{{path}}`, `{{link}}` placeholders.
+
+**Exclude options** — Skip specific folders or files even inside a recursive scan.
+
+**Copy & Bake** — Copy rendered Markdown to clipboard, or permanently bake a dynamic block into static Markdown in-place.
+
+**Create showcase** — Run **Maps of Content: Create showcase** from the Command Palette to generate a ready-to-explore demo folder covering every feature.
+
+---
+
+## Quick start
+
+````markdown
 ```moc
-folder: Diary
+folder: diary
 element: List
-filter: contains("MOC")
+filter: has_tag("#todo")
 recursive: true
 ```
-</pre>
+````
 
-### Configuration Options
+→ See the [full block reference](https://mkshp-dev.github.io/obsidian-MOC-plugin/) in the docs.
 
-- **`folder`** *(required)*: The folder path within your vault to search for files. E.g., `Diary` or `Notes/Meetings`.
-- **`element`** *(required)*: The type of element to extract. Can be set to `List`, `Task`, `Heading`, `Paragraph`, or `Blockquote`.
-- **`filter`** *(required)*: The filter condition to apply to each element. See the **Advanced Filter Examples** section below for more details.
-  - `contains("text")`: Matches elements containing the specified text (case-sensitive). (Note: `has_word` and `has_text` are supported as backward-compatible aliases).
-  - `matches("regex")`: Matches elements using a regular expression (supports optional slash-delimited format with flags, e.g. `matches("/pattern/i")`).
-  - `has_tag("#tag")`: Matches elements containing the specified tag (fully tag-aware, case-insensitive, and matches subtags like `#tag/subtag`).
-  - `is_completed()`: Matches only completed tasks (when `element` is `Task`).
-  - `is_incomplete()`: Matches only incomplete tasks (when `element` is `Task`).
-- **`recursive`** *(optional)*: A boolean (`true` or `false`) that determines whether the search should include subfolders within the specified `folder`. If omitted, it defaults to `false`.
-- **`groupBy`** *(optional)*: Group the results by a specific property. Supported values: `folder`, `cday` (creation day), `mday` (modification day), `tag`.
-- **`sort`** *(optional)*: Sort the matched files. Specified as a space-separated string containing the field and direction: `<field> <direction>`.
-  - Supported fields: `name`, `ctime` (creation time), `mtime` (modification time).
-  - Supported directions: `asc`, `desc`. E.g., `name asc` or `ctime desc`.
-- **`limit`** *(optional)*: A positive integer specifying the maximum number of files to process and extract from.
-
-### Advanced Filter Examples
-
-The plugin's filter language supports rich composition, including boolean logic (`AND`, `OR`, `NOT`), grouping with parentheses, and checking frontmatter variables.
-
-- **Boolean Logic & Grouping**:
-  `has_tag("#todo") AND (contains("urgent") OR is_incomplete())`
-
-- **Negation**:
-  `has_tag("#project") AND NOT contains("archived")`
-
-- **Frontmatter/Properties**:
-  Use `properties(key == value)` to filter notes by their YAML frontmatter before extracting elements.
-  `properties(status == "active") AND has_tag("#meeting")`
-
-### Dynamic Parameters
-
-You can dynamically include the current note's parameters in the `folder` and `filter` options using the following variables:
-- `{{this.filename}}`: Expands to the current note's name (without the `.md` extension).
-- `{{this.folder}}`: Expands to the name of the folder containing the current note.
-- `{{this.path}}`: Expands to the full path of the current note (without the `.md` extension).
-
-For example, to list elements from the `Diary` folder that contain the current note's name:
-
-<pre>
-```moc
-folder: Diary
-element: List
-filter: has_word("{{this.filename}}")
-recursive: true
-```
-</pre>
-
-## Grouping, Sorting, and Limiting
-
-You can shape the structure and volume of your MOC output directly from the code block configuration.
-
-- **Group results by their tags:**
-  <pre>
-  ```moc
-  folder: Ideas
-  element: Heading
-  filter: has_word("feature")
-  groupBy: tag
-  ```
-  </pre>
-
-- **Sort results by creation time and limit to the 5 most recent files:**
-  <pre>
-  ```moc
-  folder: Daily Notes
-  element: Task
-  filter: is_incomplete()
-  sort: ctime desc
-  limit: 5
-  ```
-  </pre>
-
-## MOC Creation Wizard
-
-If you don't want to write the YAML configuration by hand, the plugin includes a **MOC Creation Wizard**.
-
-You can invoke the wizard by using the **"Create map of content block"** command from the Obsidian command palette, or by clicking the list icon in the left ribbon.
-
-The wizard provides a visual form to select your target folder, element type, write your filters (with auto-completion), and apply optional result shaping (`groupBy`, `sort`, `limit`). When submitted, it will insert the proper `moc` code block at your cursor.
-
-## Bake to Markdown
-
-Dynamic `moc` blocks render queries on the fly. However, you might want to freeze the output at a specific point in time so it won't change if the source files are updated.
-
-When a dynamic MOC is rendered in Reading mode, you will see a **"Bake"** button at the bottom of the block. Clicking this button will irreversibly transform the dynamic `moc` block and its generated contents into static markdown text directly inside your note.
-
-This workflow is useful when you want to archive a query's results, share the text without requiring the plugin, or modify the generated output by hand.
-
-## Result
-
-The plugin will scan all markdown files in the specified `folder`. For any files containing elements that match your `filter`, it will dynamically render a section.
-
-The rendered output includes:
-1. A header with a link back to the source file where the elements were found.
-2. The matching elements themselves.
-
-> Note: The original `moc` code block is replaced in reading/preview mode with the dynamically generated content.
+---
 
 ## Support
-
-If you find this plugin helpful, consider supporting its development!
 
 <a href="https://buymeacoffee.com/mkshp" target="_blank">
   <img

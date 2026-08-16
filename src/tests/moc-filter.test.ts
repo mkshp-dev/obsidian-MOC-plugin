@@ -1,6 +1,7 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace } from '../moc';
+import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate } from '../moc';
+import { TFile } from 'obsidian';
 
 void describe('MOC Filter - Primitive Filters', () => {
     void test('has_word(...)', () => {
@@ -172,6 +173,68 @@ void describe('MOC Filter - Property/Frontmatter Evaluation', () => {
         assert.strictEqual(evaluateFrontmatter({ status: "active", priority: "high" }, filter), true);
         assert.strictEqual(evaluateFrontmatter({ status: "active", priority: "low" }, filter), false);
     });
+
+    void test('Comparison operators - numeric', () => {
+        const filterGt = parseFilter('properties(score > 3)');
+        assert.ok(filterGt);
+        assert.strictEqual(evaluateFrontmatter({ score: 4 }, filterGt), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 3 }, filterGt), false);
+        assert.strictEqual(evaluateFrontmatter({ score: 2 }, filterGt), false);
+
+        const filterGte = parseFilter('properties(score >= 3)');
+        assert.ok(filterGte);
+        assert.strictEqual(evaluateFrontmatter({ score: 4 }, filterGte), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 3 }, filterGte), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 2 }, filterGte), false);
+
+        const filterLt = parseFilter('properties(score < 3)');
+        assert.ok(filterLt);
+        assert.strictEqual(evaluateFrontmatter({ score: 2 }, filterLt), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 3 }, filterLt), false);
+
+        const filterLte = parseFilter('properties(score <= 3)');
+        assert.ok(filterLte);
+        assert.strictEqual(evaluateFrontmatter({ score: 2 }, filterLte), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 3 }, filterLte), true);
+        assert.strictEqual(evaluateFrontmatter({ score: 4 }, filterLte), false);
+    });
+
+    void test('Comparison operators - dates', () => {
+        const filterLtDate = parseFilter('properties(due <= "2026-01-01")');
+        assert.ok(filterLtDate);
+        assert.strictEqual(evaluateFrontmatter({ due: "2025-12-31" }, filterLtDate), true);
+        assert.strictEqual(evaluateFrontmatter({ due: "2026-01-01" }, filterLtDate), true);
+        assert.strictEqual(evaluateFrontmatter({ due: "2026-01-02" }, filterLtDate), false);
+
+        const filterGtDate = parseFilter('properties(due > "2026-01-01")');
+        assert.ok(filterGtDate);
+        assert.strictEqual(evaluateFrontmatter({ due: "2026-01-02" }, filterGtDate), true);
+        assert.strictEqual(evaluateFrontmatter({ due: "2026-01-01" }, filterGtDate), false);
+    });
+
+    void test('Comparison operators - string inequality', () => {
+        const filterNeq = parseFilter('properties(status != "done")');
+        assert.ok(filterNeq);
+        assert.strictEqual(evaluateFrontmatter({ status: "active" }, filterNeq), true);
+        assert.strictEqual(evaluateFrontmatter({ status: "done" }, filterNeq), false);
+    });
+
+    void test('Comparison operators - boolean/checkbox values', () => {
+        const filterTrue = parseFilter('properties(archived == true)');
+        assert.ok(filterTrue);
+        assert.strictEqual(evaluateFrontmatter({ archived: true }, filterTrue), true);
+        assert.strictEqual(evaluateFrontmatter({ archived: false }, filterTrue), false);
+
+        const filterFalse = parseFilter('properties(archived == false)');
+        assert.ok(filterFalse);
+        assert.strictEqual(evaluateFrontmatter({ archived: false }, filterFalse), true);
+        assert.strictEqual(evaluateFrontmatter({ archived: true }, filterFalse), false);
+
+        const filterNeq = parseFilter('properties(archived != true)');
+        assert.ok(filterNeq);
+        assert.strictEqual(evaluateFrontmatter({ archived: false }, filterNeq), true);
+        assert.strictEqual(evaluateFrontmatter({ archived: true }, filterNeq), false);
+    });
 });
 
 void describe('MOC Filter - Malformed Filter Handling', () => {
@@ -238,5 +301,61 @@ void describe('MOC Find & Replace', () => {
     void test('Regex replacement edge cases (invalid pattern)', () => {
         const text = 'Regex pattern';
         assert.strictEqual(applyFindReplace(text, '/[invalid/', 'literal'), 'Regex pattern');
+    });
+});
+
+void describe('MOC Template', () => {
+    // Mock TFile for testing
+    const mockFile = {
+        basename: 'my-file',
+        path: 'folder/my-file.md'
+    } as TFile;
+
+    void test('template replacement', () => {
+        const text = '- [ ] Task 1';
+
+        // Single replacement
+        assert.strictEqual(
+            applyTemplate(text, '{{content}}', mockFile),
+            '- [ ] Task 1'
+        );
+
+        assert.strictEqual(
+            applyTemplate(text, '{{file}}', mockFile),
+            'my-file'
+        );
+
+        assert.strictEqual(
+            applyTemplate(text, '{{path}}', mockFile),
+            'folder/my-file.md'
+        );
+
+        assert.strictEqual(
+            applyTemplate(text, '{{link}}', mockFile),
+            '[[folder/my-file.md|my-file]]'
+        );
+
+        // Combined replacement
+        assert.strictEqual(
+            applyTemplate(text, '- {{content}} — [[{{path}}|{{file}}]]', mockFile),
+            '- - [ ] Task 1 — [[folder/my-file.md|my-file]]'
+        );
+    });
+
+    void test('multi-line template replacement', () => {
+        const text = 'Block quote content';
+        const multilineTemplate = `> {{content}}\n> — [[{{path}}|{{file}}]]`;
+        assert.strictEqual(
+            applyTemplate(text, multilineTemplate, mockFile),
+            `> Block quote content\n> — [[folder/my-file.md|my-file]]`
+        );
+    });
+
+    void test('unknown placeholders', () => {
+        const text = 'Sample content';
+        assert.strictEqual(
+            applyTemplate(text, '{{unknown}} {{content}}', mockFile),
+            '{{unknown}} Sample content'
+        );
     });
 });

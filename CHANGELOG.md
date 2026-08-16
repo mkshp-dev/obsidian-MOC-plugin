@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+## 1.4.0 - 2026-08-16
+
 - **Feature: Copy as Markdown** — Added a Copy button to the MOC block toolbar that copies the rendered Markdown output to the clipboard without modifying the note.
 - **Feature: `properties()` comparison operators** — Added `>`, `<`, `>=`, `<=`, `!=` operators to `properties()` filters for numeric and date comparisons (e.g. `properties(priority <= 2)`, `properties(date >= "2024-01-01")`).
 - **Feature: `template` option** — Custom output formatting for each matched element by referencing a template note (configured via the **Template folder** setting) whose content uses `{{content}}`, `{{file}}`, `{{path}}`, and `{{link}}` handlebars-style placeholders.
@@ -24,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UI: Redesigned MOC Creation Wizard** — Wizard sections (Source, Filters, Shaping, Result manipulations) now use the same icon-driven card layout, with icon buttons replacing text/emoji controls throughout the filter builder and rule chain.
 - **Fix: `template` option documentation and showcase example** — The `template` key takes the *name* of a template note (resolved against the Template folder setting), not inline placeholder text. Corrected the showcase's template note (09) and all docs/README references that previously showed inline `template: "..."` strings that would fail to resolve.
 - **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.
+
 
 ## 1.3.3 - 2026-06-30
 

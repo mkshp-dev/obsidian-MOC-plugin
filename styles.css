@@ -103,30 +103,26 @@
     margin-left: 8px;
 }
 
-.moc-rule-chain-btn {
-    padding: 4px !important;
-    width: 24px !important;
-    height: 24px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: transparent !important;
-    border: none !important;
-    color: var(--text-muted) !important;
+.clickable-icon.moc-rule-chain-btn {
+    padding: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
     flex-shrink: 0;
 }
 
-.moc-rule-chain-btn:hover {
-    background-color: var(--background-modifier-hover) !important;
-    color: var(--text-normal) !important;
+.clickable-icon.moc-rule-chain-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
 }
 
-.moc-rule-chain-delete {
-    color: var(--text-muted) !important;
-}
-
-.moc-rule-chain-delete:hover {
-    color: var(--text-error) !important;
+.clickable-icon.moc-rule-chain-btn.moc-rule-chain-delete:hover {
+    color: var(--text-error);
 }
 
 /* ===== Wizard Modal Shell ===== */
@@ -236,10 +232,10 @@
     margin-left: auto;
 }
 
-.moc-recursive-toggle-setting {
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+.setting-item.moc-recursive-toggle-setting {
+    border: none;
+    padding: 0;
+    margin: 0;
 }
 
 .moc-recursive-toggle-setting .setting-item-info {
@@ -263,7 +259,7 @@
 
 /* Wizard filter builder */
 
-.suggestion-item:has(.moc-property-suggest-icon) {
+.suggestion-item.moc-suggestion-item-icon {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -334,28 +330,28 @@
     box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
 }
 
-.moc-shaping-select,
-.moc-shaping-select-dir {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
+select.dropdown.moc-shaping-select,
+select.dropdown.moc-shaping-select-dir {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
     padding: 6px 10px;
     font-size: var(--font-ui-small);
     color: var(--text-normal);
     cursor: pointer;
 }
 
-.moc-shaping-input-group select:not(:last-child),
-.moc-shaping-input-group input:not(:last-child) {
-    border-right: 1px solid var(--background-modifier-border) !important;
+.moc-shaping-input-group select.dropdown:not(:last-child),
+.moc-shaping-input-group input[type="text"]:not(:last-child) {
+    border-right: 1px solid var(--background-modifier-border);
 }
 
-.moc-shaping-input {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
+input[type="text"].moc-shaping-input {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
     padding: 6px 10px;
     font-size: var(--font-ui-small);
     min-width: 140px;
@@ -412,31 +408,31 @@
     font-weight: 500;
 }
 
-.moc-shaping-pill-input {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
+input[type="number"].moc-shaping-pill-input {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
     padding: 6px 10px;
     font-size: var(--font-ui-small);
     width: 68px;
 }
 
-.moc-shaping-pill-select {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
+select.dropdown.moc-shaping-pill-select {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
     padding: 6px 10px;
     font-size: var(--font-ui-small);
     color: var(--text-normal);
     cursor: pointer;
 }
 
-.moc-shaping-count-toggle {
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+.setting-item.moc-shaping-count-toggle {
+    border: none;
+    padding: 0;
+    margin: 0;
 }
 
 .moc-shaping-count-toggle .setting-item-info {

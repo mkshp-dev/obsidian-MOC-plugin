@@ -41,8 +41,12 @@ export function getFrontmatterPropertyOptions(app: App, folderPath: string): Fro
         const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
         if (!frontmatter) continue;
 
-        for (const [key, value] of Object.entries(frontmatter)) {
+        // Read through a `Record<string, unknown>` view so property values are never
+        // implicitly typed `any` (FrontMatterCache declares `[key: string]: any`).
+        const frontmatterEntries: Record<string, unknown> = frontmatter;
+        for (const key of Object.keys(frontmatterEntries)) {
             if (key === 'position') continue;
+            const value: unknown = frontmatterEntries[key];
             const type = getFrontmatterValueType(value);
             if (!type) continue;
             options.set(`${key}\u0000${type}`, { key, type });
@@ -363,6 +367,7 @@ export class TypedPropertySuggest extends AbstractInputSuggest<FrontmatterProper
     }
 
     renderSuggestion(option: FrontmatterPropertyOption, el: HTMLElement): void {
+        el.addClass('moc-suggestion-item-icon');
         const iconEl = el.createSpan({ cls: 'moc-property-suggest-icon' });
         setIcon(iconEl, getPropertyTypeIcon(option.type));
         el.createSpan({ text: option.key });
@@ -465,6 +470,7 @@ export class TemplateSuggest extends AbstractInputSuggest<string> {
     }
 
     renderSuggestion(value: string, el: HTMLElement): void {
+        el.addClass('moc-suggestion-item-icon');
         const iconEl = el.createSpan({ cls: 'moc-property-suggest-icon' });
         setIcon(iconEl, 'file-text');
         el.createSpan({ text: value });

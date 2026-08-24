@@ -12,6 +12,7 @@
 		"test": "node test-runner.mjs"
 	},
 	"keywords": [],
+	"author": "mkshp",
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^16.11.6",

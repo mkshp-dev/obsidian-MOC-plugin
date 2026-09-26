@@ -27,12 +27,14 @@ without writing a single line of YAML manually.
 | [[04 - Paragraphs and blockquotes]] | \`Paragraph\`, \`Blockquote\` elements |
 | [[05 - Advanced filters]] | \`AND\`, \`OR\`, \`NOT\`, \`properties()\`, comparison operators |
 | [[06 - Grouping and sorting]] | \`groupBy\`, \`sort\`, \`showCount\` |
-| [[07 - Limit offset and pagination]] | \`limit\`, \`offset\` |
+| [[07 - Limit offset and pagination]] | \`fileLimit\`, \`blockLimit\`, \`blocksPerFile\`, offsets |
 | [[08 - Exclude folders and files]] | \`excludeFolder\`, \`excludeFile\` |
 | [[09 - Template output formatting]] | \`template\` (template notes) |
 | [[10 - Find and replace rules]] | \`applyFnR\`, settings rules |
 | [[11 - Copy Bake and live refresh]] | Toolbar buttons, auto-refresh |
 | [[12 - Separators and dynamic parameters]] | \`blockSeparator\`, \`noteSeparator\`, \`{{this.folder}}\` |
+| [[13 - Interactive tasks]] | Ticking tasks in place, write-back safety |
+| [[14 - Jump to source]] | Per-block jump-to-source buttons |
 `,
     },
 
@@ -203,6 +205,7 @@ recursive: true
 **What to notice:**
 - \`is_completed()\` and \`is_incomplete()\` are only meaningful for \`Task\` (and \`List\`) elements.
 - The wizard hides these filters when a non-task element is selected.
+- The checkboxes above are **live** — tick one and it updates in its source note. See [[13 - Interactive tasks]].
 `,
     },
     {
@@ -370,37 +373,92 @@ recursive: true
     },
     {
         path: `${SHOWCASE_FOLDER}/07 - Limit offset and pagination.md`,
-        content: `# 07 — Limit, offset and pagination
+        content: `# 07 — Limits, offsets and pagination
 
-Use \`limit\` and \`offset\` together to paginate large result sets.
+Limits come in two units, and mixing them up is the most common source of
+surprise. **Files** are the notes that get scanned. **Results** are the individual
+matched elements that come out.
 
-### First 2 files
+## Limiting files
+
+\`fileLimit\` caps how many notes are scanned. It is the only limit that saves work,
+because notes beyond it are never read at all.
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
 element: Heading
 filter: contains("Action items")
 sort: name asc
-limit: 2
+fileLimit: 2
 recursive: true
+showCount: true
 \`\`\`
 
-### Skip first file, take next 1
+\`fileOffset\` skips notes before that, so the two together page through notes:
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
 element: Heading
 filter: contains("Action items")
 sort: name asc
-offset: 1
-limit: 1
+fileOffset: 1
+fileLimit: 1
 recursive: true
+showCount: true
+\`\`\`
+
+## Limiting results
+
+\`blockLimit\` caps how many matched elements are shown in total, regardless of how
+many notes they came from. This is usually what you actually want:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+blockLimit: 3
+showCount: true
+\`\`\`
+
+Note the count at the bottom: it reads \`3 of N results\`, so a limited view never
+hides how much is really outstanding.
+
+\`blockOffset\` is the matching page control — this is the *next* page of the block
+above:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+blockOffset: 3
+blockLimit: 3
+showCount: true
+\`\`\`
+
+## Keeping one note from hogging the list
+
+A \`blockLimit\` on its own can be filled entirely by a single busy note, hiding every
+other note from view. \`blocksPerFile\` caps the contribution of any one note, so the
+result stays a map rather than an excerpt:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+blocksPerFile: 1
+blockLimit: 5
+showCount: true
 \`\`\`
 
 **What to notice:**
-- \`limit\` and \`offset\` apply to the **file** list, not individual result blocks.
-- Combine with \`sort\` for predictable, stable pages.
-- \`offset: 0\` is the same as omitting offset.
+- \`fileLimit\`/\`fileOffset\` count **notes**; \`blockLimit\`/\`blockOffset\` count **results**.
+- \`blocksPerFile\` keeps the first matches of each note, in document order.
+- Combine any of them with \`sort\` for stable, predictable pages.
+- An offset of \`0\` is the same as omitting it.
+- \`limit\` and \`offset\` still work as the old names for \`fileLimit\` and \`fileOffset\`.
 `,
     },
     {
@@ -556,6 +614,7 @@ applyFnR: ["strip-hashes", "add-prefix"]
 - Patterns starting and ending with \`/\` are treated as regex (e.g., \`/^#+ /gm\`).
 - Literal strings replace all occurrences (equivalent to a global replace).
 - The wizard lets you add and reorder rules visually under the "Find and replace" section.
+- Once a rule rewrites the matched text, any task checkboxes in the output become **disabled** — the plugin can no longer map a checkbox back to its source line. See [[13 - Interactive tasks]].
 `,
     },
     {
@@ -653,6 +712,132 @@ recursive: true
 **What to notice:**
 - Dynamic parameters work inside both \`folder\` and \`filter\`.
 - They're expanded relative to whichever note the \`moc\` block lives in, not the showcase notes specifically.
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/13 - Interactive tasks.md`,
+        content: `# 13 — Interactive tasks
+
+Task checkboxes inside a rendered MOC block are **live**. Ticking one writes the
+change straight back to the note the task came from, so you can work through an
+aggregated list without opening each source note.
+
+### Everything still open, across all meeting notes
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+showCount: true
+\`\`\`
+
+**Try it:**
+1. Tick any checkbox above.
+2. Open the source note named in the heading — the matching \`- [ ]\` is now \`- [x]\`.
+3. Come back here. Because the filter is \`is_incomplete()\` and blocks auto-refresh,
+   the task you completed has dropped out of the list on its own.
+
+### Tasks found inside other elements
+
+Interactive tasks are not limited to \`element: Task\`. The block below extracts whole
+\`Decisions\` sections, and the tasks that happen to live inside them are clickable too:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Heading
+filter: contains("Decisions")
+recursive: true
+\`\`\`
+
+## Write-back is guarded
+
+Before writing, the plugin checks that the target line still reads exactly as it did
+when the block was rendered. If the note changed in the meantime — an edit in another
+pane, or a sync from another device — the write is skipped, you get a notice, and the
+block refreshes to show the current state.
+
+**Try it:**
+1. Open \`${SHOWCASE_FOLDER}/data/Meeting Notes Alpha.md\` in a second pane.
+2. Edit the text of \`- [ ] Update documentation\` (for example, add a word).
+3. Without saving focus back here, tick that task in a block above *before* it refreshes.
+4. You get "the source line has changed" instead of a silent overwrite.
+
+A stale view can never clobber newer content.
+
+## When tasks are read-only
+
+Checkboxes are shown but **disabled** when a block uses \`template\` or \`applyFnR\`.
+Both options rewrite matched text before rendering, which breaks the link between a
+rendered checkbox and its source line:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+applyFnR: strip-hashes
+\`\`\`
+
+> This needs the \`strip-hashes\` rule from [[10 - Find and replace rules]]. Once the rule
+> exists and actually rewrites something, the checkboxes above grey out — hover one to see
+> why. Until then nothing is rewritten, so they stay clickable: the read-only state tracks
+> whether the text really changed, not just whether the option is present.
+
+**What to notice:**
+- Nested subtasks, ordered-list tasks (\`1. [ ]\`), and tasks inside blockquotes and
+  callouts all work.
+- Custom states such as \`- [/]\` are treated as checked and become unchecked on the
+  first click.
+- Toggling from a MOC block is a normal note edit — undo in the source note works as usual.
+- To switch the whole feature off, go to **Settings → Maps of Content → Tasks** and
+  turn off **Interactive tasks**.
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/14 - Jump to source.md`,
+        content: `# 14 — Jump to source
+
+A MOC block gathers content from all over your vault. Jump to source is how you get
+back: every matched block carries its own button that opens the note it came from,
+scrolled to the exact line the block starts at.
+
+### Decisions from every meeting note
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Blockquote
+filter: has_tag("#decision")
+recursive: true
+\`\`\`
+
+**Try it:**
+1. Hover any block above — a small arrow button appears in its top-right corner.
+2. Click it. The source note opens with the cursor on that blockquote.
+3. Go back and hold **Ctrl** (**Cmd** on macOS) while clicking instead — the note
+   opens in a new pane, leaving this one in place.
+
+### It is per block, not per note
+
+The block below pulls several tasks out of the same handful of notes. Each matched
+task has its own button pointing at its own line, so you land on the task you clicked
+rather than at the top of the file:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+\`\`\`
+
+**What to notice:**
+- The heading above each group is still an ordinary \`[[wikilink]]\` to the whole note —
+  the jump button is the line-precise counterpart to it.
+- Jump buttons appear on every element type, not just tasks.
+- Jumping never modifies anything; it is purely navigation. Compare with
+  [[13 - Interactive tasks]], which does write back.
+- To hide the buttons, go to **Settings → Maps of Content → Tasks** and turn off
+  **Jump to source**.
 `,
     },
 ];

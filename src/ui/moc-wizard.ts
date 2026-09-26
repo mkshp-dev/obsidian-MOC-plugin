@@ -36,8 +36,11 @@ export class MocWizardModal extends Modal {
     propertyKey: string = '';
     sortField: string = '';
     sortDirection: string = 'asc';
-    limit: string = '';
-    offset: string = '';
+    fileLimit: string = '';
+    fileOffset: string = '';
+    blockLimit: string = '';
+    blockOffset: string = '';
+    blocksPerFile: string = '';
     plugin: MOCPlugin;
     applyFnR: string[] = [];
     template: string = '';
@@ -46,6 +49,7 @@ export class MocWizardModal extends Modal {
     showCount: boolean = false;
     excludeFolder: string = '';
     excludeFile: string = '';
+    taskHintEl: HTMLElement | null = null;
 
     constructor(app: App, plugin: MOCPlugin) {
         super(app);
@@ -182,6 +186,7 @@ export class MocWizardModal extends Modal {
         templateInput.value = this.template;
         templateInput.oninput = () => {
             this.template = templateInput.value;
+            this.updateTaskReadOnlyHint();
         };
         new TemplateSuggest(this.app, templateInput, () => this.plugin.settings.templateFolder || '');
         if (this.template) {
@@ -228,6 +233,9 @@ export class MocWizardModal extends Modal {
         
         const ruleChainContainer = resultManipContainer.createDiv({ cls: 'moc-rule-chain-container' });
         this.renderRuleChain(ruleChainContainer);
+
+        this.taskHintEl = resultManipContainer.createDiv({ cls: 'moc-wizard-hint' });
+        this.updateTaskReadOnlyHint();
 
         const footerEl = contentEl.createDiv({ cls: 'moc-wizard-footer' });
         new Setting(footerEl)
@@ -338,41 +346,60 @@ export class MocWizardModal extends Modal {
             });
         }
 
-        // 3. Limit, Offset, and Show count section
-        const optionsRow = containerEl.createDiv({ cls: 'moc-shaping-options-row' });
+        // 3. Limits row — files and results are counted separately, so each gets
+        // its own field rather than one ambiguous "Limit".
+        const limitsRow = containerEl.createDiv({ cls: 'moc-shaping-options-row' });
 
-        // Limit input group
-        const limitGroup = optionsRow.createDiv({ cls: 'moc-shaping-pill-item' });
-        const limitLabel = limitGroup.createSpan({ text: 'Limit', cls: 'moc-shaping-pill-label' });
-        limitLabel.title = 'Maximum number of results to include';
-        const limitInput = limitGroup.createEl('input', {
-            type: 'number',
+        this.createCountPill(limitsRow, {
+            label: 'File limit',
+            tooltip: 'Maximum number of notes to scan',
             placeholder: 'All',
-            cls: 'moc-shaping-pill-input',
+            min: '1',
+            value: this.fileLimit,
+            onChange: value => { this.fileLimit = value; }
         });
-        limitInput.min = '1';
-        limitInput.value = this.limit;
-        limitInput.oninput = () => {
-            this.limit = limitInput.value;
-        };
 
-        // Offset input group
-        const offsetGroup = optionsRow.createDiv({ cls: 'moc-shaping-pill-item' });
-        const offsetLabel = offsetGroup.createSpan({ text: 'Offset', cls: 'moc-shaping-pill-label' });
-        offsetLabel.title = 'Skip this many results from the beginning';
-        const offsetInput = offsetGroup.createEl('input', {
-            type: 'number',
-            placeholder: '0',
-            cls: 'moc-shaping-pill-input',
+        this.createCountPill(limitsRow, {
+            label: 'Result limit',
+            tooltip: 'Maximum number of matched elements to show in total',
+            placeholder: 'All',
+            min: '1',
+            value: this.blockLimit,
+            onChange: value => { this.blockLimit = value; }
         });
-        offsetInput.min = '0';
-        offsetInput.value = this.offset;
-        offsetInput.oninput = () => {
-            this.offset = offsetInput.value;
-        };
+
+        this.createCountPill(limitsRow, {
+            label: 'Max per note',
+            tooltip: 'Maximum number of matched elements to take from any single note',
+            placeholder: 'All',
+            min: '1',
+            value: this.blocksPerFile,
+            onChange: value => { this.blocksPerFile = value; }
+        });
+
+        // 3b. Offsets row, paired with the limits above.
+        const offsetsRow = containerEl.createDiv({ cls: 'moc-shaping-options-row' });
+
+        this.createCountPill(offsetsRow, {
+            label: 'File offset',
+            tooltip: 'Skip this many notes before scanning',
+            placeholder: '0',
+            min: '0',
+            value: this.fileOffset,
+            onChange: value => { this.fileOffset = value; }
+        });
+
+        this.createCountPill(offsetsRow, {
+            label: 'Result offset',
+            tooltip: 'Skip this many matched elements before showing results',
+            placeholder: '0',
+            min: '0',
+            value: this.blockOffset,
+            onChange: value => { this.blockOffset = value; }
+        });
 
         // Show count toggle
-        const countSetting = new Setting(optionsRow)
+        const countSetting = new Setting(offsetsRow)
             .setClass('moc-shaping-count-toggle')
             .setName('Show count')
             .addToggle(toggle => toggle
@@ -705,6 +732,44 @@ export class MocWizardModal extends Modal {
         return compileFilterTree(tempGroup) ?? '';
     }
 
+    createCountPill(rowEl: HTMLElement, options: {
+        label: string;
+        tooltip: string;
+        placeholder: string;
+        min: string;
+        value: string;
+        onChange: (value: string) => void;
+    }) {
+        const group = rowEl.createDiv({ cls: 'moc-shaping-pill-item' });
+        const labelEl = group.createSpan({ text: options.label, cls: 'moc-shaping-pill-label' });
+        labelEl.title = options.tooltip;
+
+        const input = group.createEl('input', {
+            type: 'number',
+            placeholder: options.placeholder,
+            cls: 'moc-shaping-pill-input',
+        });
+        input.min = options.min;
+        input.value = options.value;
+        input.oninput = () => {
+            options.onChange(input.value);
+        };
+        return input;
+    }
+
+    /** Empty means "unset", so only non-empty values are checked. */
+    isValidCount(raw: string, label: string, minimum: number): boolean {
+        if (raw.trim() === '') return true;
+
+        const parsed = Number(raw);
+        if (!Number.isInteger(parsed) || parsed < minimum) {
+            const requirement = minimum > 0 ? 'a positive integer' : 'a non-negative integer';
+            new Notice(`${label} must be ${requirement}`);
+            return false;
+        }
+        return true;
+    }
+
     addSelectOption(selectEl: HTMLSelectElement, value: string, label: string) {
         const optionEl = selectEl.createEl('option', { text: label });
         optionEl.value = value;
@@ -823,6 +888,33 @@ export class MocWizardModal extends Modal {
                 });
             }
         }
+
+        this.updateTaskReadOnlyHint();
+    }
+
+    /**
+     * Warns that reshaping the output makes task checkboxes read-only. The
+     * plugin only disables them when the text actually changes, which cannot be
+     * known until the block renders, so this is phrased as a consequence of the
+     * rewrite rather than a certainty.
+     */
+    updateTaskReadOnlyHint() {
+        const hintEl = this.taskHintEl;
+        if (!hintEl) return;
+
+        hintEl.empty();
+
+        const reshapesOutput = this.template.trim() !== '' || this.applyFnR.length > 0;
+        const rendersCheckboxes = this.element === 'Task' || this.element === 'List';
+        const show = reshapesOutput && rendersCheckboxes && this.plugin.settings.interactiveTasks;
+
+        hintEl.toggleClass('is-visible', show);
+        if (!show) return;
+
+        setIcon(hintEl.createSpan({ cls: 'moc-wizard-hint-icon' }), 'info');
+        hintEl.createSpan({
+            text: 'Heads up: tasks in this block become read-only once a template or rule rewrites the text.'
+        });
     }
 
     insertMocBlock() {
@@ -844,18 +936,16 @@ export class MocWizardModal extends Modal {
                 return;
             }
 
-            if (this.limit) {
-                if (!/^[1-9]\d*$/.test(this.limit)) {
-                    new Notice('Limit must be a positive integer');
-                    return;
-                }
-            }
+            const countChecks: [string, string, number][] = [
+                [this.fileLimit, 'File limit', 1],
+                [this.blockLimit, 'Result limit', 1],
+                [this.blocksPerFile, 'Max per note', 1],
+                [this.fileOffset, 'File offset', 0],
+                [this.blockOffset, 'Result offset', 0]
+            ];
 
-            if (this.offset) {
-                if (!/^(0|[1-9]\d*)$/.test(this.offset)) {
-                    new Notice('Offset must be a non-negative integer');
-                    return;
-                }
+            for (const [raw, label, minimum] of countChecks) {
+                if (!this.isValidCount(raw, label, minimum)) return;
             }
 
             const yamlLines = [
@@ -899,12 +989,20 @@ export class MocWizardModal extends Modal {
                 yamlLines.push(`sort: ${this.sortField} ${this.sortDirection}`);
             }
 
-            if (this.limit) {
-                yamlLines.push(`limit: ${this.limit}`);
-            }
+            // Emits the explicit file/block keys, never the deprecated
+            // `limit`/`offset` aliases.
+            const countKeys: [string, string][] = [
+                [this.fileLimit, 'fileLimit'],
+                [this.fileOffset, 'fileOffset'],
+                [this.blocksPerFile, 'blocksPerFile'],
+                [this.blockOffset, 'blockOffset'],
+                [this.blockLimit, 'blockLimit']
+            ];
 
-            if (this.offset) {
-                yamlLines.push(`offset: ${this.offset}`);
+            for (const [raw, key] of countKeys) {
+                if (raw.trim() !== '') {
+                    yamlLines.push(`${key}: ${raw.trim()}`);
+                }
             }
 
             if (this.applyFnR.length > 0) {

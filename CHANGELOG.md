@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Feature: Interactive tasks** — Task checkboxes in a rendered `moc` block now write back to their source note. Clicking a checkbox toggles the matching `- [ ]` in the original file, and the block's existing auto-refresh reconciles the view. Works for nested subtasks, ordered-list tasks, and tasks inside extracted headings, blockquotes and callouts. Writes are guarded by a source-line match, so a stale block can never overwrite a newer edit. Blocks render their checkboxes disabled when `template` or `applyFnR` actually rewrites the matched text, since rewriting breaks the mapping back to source lines; output that comes back unchanged stays interactive. Can be turned off with the new **Interactive tasks** setting.
+
+- **Feature: Jump to source** — Every matched block now renders with a hover-revealed button that opens its source note scrolled to the exact line the block starts at, with mod-click to open in a new pane. Blocks are rendered into individual containers so each one has its own handle, and `blockSeparator` spacing is preserved. Can be turned off with the new **Jump to source** setting.
+
+- **Feature: Separate file and result limits** — Added `fileLimit`, `fileOffset`, `blockLimit`, `blockOffset` and `blocksPerFile`. `blockLimit` finally expresses "show me 20 results", which the old file-counting `limit` could not; `blocksPerFile` stops one busy note filling the whole result window; `blockOffset` paginates results rather than notes. `limit` and `offset` keep working as aliases for `fileLimit`/`fileOffset`, with the explicit key winning if both are set. `showCount` now reports `20 of 137 results in 8 files` when results were trimmed, and extraction stops reading files once the block window is full.
+
+- **UI: Wizard read-only hint** — The MOC Creation Wizard now warns inline when a `Task` or `List` block is given a template or a find-and-replace rule, since reshaping the output makes its task checkboxes read-only.
+
+## 1.4.0 - 2026-08-16
+
 - **Feature: Copy as Markdown** — Added a Copy button to the MOC block toolbar that copies the rendered Markdown output to the clipboard without modifying the note.
 - **Feature: `properties()` comparison operators** — Added `>`, `<`, `>=`, `<=`, `!=` operators to `properties()` filters for numeric and date comparisons (e.g. `properties(priority <= 2)`, `properties(date >= "2024-01-01")`).
 - **Feature: `template` option** — Custom output formatting for each matched element by referencing a template note (configured via the **Template folder** setting) whose content uses `{{content}}`, `{{file}}`, `{{path}}`, and `{{link}}` handlebars-style placeholders.
@@ -24,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UI: Redesigned MOC Creation Wizard** — Wizard sections (Source, Filters, Shaping, Result manipulations) now use the same icon-driven card layout, with icon buttons replacing text/emoji controls throughout the filter builder and rule chain.
 - **Fix: `template` option documentation and showcase example** — The `template` key takes the *name* of a template note (resolved against the Template folder setting), not inline placeholder text. Corrected the showcase's template note (09) and all docs/README references that previously showed inline `template: "..."` strings that would fail to resolve.
 - **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.
+
 
 ## 1.3.3 - 2026-06-30
 

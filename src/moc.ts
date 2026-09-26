@@ -1,4 +1,4 @@
-import { App, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, TFile, debounce, TAbstractFile } from 'obsidian';
+import { App, CachedMetadata, Keymap, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, setIcon, TFile, debounce, TAbstractFile } from 'obsidian';
 import { MOCPluginSettings } from './settings';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
@@ -311,10 +311,233 @@ function extractTags(text: string): string[] {
     return Array.from(tags);
 }
 
+export interface TaskLineRef {
+    /** Zero-based line number of the task within its source file. */
+    line: number;
+    /** The task line exactly as it appears in the source, used to detect stale writes. */
+    sourceText: string;
+}
+
+export interface TaskRef extends TaskLineRef {
+    file: TFile;
+}
+
+/** The limit and offset options, after aliases are resolved and validated. */
+export interface ResolvedLimits {
+    fileLimit?: number;
+    fileOffset?: number;
+    blockLimit?: number;
+    blockOffset?: number;
+    blocksPerFile?: number;
+}
+
+function validateCount(value: unknown, key: string, minimum: number): string | null {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < minimum) {
+        const requirement = minimum > 0 ? 'a positive integer' : 'a non-negative integer';
+        return `Error: invalid '${key}' in moc block. Must be ${requirement}.`;
+    }
+    return null;
+}
+
+/**
+ * Resolves the five limit options, honouring `limit` and `offset` as aliases of
+ * `fileLimit` and `fileOffset`. The explicit key wins when both are present.
+ *
+ * The deprecated aliases keep their original, looser validation so that blocks
+ * written before the split are never rejected; the newer keys require integers.
+ */
+export function resolveLimitOptions(config: MocConfig): { limits?: ResolvedLimits; error?: string } {
+    if (config.limit !== undefined && config.fileLimit === undefined) {
+        if (typeof config.limit !== 'number' || config.limit <= 0) {
+            return { error: "Error: invalid 'limit' in moc block. Must be a positive number." };
+        }
+    }
+
+    if (config.offset !== undefined && config.fileOffset === undefined) {
+        if (typeof config.offset !== 'number' || config.offset < 0 || !Number.isInteger(config.offset)) {
+            return { error: "Error: invalid 'offset' in moc block. Must be a non-negative integer." };
+        }
+    }
+
+    const checks: [unknown, string, number][] = [
+        [config.fileLimit, 'fileLimit', 1],
+        [config.blockLimit, 'blockLimit', 1],
+        [config.blocksPerFile, 'blocksPerFile', 1],
+        [config.fileOffset, 'fileOffset', 0],
+        [config.blockOffset, 'blockOffset', 0]
+    ];
+
+    for (const [value, key, minimum] of checks) {
+        if (value === undefined) continue;
+        const error = validateCount(value, key, minimum);
+        if (error) return { error };
+    }
+
+    return {
+        limits: {
+            fileLimit: config.fileLimit ?? config.limit,
+            fileOffset: config.fileOffset ?? config.offset,
+            blockLimit: config.blockLimit,
+            blockOffset: config.blockOffset,
+            blocksPerFile: config.blocksPerFile
+        }
+    };
+}
+
+/** Points at where a matched block begins in its source note. */
+export interface BlockRef {
+    file: TFile;
+    /** Zero-based line number of the block's first line. */
+    line: number;
+}
+
 export interface MatchedBlock {
     file: TFile;
     lines: string[];
     tags: string[];
+    taskLines: TaskLineRef[];
+    /** Zero-based line number this block starts at in its source note. */
+    startLine: number;
+}
+
+/**
+ * A slice of the rendered output. Segments carrying a `ref` are matched blocks
+ * and get their own container plus a jump-to-source control; the rest are the
+ * headings, separators and counts emitted around them.
+ */
+export interface MocSegment {
+    markdown: string;
+    ref?: BlockRef;
+}
+
+interface BlockRange {
+    ref: BlockRef;
+    /** Inclusive index into the emitted output lines. */
+    start: number;
+    /** Inclusive index into the emitted output lines. */
+    end: number;
+}
+
+/**
+ * Splits the emitted lines into renderable segments, isolating each matched
+ * block so it can be rendered into its own element. The concatenation of every
+ * segment's markdown is identical to the flat output used by Copy and Bake.
+ */
+export function buildSegments(outputLines: string[], blockRanges: BlockRange[]): MocSegment[] {
+    const segments: MocSegment[] = [];
+    let cursor = 0;
+
+    for (const range of blockRanges) {
+        if (range.start > cursor) {
+            segments.push({ markdown: outputLines.slice(cursor, range.start).join('\n') });
+        }
+        segments.push({
+            markdown: outputLines.slice(range.start, range.end + 1).join('\n'),
+            ref: range.ref
+        });
+        cursor = range.end + 1;
+    }
+
+    if (cursor < outputLines.length) {
+        segments.push({ markdown: outputLines.slice(cursor).join('\n') });
+    }
+
+    return segments;
+}
+
+const TASK_MARKER_PATTERN = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)(.)(\])/;
+
+/**
+ * Flips a task line between checked and unchecked, preserving indentation, list
+ * marker, blockquote prefix and everything after the checkbox. Any state other
+ * than a space is treated as checked, so custom states collapse to unchecked on
+ * the first click. Returns null when the line is not a task.
+ */
+export function toggleTaskMarker(line: string): string | null {
+    const match = line.match(TASK_MARKER_PATTERN);
+    if (!match) return null;
+
+    const [, prefix, state, suffix] = match;
+    const nextState = state === ' ' ? 'x' : ' ';
+    return `${prefix}${nextState}${suffix}${line.slice(match[0].length)}`;
+}
+
+/**
+ * True when a task line is in any state other than unchecked, mirroring how
+ * Obsidian renders custom states such as `[/]` as checked. Null if not a task.
+ */
+export function isTaskLineChecked(line: string): boolean | null {
+    const match = line.match(TASK_MARKER_PATTERN);
+    if (!match) return null;
+    return match[2] !== ' ';
+}
+
+/**
+ * Maps every task line in a file to its source text, keyed by line number.
+ * Derived from the metadata cache so that `- [ ]` inside a fenced code block is
+ * ignored, matching what Obsidian actually renders as a checkbox.
+ */
+function buildTaskLineMap(fileCache: CachedMetadata | null, lines: string[]): Map<number, string> {
+    const map = new Map<number, string>();
+    if (!fileCache || !fileCache.listItems) return map;
+
+    for (const item of fileCache.listItems) {
+        if (item.task === undefined) continue;
+        const line = item.position.start.line;
+        const sourceText = lines[line];
+        if (sourceText !== undefined) {
+            map.set(line, sourceText);
+        }
+    }
+    return map;
+}
+
+/** Collects the task lines falling inside a matched block, in document order. */
+function collectTaskLines(taskLineMap: Map<number, string>, startLine: number, endLine: number): TaskLineRef[] {
+    const refs: TaskLineRef[] = [];
+    for (let line = startLine; line <= endLine; line++) {
+        const sourceText = taskLineMap.get(line);
+        if (sourceText !== undefined) {
+            refs.push({ line, sourceText });
+        }
+    }
+    return refs;
+}
+
+export type TaskToggleResult = 'ok' | 'stale' | 'missing';
+
+/**
+ * Toggles a task in its source note. The write is skipped unless the target
+ * line still matches the text it had when the block was rendered, so a stale
+ * MOC view can never overwrite an edit made elsewhere.
+ */
+export async function toggleTaskInSource(app: App, ref: TaskRef): Promise<TaskToggleResult> {
+    const file = app.vault.getAbstractFileByPath(ref.file.path);
+    if (!(file instanceof TFile)) return 'missing';
+
+    let outcome: TaskToggleResult = 'ok';
+
+    await app.vault.process(file, (data) => {
+        const eol = data.includes('\r\n') ? '\r\n' : '\n';
+        const lines = data.split(/\r?\n/);
+        const current = lines[ref.line];
+
+        if (current === undefined || current !== ref.sourceText) {
+            outcome = 'stale';
+            return data;
+        }
+
+        const toggled = toggleTaskMarker(current);
+        if (toggled === null) {
+            outcome = 'stale';
+            return data;
+        }
+
+        lines[ref.line] = toggled;
+        return lines.join(eol);
+    });
+
+    return outcome;
 }
 
 export function applyFindReplace(text: string, find?: string, replace?: string): string {
@@ -356,8 +579,15 @@ export interface MocConfig {
     recursive?: boolean;
     groupBy?: string;
     sort?: string;
+    /** Deprecated alias for `fileLimit`, kept so existing blocks keep working. */
     limit?: number;
+    /** Deprecated alias for `fileOffset`, kept so existing blocks keep working. */
     offset?: number;
+    fileLimit?: number;
+    fileOffset?: number;
+    blockLimit?: number;
+    blockOffset?: number;
+    blocksPerFile?: number;
     applyFnR?: string | string[];
     template?: string;
     blockSeparator?: 'none' | 'divider' | 'newline';
@@ -365,6 +595,27 @@ export interface MocConfig {
     showCount?: boolean;
     excludeFolder?: string | string[];
     excludeFile?: string | string[];
+}
+
+export interface MocRenderResult {
+    markdownText?: string;
+    error?: string;
+    cls?: string;
+    /**
+     * Source locations of every task emitted into `markdownText`, in the order
+     * they appear. Rendered checkboxes are matched to these positionally.
+     */
+    taskRefs?: TaskRef[];
+    /**
+     * True when `template` or `applyFnR` rewrote the matched blocks, which
+     * breaks the positional mapping between checkboxes and source lines.
+     */
+    tasksTransformed?: boolean;
+    /**
+     * `markdownText` split so each matched block can be rendered into its own
+     * element. Joining every segment reproduces `markdownText` exactly.
+     */
+    segments?: MocSegment[];
 }
 
 class MocRenderChild extends MarkdownRenderChild {
@@ -447,8 +698,160 @@ class MocRenderChild extends MarkdownRenderChild {
             if (result.error) {
                 this.container.createDiv({ text: result.error, cls: result.cls || 'moc-error' });
             } else if (result.markdownText) {
-                await MarkdownRenderer.render(this.app, result.markdownText, this.container, this.sourcePath, this);
+                if (result.segments && result.segments.length > 0) {
+                    await this.renderSegments(result.segments);
+                } else {
+                    await MarkdownRenderer.render(this.app, result.markdownText, this.container, this.sourcePath, this);
+                }
+                this.attachTaskHandlers(result.taskRefs || [], result.tasksTransformed === true);
             }
+        }
+    }
+
+    /**
+     * Renders the output segment by segment so every matched block lands in its
+     * own element. That gives each block a stable handle for the jump-to-source
+     * control, which a single flat render cannot provide.
+     */
+    private async renderSegments(segments: MocSegment[]) {
+        if (!this.container) return;
+
+        for (let i = 0; i < segments.length; i++) {
+            const segment = segments[i]!;
+
+            if (segment.markdown.trim() === '') {
+                // A blank segment sitting between two blocks is the blank line
+                // emitted by `blockSeparator: newline`. Rendering each block into
+                // its own element loses the spacing that blank line used to
+                // create, so stand an explicit spacer in its place. Blank lines
+                // anywhere else are structural and already absorbed into the
+                // neighbouring heading segment.
+                if (segments[i - 1]?.ref && segments[i + 1]?.ref) {
+                    this.container.createDiv({ cls: 'moc-spacer' });
+                }
+                continue;
+            }
+
+            if (!segment.ref) {
+                const segmentEl = this.container.createDiv({ cls: 'moc-segment' });
+                await MarkdownRenderer.render(this.app, segment.markdown, segmentEl, this.sourcePath, this);
+                continue;
+            }
+
+            const blockEl = this.container.createDiv({ cls: 'moc-block' });
+            await MarkdownRenderer.render(this.app, segment.markdown, blockEl, this.sourcePath, this);
+            this.addJumpButton(blockEl, segment.ref);
+        }
+    }
+
+    private addJumpButton(blockEl: HTMLElement, ref: BlockRef) {
+        if (!this.settings.showJumpToSource) return;
+
+        // aria-label only: Obsidian renders its own tooltip from it, and adding
+        // a `title` would stack a second, native tooltip behind it.
+        const button = blockEl.createEl('button', {
+            cls: 'moc-jump-button',
+            attr: {
+                'aria-label': `Open ${ref.file.basename}, line ${ref.line + 1}`
+            }
+        });
+        setIcon(button, 'arrow-up-right');
+
+        button.onClickEvent(async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await this.jumpToSource(e, ref);
+        });
+    }
+
+    private async jumpToSource(evt: MouseEvent, ref: BlockRef) {
+        const file = this.app.vault.getAbstractFileByPath(ref.file.path);
+        if (!(file instanceof TFile)) {
+            new Notice(`Could not open source: '${ref.file.path}' no longer exists.`);
+            return;
+        }
+
+        // Mod-click (or middle click) opens in a new pane, matching how Obsidian
+        // treats links everywhere else.
+        const leaf = this.app.workspace.getLeaf(Keymap.isModEvent(evt));
+        await leaf.openFile(file, { eState: { line: ref.line } });
+    }
+
+    /**
+     * Makes rendered task checkboxes write back to their source notes.
+     *
+     * Checkboxes are paired with `taskRefs` by position, which holds because the
+     * generator records each task in the same order it emits it. If the counts
+     * disagree for any reason the mapping is untrustworthy, so every checkbox is
+     * disabled rather than risk writing to the wrong line.
+     */
+    private attachTaskHandlers(taskRefs: TaskRef[], tasksTransformed: boolean) {
+        if (!this.container || !this.settings.interactiveTasks) return;
+
+        const checkboxes = Array.from(
+            this.container.querySelectorAll<HTMLInputElement>('input.task-list-item-checkbox')
+        );
+        if (checkboxes.length === 0) return;
+
+        if (tasksTransformed || checkboxes.length !== taskRefs.length) {
+            const reason = tasksTransformed
+                ? 'Read-only: tasks cannot be toggled when template or applyFnR is used.'
+                : 'Read-only: rendered tasks could not be matched to their source lines.';
+            for (const checkbox of checkboxes) {
+                checkbox.disabled = true;
+                checkbox.title = reason;
+            }
+            return;
+        }
+
+        for (let i = 0; i < checkboxes.length; i++) {
+            const checkbox = checkboxes[i]!;
+            const ref = taskRefs[i]!;
+
+            checkbox.disabled = false;
+            checkbox.title = `Toggle in ${ref.file.path}`;
+            checkbox.onClickEvent(async (e) => {
+                e.preventDefault();
+                await this.handleTaskToggle(checkbox, ref);
+            });
+        }
+    }
+
+    private async handleTaskToggle(checkbox: HTMLInputElement, ref: TaskRef) {
+        // Derived from the source line rather than the checkbox: a click has
+        // already flipped `checked` by the time this runs, and preventDefault
+        // only restores it afterwards, so the DOM is not a reliable source here.
+        const nextChecked = isTaskLineChecked(ref.sourceText) === false;
+        const nextSourceText = toggleTaskMarker(ref.sourceText);
+
+        const outcome = await toggleTaskInSource(this.app, ref);
+
+        if (outcome === 'missing') {
+            new Notice(`Could not update task: '${ref.file.path}' no longer exists.`);
+            await this.renderMoc();
+            return;
+        }
+
+        if (outcome === 'stale') {
+            new Notice('Could not update task: the source line has changed. Refreshing.');
+            await this.renderMoc();
+            return;
+        }
+
+        // Keep the ref in step with the file so that clicking the same checkbox
+        // again before the debounced re-render lands still toggles cleanly.
+        if (nextSourceText !== null) {
+            ref.sourceText = nextSourceText;
+        }
+
+        // Reflect the change immediately; the vault 'modify' event re-renders the
+        // block shortly after, which reconciles grouping, filters and counts.
+        checkbox.checked = nextChecked;
+
+        const listItem = checkbox.closest('.task-list-item');
+        if (listItem instanceof HTMLElement) {
+            listItem.toggleClass('is-checked', nextChecked);
+            listItem.setAttribute('data-task', nextChecked ? 'x' : ' ');
         }
     }
 }
@@ -458,7 +861,7 @@ export async function generateMocMarkdown(
     app: App,
     sourcePath: string,
     settings: MOCPluginSettings
-): Promise<{ markdownText?: string; error?: string; cls?: string }> {
+): Promise<MocRenderResult> {
     const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
 
     if (!config.folder || typeof config.folder !== 'string') {
@@ -527,17 +930,11 @@ export async function generateMocMarkdown(
         }
     }
 
-    if (config.limit !== undefined) {
-        if (typeof config.limit !== 'number' || config.limit <= 0) {
-            return { error: "Error: invalid 'limit' in moc block. Must be a positive number.", cls: 'moc-error' };
-        }
+    const limitResult = resolveLimitOptions(config);
+    if (limitResult.error) {
+        return { error: limitResult.error, cls: 'moc-error' };
     }
-
-    if (config.offset !== undefined) {
-        if (typeof config.offset !== 'number' || config.offset < 0 || !Number.isInteger(config.offset)) {
-            return { error: "Error: invalid 'offset' in moc block. Must be a non-negative integer.", cls: 'moc-error' };
-        }
-    }
+    const limits = limitResult.limits!;
 
     // 1. Find all matching files
     const allFiles = app.vault.getMarkdownFiles();
@@ -615,14 +1012,21 @@ export async function generateMocMarkdown(
         });
     }
 
-    if (config.offset !== undefined || config.limit !== undefined) {
-        const start = config.offset || 0;
-        const end = config.limit !== undefined ? start + config.limit : undefined;
+    if (limits.fileOffset !== undefined || limits.fileLimit !== undefined) {
+        const start = limits.fileOffset || 0;
+        const end = limits.fileLimit !== undefined ? start + limits.fileLimit : undefined;
         matchedFiles = matchedFiles.slice(start, end);
     }
 
     // 2. Extract elements
-    const matchedBlocks: MatchedBlock[] = [];
+    let matchedBlocks: MatchedBlock[] = [];
+
+    // Blocks are collected in file order and never reordered afterwards, so once
+    // enough of them exist to fill the block window the remaining files cannot
+    // affect the output and do not need reading. `showCount` reports the true
+    // total, which stopping early would make unknowable, so it opts out.
+    const blocksNeeded = (limits.blockOffset || 0) + (limits.blockLimit || 0);
+    const canStopEarly = limits.blockLimit !== undefined && config.showCount !== true;
 
     for (const file of matchedFiles) {
         const fileCache = app.metadataCache.getFileCache(file);
@@ -635,6 +1039,8 @@ export async function generateMocMarkdown(
 
         const fileContent = await app.vault.cachedRead(file);
         const lines = fileContent.split(/\r?\n/);
+        const taskLineMap = buildTaskLineMap(fileCache, lines);
+        const fileBlockStart = matchedBlocks.length;
 
         if (config.element === 'List' || config.element === 'Task') {
             if (!fileCache.listItems || fileCache.listItems.length === 0) continue;
@@ -689,7 +1095,13 @@ export async function generateMocMarkdown(
                         blockLines.push(currentLine);
                     }
                     const blockText = blockLines.join('\n');
-                    matchedBlocks.push({ file, lines: blockLines, tags: extractTags(blockText) });
+                    matchedBlocks.push({
+                        file,
+                        lines: blockLines,
+                        tags: extractTags(blockText),
+                        taskLines: collectTaskLines(taskLineMap, startLine, endLine),
+                        startLine
+                    });
                 }
             }
         } else if (config.element === 'Heading') {
@@ -728,7 +1140,13 @@ export async function generateMocMarkdown(
                         }
                     }
                     const blockText = blockLines.join('\n');
-                    matchedBlocks.push({ file, lines: blockLines, tags: extractTags(blockText) });
+                    matchedBlocks.push({
+                        file,
+                        lines: blockLines,
+                        tags: extractTags(blockText),
+                        taskLines: collectTaskLines(taskLineMap, startLine, endLine),
+                        startLine
+                    });
                 }
             }
         } else if (config.element === 'Paragraph' || config.element === 'Blockquote') {
@@ -751,11 +1169,54 @@ export async function generateMocMarkdown(
                 const sectionText = sectionLines.join('\n');
 
                 if (evaluateFilter(sectionText, parsedFilter)) {
-                    matchedBlocks.push({ file, lines: sectionLines as string[], tags: extractTags(sectionText) });
+                    matchedBlocks.push({
+                        file,
+                        lines: sectionLines as string[],
+                        tags: extractTags(sectionText),
+                        taskLines: collectTaskLines(taskLineMap, startLine, endLine),
+                        startLine
+                    });
                 }
             }
         }
+
+        // Keep the first N matches from this file, in document order, so one
+        // busy note cannot crowd every other note out of a block window.
+        if (limits.blocksPerFile !== undefined) {
+            const keepUntil = fileBlockStart + limits.blocksPerFile;
+            if (matchedBlocks.length > keepUntil) {
+                matchedBlocks.length = keepUntil;
+            }
+        }
+
+        if (canStopEarly && matchedBlocks.length >= blocksNeeded) {
+            break;
+        }
     }
+
+    // Captured before the block window is applied so showCount can report how much
+    // was trimmed. Stopping early would make this a partial count, which is why
+    // that optimisation stands down whenever showCount is on.
+    const totalMatchedBlocks = matchedBlocks.length;
+
+    if (limits.blockOffset !== undefined || limits.blockLimit !== undefined) {
+        const start = limits.blockOffset || 0;
+        const end = limits.blockLimit !== undefined ? start + limits.blockLimit : undefined;
+        matchedBlocks = matchedBlocks.slice(start, end);
+    }
+
+    if (matchedBlocks.length === 0 && totalMatchedBlocks > 0) {
+        return {
+            error: `No results left to show: blockOffset skips past all ${totalMatchedBlocks} matching elements.`,
+            cls: 'moc-empty'
+        };
+    }
+
+    // Set when a block's text is actually rewritten. Rewritten text can gain or
+    // lose checkboxes, which breaks the positional mapping from a rendered
+    // checkbox back to its source line, so tasks are rendered read-only.
+    // Text that comes back byte-identical leaves the mapping intact.
+    let tasksTransformed = false;
 
     if (config.applyFnR) {
         const ruleNames = Array.isArray(config.applyFnR) ? config.applyFnR : [config.applyFnR];
@@ -765,6 +1226,9 @@ export async function generateMocMarkdown(
                 for (const block of matchedBlocks) {
                     const blockText = block.lines.join('\n');
                     const replacedText = applyFindReplace(blockText, rule.find, rule.replace);
+                    if (replacedText !== blockText) {
+                        tasksTransformed = true;
+                    }
                     block.lines = replacedText.split(/\r?\n/);
                     block.tags = extractTags(replacedText);
                 }
@@ -814,6 +1278,9 @@ export async function generateMocMarkdown(
         for (const block of matchedBlocks) {
             const blockText = block.lines.join('\n');
             const replacedText = applyTemplate(blockText, templateContent, block.file);
+            if (replacedText !== blockText) {
+                tasksTransformed = true;
+            }
             block.lines = replacedText.split(/\r?\n/);
             block.tags = extractTags(replacedText);
         }
@@ -824,6 +1291,9 @@ export async function generateMocMarkdown(
     }
 
     const outputLines: string[] = [];
+    // Recorded as blocks are emitted so the order matches the rendered output.
+    const taskRefs: TaskRef[] = [];
+    const blockRanges: BlockRange[] = [];
 
     if (!config.groupBy) {
         const filesMap = new Map<string, MatchedBlock[]>();
@@ -845,7 +1315,16 @@ export async function generateMocMarkdown(
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 if (block) {
+                    const blockStart = outputLines.length;
                     outputLines.push(...block.lines);
+                    blockRanges.push({
+                        ref: { file: block.file, line: block.startLine },
+                        start: blockStart,
+                        end: outputLines.length - 1
+                    });
+                    for (const taskLine of block.taskLines) {
+                        taskRefs.push({ file: block.file, ...taskLine });
+                    }
                     if (i < blocks.length - 1) {
                         if (config.blockSeparator === 'divider') {
                             outputLines.push("");
@@ -960,7 +1439,16 @@ export async function generateMocMarkdown(
                 for (let i = 0; i < fileBlocks.length; i++) {
                     const block = fileBlocks[i];
                     if (block) {
+                        const blockStart = outputLines.length;
                         outputLines.push(...block.lines);
+                        blockRanges.push({
+                            ref: { file: block.file, line: block.startLine },
+                            start: blockStart,
+                            end: outputLines.length - 1
+                        });
+                        for (const taskLine of block.taskLines) {
+                            taskRefs.push({ file: block.file, ...taskLine });
+                        }
                         if (i < fileBlocks.length - 1) {
                             if (config.blockSeparator === 'divider') {
                                 outputLines.push("");
@@ -991,17 +1479,23 @@ export async function generateMocMarkdown(
     }
 
     if (config.showCount) {
-        const totalBlocks = matchedBlocks.length;
+        const shownBlocks = matchedBlocks.length;
         const uniqueFiles = new Set(matchedBlocks.map(b => b.file.path)).size;
-        const resultText = totalBlocks === 1 ? 'result' : 'results';
+        const isTrimmed = totalMatchedBlocks > shownBlocks;
+        // Pluralise on the larger number so a trimmed count reads naturally.
+        const resultText = (isTrimmed ? totalMatchedBlocks : shownBlocks) === 1 ? 'result' : 'results';
         const fileText = uniqueFiles === 1 ? 'file' : 'files';
+        // Say how much was hidden, so a limited view never misreports the backlog.
+        const countText = isTrimmed
+            ? `${shownBlocks} of ${totalMatchedBlocks} ${resultText} in ${uniqueFiles} ${fileText}`
+            : `${shownBlocks} ${resultText} in ${uniqueFiles} ${fileText}`;
 
         outputLines.push("");
-        outputLines.push(`<div class="moc-count">${totalBlocks} ${resultText} in ${uniqueFiles} ${fileText}</div>`);
+        outputLines.push(`<div class="moc-count">${countText}</div>`);
     }
 
     const markdownText = outputLines.join('\n');
-    return { markdownText };
+    return { markdownText, taskRefs, tasksTransformed, segments: buildSegments(outputLines, blockRanges) };
 }
 export async function processMocBlock(
     config: MocConfig,

@@ -1,4 +1,4 @@
-import {App, Notice, PluginSettingTab, SettingDefinition, setIcon} from "obsidian";
+import {App, Notice, PluginSettingTab, Setting, SettingDefinition, setIcon} from "obsidian";
 import MOCPlugin from "./main";
 import { FolderSuggest } from "./ui/moc-wizard-suggests";
 
@@ -11,11 +11,15 @@ export interface FindReplaceRule {
 export interface MOCPluginSettings {
 	rules: FindReplaceRule[];
 	templateFolder: string;
+	interactiveTasks: boolean;
+	showJumpToSource: boolean;
 }
 
 export const DEFAULT_SETTINGS: MOCPluginSettings = {
 	rules: [],
 	templateFolder: "",
+	interactiveTasks: true,
+	showJumpToSource: true,
 }
 
 export class MOCSettingTab extends PluginSettingTab {
@@ -53,6 +57,34 @@ export class MOCSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 		containerEl.empty();
 		containerEl.addClass('moc-settings-container');
+
+		// ===== Tasks Section =====
+		const tasksBody = this.createSection(
+			containerEl,
+			'check-square',
+			'Tasks',
+			'Control whether tasks shown in a map of content can be ticked off in place.'
+		);
+
+		new Setting(tasksBody)
+			.setName('Interactive tasks')
+			.setDesc('Toggle a task checkbox in a rendered block to update it in its source note. Blocks that reshape their output with a template or a find-and-replace rule stay read-only.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.interactiveTasks)
+				.onChange(async (value) => {
+					this.plugin.settings.interactiveTasks = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(tasksBody)
+			.setName('Jump to source')
+			.setDesc('Show a button on each matched block that opens the source note scrolled to that block.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showJumpToSource)
+				.onChange(async (value) => {
+					this.plugin.settings.showJumpToSource = value;
+					await this.plugin.saveSettings();
+				}));
 
 		// ===== Templates Section =====
 		const templatesBody = this.createSection(

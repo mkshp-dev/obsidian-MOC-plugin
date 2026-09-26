@@ -51,3 +51,34 @@ MOC blocks **automatically re-render** whenever a Markdown file in the watched f
 The refresh is **debounced by 500 ms** to avoid excessive re-renders during rapid consecutive saves.
 
 The watched folder is determined by the `folder` and `recursive` settings of each individual block. Only file changes within the relevant folder (and subfolders, if `recursive: true`) trigger a refresh.
+
+---
+
+## Interactive tasks
+
+Task checkboxes inside a rendered MOC block are **live**. Ticking one writes the change straight back to the note the task came from, so you can work through an aggregated task list without opening each source note.
+
+```moc
+folder: Projects
+element: Task
+filter: is_incomplete()
+recursive: true
+```
+
+Click a checkbox in the block above and the matching `- [ ]` becomes `- [x]` in its original note. Because the block also auto-refreshes on file changes, a task filtered by `is_incomplete()` disappears from the list moments after you complete it.
+
+This works for tasks anywhere in the output, including tasks that appear inside an extracted `Heading` or `Blockquote` block, nested subtasks, ordered-list tasks (`1. [ ]`), and tasks inside callouts.
+
+### Safety
+
+Before writing, the plugin checks that the target line still reads exactly as it did when the block was rendered. If the note changed in the meantime — an edit in another pane, or a sync from another device — the write is skipped, you get a notice, and the block refreshes to show the current state. A stale view can never overwrite newer content.
+
+### When tasks are read-only
+
+Checkboxes are shown but disabled when `template` or `applyFnR` actually rewrites the matched text. Rewriting can add or remove checkboxes, which breaks the link between a rendered checkbox and its source line.
+
+This is based on whether the text really changed, not merely on the option being present. An `applyFnR` naming a rule that does not exist, or a rule whose pattern matches nothing, leaves the output untouched — so the tasks stay clickable. Remove the option if you need tasks to be editable in a block that does transform its output.
+
+### Turning it off
+
+Interactive tasks are enabled by default. To disable them, go to **Settings → Maps of Content → Tasks** and turn off **Interactive tasks**. Checkboxes then render exactly as they did before, with no write-back.

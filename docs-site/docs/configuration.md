@@ -157,6 +157,8 @@ Available placeholders (used inside the template note's content):
 
 ---
 
+> **Note**: If a template rewrites the matched text, task checkboxes in the output render read-only. See [Interactive tasks](./toolbar.md#interactive-tasks).
+
 ### `applyFnR` (Optional)
 Applies reusable Find & Replace rules defined in the plugin's settings to the matched block contents. Can be a single rule name string or a JSON array of rule names. If an array is provided, the rules are applied sequentially in the specified order.
 - **Format**: `string` or `string[]`
@@ -164,6 +166,8 @@ Applies reusable Find & Replace rules defined in the plugin's settings to the ma
 - *Example (chain)*: `applyFnR: ["strip-comments", "clean-headers"]`
 
 ---
+
+> **Note**: If a rule rewrites the matched text, task checkboxes in the output render read-only. See [Interactive tasks](./toolbar.md#interactive-tasks).
 
 ### `blockSeparator` (Optional)
 Defines the separator rendered between different matched blocks extracted from the **same note**.

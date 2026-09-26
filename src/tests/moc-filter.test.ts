@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate } from '../moc';
+import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate, toggleTaskMarker, isTaskLineChecked } from '../moc';
 import { TFile } from 'obsidian';
 
 void describe('MOC Filter - Primitive Filters', () => {
@@ -357,5 +357,84 @@ void describe('MOC Template', () => {
             applyTemplate(text, '{{unknown}} {{content}}', mockFile),
             '{{unknown}} Sample content'
         );
+    });
+});
+
+void describe('MOC Tasks - toggleTaskMarker', () => {
+    void test('unchecked to checked', () => {
+        assert.strictEqual(toggleTaskMarker('- [ ] Buy milk'), '- [x] Buy milk');
+    });
+
+    void test('checked to unchecked', () => {
+        assert.strictEqual(toggleTaskMarker('- [x] Buy milk'), '- [ ] Buy milk');
+    });
+
+    void test('preserves indentation', () => {
+        assert.strictEqual(toggleTaskMarker('    - [ ] Nested'), '    - [x] Nested');
+        assert.strictEqual(toggleTaskMarker('\t- [x] Tabbed'), '\t- [ ] Tabbed');
+    });
+
+    void test('preserves alternative list markers', () => {
+        assert.strictEqual(toggleTaskMarker('* [ ] Star'), '* [x] Star');
+        assert.strictEqual(toggleTaskMarker('+ [ ] Plus'), '+ [x] Plus');
+        assert.strictEqual(toggleTaskMarker('1. [ ] Ordered'), '1. [x] Ordered');
+        assert.strictEqual(toggleTaskMarker('2) [ ] Ordered paren'), '2) [x] Ordered paren');
+    });
+
+    void test('preserves blockquote and callout prefixes', () => {
+        assert.strictEqual(toggleTaskMarker('> - [ ] Quoted'), '> - [x] Quoted');
+        assert.strictEqual(toggleTaskMarker('> > - [x] Nested quote'), '> > - [ ] Nested quote');
+    });
+
+    void test('preserves trailing content, tags and links', () => {
+        assert.strictEqual(
+            toggleTaskMarker('- [ ] Ship #todo [[Note]] due 2026-01-01'),
+            '- [x] Ship #todo [[Note]] due 2026-01-01'
+        );
+    });
+
+    void test('custom states collapse to unchecked', () => {
+        assert.strictEqual(toggleTaskMarker('- [/] In progress'), '- [ ] In progress');
+        assert.strictEqual(toggleTaskMarker('- [-] Cancelled'), '- [ ] Cancelled');
+    });
+
+    void test('returns null for non-task lines', () => {
+        assert.strictEqual(toggleTaskMarker('- Just a list item'), null);
+        assert.strictEqual(toggleTaskMarker('# A heading'), null);
+        assert.strictEqual(toggleTaskMarker(''), null);
+        assert.strictEqual(toggleTaskMarker('Some [x] prose'), null);
+    });
+
+    void test('round trip is stable', () => {
+        const original = '  - [ ] Round trip #tag';
+        const toggled = toggleTaskMarker(original);
+        assert.ok(toggled);
+        assert.strictEqual(toggleTaskMarker(toggled), original);
+    });
+});
+
+void describe('MOC Tasks - isTaskLineChecked', () => {
+    void test('unchecked tasks', () => {
+        assert.strictEqual(isTaskLineChecked('- [ ] Open'), false);
+        assert.strictEqual(isTaskLineChecked('  > - [ ] Quoted open'), false);
+    });
+
+    void test('checked and custom states count as checked', () => {
+        assert.strictEqual(isTaskLineChecked('- [x] Done'), true);
+        assert.strictEqual(isTaskLineChecked('- [X] Done upper'), true);
+        assert.strictEqual(isTaskLineChecked('- [/] In progress'), true);
+    });
+
+    void test('non-task lines', () => {
+        assert.strictEqual(isTaskLineChecked('- Plain item'), null);
+        assert.strictEqual(isTaskLineChecked('Prose'), null);
+    });
+
+    void test('agrees with toggleTaskMarker', () => {
+        for (const line of ['- [ ] a', '- [x] b', '\t1. [ ] c', '> - [/] d']) {
+            const toggled = toggleTaskMarker(line);
+            assert.ok(toggled);
+            assert.strictEqual(isTaskLineChecked(toggled), !isTaskLineChecked(line));
+        }
     });
 });

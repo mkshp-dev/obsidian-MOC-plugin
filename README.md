@@ -10,6 +10,8 @@ Dynamically generate **Map of Content (MOC)** indexes by extracting matching ele
 
 **Live, auto-updating indexes** — `moc` blocks re-render automatically when files in the watched folder change. No refreshing needed.
 
+**Interactive tasks** — Tick a task checkbox in a rendered `moc` block and it updates in its source note, guarded against writing over newer edits.
+
 **Powerful filter DSL** — Boolean logic (`AND`, `OR`, `NOT`), text matching, tag matching, regex, and frontmatter property comparisons with full numeric/date operator support (`>`, `<`, `>=`, `<=`, `!=`).
 
 **MOC Creation Wizard** — Generate `moc` blocks visually from the Command Palette. No YAML required.

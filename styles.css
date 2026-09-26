@@ -983,3 +983,91 @@ select.dropdown.moc-shaping-pill-select {
     background-color: var(--background-modifier-hover);
     color: var(--text-normal);
 }
+
+/* ===== Jump to source (per matched block) ===== */
+
+.moc-block {
+    position: relative;
+}
+
+.moc-jump-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: var(--radius-s);
+    background-color: var(--background-modifier-hover);
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    box-shadow: none;
+}
+
+.moc-block:hover .moc-jump-button,
+.moc-jump-button:focus-visible {
+    opacity: 1;
+}
+
+.moc-jump-button:hover {
+    background-color: var(--background-modifier-active-hover);
+    color: var(--text-normal);
+}
+
+.moc-jump-button .svg-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* Each block renders into its own container, so strip the outer margins that
+   would otherwise stack up and make adjacent blocks drift apart. Spacing between
+   blocks is driven purely by blockSeparator, via .moc-spacer. */
+.moc-block > :first-child,
+.moc-segment > :first-child {
+    margin-top: 0;
+}
+
+.moc-block > :last-child,
+.moc-segment > :last-child {
+    margin-bottom: 0;
+}
+
+/* Stands in for the blank line emitted by blockSeparator: newline. */
+.moc-spacer {
+    height: var(--size-4-2);
+}
+
+/* ===== Wizard inline hint ===== */
+
+.moc-wizard-hint {
+    display: none;
+}
+
+.moc-wizard-hint.is-visible {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 6px 10px;
+    border-radius: var(--radius-s);
+    background-color: var(--background-modifier-hover);
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.4;
+}
+
+.moc-wizard-hint-icon {
+    display: flex;
+    flex-shrink: 0;
+}
+
+.moc-wizard-hint-icon .svg-icon {
+    width: 14px;
+    height: 14px;
+}

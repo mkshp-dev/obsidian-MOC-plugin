@@ -12,12 +12,14 @@ export interface MOCPluginSettings {
 	rules: FindReplaceRule[];
 	templateFolder: string;
 	interactiveTasks: boolean;
+	showJumpToSource: boolean;
 }
 
 export const DEFAULT_SETTINGS: MOCPluginSettings = {
 	rules: [],
 	templateFolder: "",
 	interactiveTasks: true,
+	showJumpToSource: true,
 }
 
 export class MOCSettingTab extends PluginSettingTab {
@@ -71,6 +73,16 @@ export class MOCSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.interactiveTasks)
 				.onChange(async (value) => {
 					this.plugin.settings.interactiveTasks = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(tasksBody)
+			.setName('Jump to source')
+			.setDesc('Show a button on each matched block that opens the source note scrolled to that block.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showJumpToSource)
+				.onChange(async (value) => {
+					this.plugin.settings.showJumpToSource = value;
 					await this.plugin.saveSettings();
 				}));
 

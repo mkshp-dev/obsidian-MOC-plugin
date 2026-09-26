@@ -34,6 +34,7 @@ without writing a single line of YAML manually.
 | [[11 - Copy Bake and live refresh]] | Toolbar buttons, auto-refresh |
 | [[12 - Separators and dynamic parameters]] | \`blockSeparator\`, \`noteSeparator\`, \`{{this.folder}}\` |
 | [[13 - Interactive tasks]] | Ticking tasks in place, write-back safety |
+| [[14 - Jump to source]] | Per-block jump-to-source buttons |
 `,
     },
 
@@ -736,6 +737,52 @@ applyFnR: strip-hashes
 - Toggling from a MOC block is a normal note edit — undo in the source note works as usual.
 - To switch the whole feature off, go to **Settings → Maps of Content → Tasks** and
   turn off **Interactive tasks**.
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/14 - Jump to source.md`,
+        content: `# 14 — Jump to source
+
+A MOC block gathers content from all over your vault. Jump to source is how you get
+back: every matched block carries its own button that opens the note it came from,
+scrolled to the exact line the block starts at.
+
+### Decisions from every meeting note
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Blockquote
+filter: has_tag("#decision")
+recursive: true
+\`\`\`
+
+**Try it:**
+1. Hover any block above — a small arrow button appears in its top-right corner.
+2. Click it. The source note opens with the cursor on that blockquote.
+3. Go back and hold **Ctrl** (**Cmd** on macOS) while clicking instead — the note
+   opens in a new pane, leaving this one in place.
+
+### It is per block, not per note
+
+The block below pulls several tasks out of the same handful of notes. Each matched
+task has its own button pointing at its own line, so you land on the task you clicked
+rather than at the top of the file:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+\`\`\`
+
+**What to notice:**
+- The heading above each group is still an ordinary \`[[wikilink]]\` to the whole note —
+  the jump button is the line-precise counterpart to it.
+- Jump buttons appear on every element type, not just tasks.
+- Jumping never modifies anything; it is purely navigation. Compare with
+  [[13 - Interactive tasks]], which does write back.
+- To hide the buttons, go to **Settings → Maps of Content → Tasks** and turn off
+  **Jump to source**.
 `,
     },
 ];

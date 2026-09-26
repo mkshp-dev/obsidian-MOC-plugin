@@ -46,6 +46,7 @@ export class MocWizardModal extends Modal {
     showCount: boolean = false;
     excludeFolder: string = '';
     excludeFile: string = '';
+    taskHintEl: HTMLElement | null = null;
 
     constructor(app: App, plugin: MOCPlugin) {
         super(app);
@@ -182,6 +183,7 @@ export class MocWizardModal extends Modal {
         templateInput.value = this.template;
         templateInput.oninput = () => {
             this.template = templateInput.value;
+            this.updateTaskReadOnlyHint();
         };
         new TemplateSuggest(this.app, templateInput, () => this.plugin.settings.templateFolder || '');
         if (this.template) {
@@ -228,6 +230,9 @@ export class MocWizardModal extends Modal {
         
         const ruleChainContainer = resultManipContainer.createDiv({ cls: 'moc-rule-chain-container' });
         this.renderRuleChain(ruleChainContainer);
+
+        this.taskHintEl = resultManipContainer.createDiv({ cls: 'moc-wizard-hint' });
+        this.updateTaskReadOnlyHint();
 
         const footerEl = contentEl.createDiv({ cls: 'moc-wizard-footer' });
         new Setting(footerEl)
@@ -823,6 +828,33 @@ export class MocWizardModal extends Modal {
                 });
             }
         }
+
+        this.updateTaskReadOnlyHint();
+    }
+
+    /**
+     * Warns that reshaping the output makes task checkboxes read-only. The
+     * plugin only disables them when the text actually changes, which cannot be
+     * known until the block renders, so this is phrased as a consequence of the
+     * rewrite rather than a certainty.
+     */
+    updateTaskReadOnlyHint() {
+        const hintEl = this.taskHintEl;
+        if (!hintEl) return;
+
+        hintEl.empty();
+
+        const reshapesOutput = this.template.trim() !== '' || this.applyFnR.length > 0;
+        const rendersCheckboxes = this.element === 'Task' || this.element === 'List';
+        const show = reshapesOutput && rendersCheckboxes && this.plugin.settings.interactiveTasks;
+
+        hintEl.toggleClass('is-visible', show);
+        if (!show) return;
+
+        setIcon(hintEl.createSpan({ cls: 'moc-wizard-hint-icon' }), 'info');
+        hintEl.createSpan({
+            text: 'Heads up: tasks in this block become read-only once a template or rule rewrites the text.'
+        });
     }
 
     insertMocBlock() {

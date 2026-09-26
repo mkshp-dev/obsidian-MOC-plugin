@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **UI: Wizard read-only hint** — The MOC Creation Wizard now warns inline when a `Task` or `List` block is given a template or a find-and-replace rule, since reshaping the output makes its task checkboxes read-only.
+
+- **Feature: Jump to source** — Every matched block now renders with a hover-revealed button that opens its source note scrolled to the exact line the block starts at, with mod-click to open in a new pane. Blocks are rendered into individual containers so each one has its own handle, and `blockSeparator` spacing is preserved. Can be turned off with the new **Jump to source** setting.
+
 - **Feature: Interactive tasks** — Task checkboxes in a rendered `moc` block now write back to their source note. Clicking a checkbox toggles the matching `- [ ]` in the original file, and the block's existing auto-refresh reconciles the view. Works for nested subtasks, ordered-list tasks, and tasks inside extracted headings, blockquotes and callouts. Writes are guarded by a source-line match, so a stale block can never overwrite a newer edit. Blocks render their checkboxes disabled when `template` or `applyFnR` actually rewrites the matched text, since rewriting breaks the mapping back to source lines; output that comes back unchanged stays interactive. Can be turned off with the new **Interactive tasks** setting.
 
 ## 1.4.0 - 2026-08-16

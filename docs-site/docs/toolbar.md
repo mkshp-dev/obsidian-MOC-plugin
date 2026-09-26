@@ -82,3 +82,17 @@ This is based on whether the text really changed, not merely on the option being
 ### Turning it off
 
 Interactive tasks are enabled by default. To disable them, go to **Settings → Maps of Content → Tasks** and turn off **Interactive tasks**. Checkboxes then render exactly as they did before, with no write-back.
+
+---
+
+## Jump to source
+
+Every matched block carries its own **jump-to-source** button, revealed in the block's top-right corner when you hover it. Clicking it opens the source note scrolled to the exact line the block starts at — not just the top of the file.
+
+Hold `Ctrl` (`Cmd` on macOS) while clicking to open the source in a new pane instead of the current one, the same as any other link in Obsidian.
+
+This is per *block*, not per file. If one note contributed five matched tasks, each of the five has its own button pointing at its own line.
+
+### Turning it off
+
+Jump buttons are enabled by default. To hide them, go to **Settings → Maps of Content → Tasks** and turn off **Jump to source**.

@@ -1,4 +1,4 @@
-import { App, CachedMetadata, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, TFile, debounce, TAbstractFile } from 'obsidian';
+import { App, CachedMetadata, Keymap, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, setIcon, TFile, debounce, TAbstractFile } from 'obsidian';
 import { MOCPluginSettings } from './settings';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
@@ -322,11 +322,65 @@ export interface TaskRef extends TaskLineRef {
     file: TFile;
 }
 
+/** Points at where a matched block begins in its source note. */
+export interface BlockRef {
+    file: TFile;
+    /** Zero-based line number of the block's first line. */
+    line: number;
+}
+
 export interface MatchedBlock {
     file: TFile;
     lines: string[];
     tags: string[];
     taskLines: TaskLineRef[];
+    /** Zero-based line number this block starts at in its source note. */
+    startLine: number;
+}
+
+/**
+ * A slice of the rendered output. Segments carrying a `ref` are matched blocks
+ * and get their own container plus a jump-to-source control; the rest are the
+ * headings, separators and counts emitted around them.
+ */
+export interface MocSegment {
+    markdown: string;
+    ref?: BlockRef;
+}
+
+interface BlockRange {
+    ref: BlockRef;
+    /** Inclusive index into the emitted output lines. */
+    start: number;
+    /** Inclusive index into the emitted output lines. */
+    end: number;
+}
+
+/**
+ * Splits the emitted lines into renderable segments, isolating each matched
+ * block so it can be rendered into its own element. The concatenation of every
+ * segment's markdown is identical to the flat output used by Copy and Bake.
+ */
+export function buildSegments(outputLines: string[], blockRanges: BlockRange[]): MocSegment[] {
+    const segments: MocSegment[] = [];
+    let cursor = 0;
+
+    for (const range of blockRanges) {
+        if (range.start > cursor) {
+            segments.push({ markdown: outputLines.slice(cursor, range.start).join('\n') });
+        }
+        segments.push({
+            markdown: outputLines.slice(range.start, range.end + 1).join('\n'),
+            ref: range.ref
+        });
+        cursor = range.end + 1;
+    }
+
+    if (cursor < outputLines.length) {
+        segments.push({ markdown: outputLines.slice(cursor).join('\n') });
+    }
+
+    return segments;
 }
 
 const TASK_MARKER_PATTERN = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)(.)(\])/;
@@ -488,6 +542,11 @@ export interface MocRenderResult {
      * breaks the positional mapping between checkboxes and source lines.
      */
     tasksTransformed?: boolean;
+    /**
+     * `markdownText` split so each matched block can be rendered into its own
+     * element. Joining every segment reproduces `markdownText` exactly.
+     */
+    segments?: MocSegment[];
 }
 
 class MocRenderChild extends MarkdownRenderChild {
@@ -570,10 +629,83 @@ class MocRenderChild extends MarkdownRenderChild {
             if (result.error) {
                 this.container.createDiv({ text: result.error, cls: result.cls || 'moc-error' });
             } else if (result.markdownText) {
-                await MarkdownRenderer.render(this.app, result.markdownText, this.container, this.sourcePath, this);
+                if (result.segments && result.segments.length > 0) {
+                    await this.renderSegments(result.segments);
+                } else {
+                    await MarkdownRenderer.render(this.app, result.markdownText, this.container, this.sourcePath, this);
+                }
                 this.attachTaskHandlers(result.taskRefs || [], result.tasksTransformed === true);
             }
         }
+    }
+
+    /**
+     * Renders the output segment by segment so every matched block lands in its
+     * own element. That gives each block a stable handle for the jump-to-source
+     * control, which a single flat render cannot provide.
+     */
+    private async renderSegments(segments: MocSegment[]) {
+        if (!this.container) return;
+
+        for (let i = 0; i < segments.length; i++) {
+            const segment = segments[i]!;
+
+            if (segment.markdown.trim() === '') {
+                // A blank segment sitting between two blocks is the blank line
+                // emitted by `blockSeparator: newline`. Rendering each block into
+                // its own element loses the spacing that blank line used to
+                // create, so stand an explicit spacer in its place. Blank lines
+                // anywhere else are structural and already absorbed into the
+                // neighbouring heading segment.
+                if (segments[i - 1]?.ref && segments[i + 1]?.ref) {
+                    this.container.createDiv({ cls: 'moc-spacer' });
+                }
+                continue;
+            }
+
+            if (!segment.ref) {
+                const segmentEl = this.container.createDiv({ cls: 'moc-segment' });
+                await MarkdownRenderer.render(this.app, segment.markdown, segmentEl, this.sourcePath, this);
+                continue;
+            }
+
+            const blockEl = this.container.createDiv({ cls: 'moc-block' });
+            await MarkdownRenderer.render(this.app, segment.markdown, blockEl, this.sourcePath, this);
+            this.addJumpButton(blockEl, segment.ref);
+        }
+    }
+
+    private addJumpButton(blockEl: HTMLElement, ref: BlockRef) {
+        if (!this.settings.showJumpToSource) return;
+
+        // aria-label only: Obsidian renders its own tooltip from it, and adding
+        // a `title` would stack a second, native tooltip behind it.
+        const button = blockEl.createEl('button', {
+            cls: 'moc-jump-button',
+            attr: {
+                'aria-label': `Open ${ref.file.basename}, line ${ref.line + 1}`
+            }
+        });
+        setIcon(button, 'arrow-up-right');
+
+        button.onClickEvent(async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await this.jumpToSource(e, ref);
+        });
+    }
+
+    private async jumpToSource(evt: MouseEvent, ref: BlockRef) {
+        const file = this.app.vault.getAbstractFileByPath(ref.file.path);
+        if (!(file instanceof TFile)) {
+            new Notice(`Could not open source: '${ref.file.path}' no longer exists.`);
+            return;
+        }
+
+        // Mod-click (or middle click) opens in a new pane, matching how Obsidian
+        // treats links everywhere else.
+        const leaf = this.app.workspace.getLeaf(Keymap.isModEvent(evt));
+        await leaf.openFile(file, { eState: { line: ref.line } });
     }
 
     /**
@@ -896,7 +1028,8 @@ export async function generateMocMarkdown(
                         file,
                         lines: blockLines,
                         tags: extractTags(blockText),
-                        taskLines: collectTaskLines(taskLineMap, startLine, endLine)
+                        taskLines: collectTaskLines(taskLineMap, startLine, endLine),
+                        startLine
                     });
                 }
             }
@@ -940,7 +1073,8 @@ export async function generateMocMarkdown(
                         file,
                         lines: blockLines,
                         tags: extractTags(blockText),
-                        taskLines: collectTaskLines(taskLineMap, startLine, endLine)
+                        taskLines: collectTaskLines(taskLineMap, startLine, endLine),
+                        startLine
                     });
                 }
             }
@@ -968,7 +1102,8 @@ export async function generateMocMarkdown(
                         file,
                         lines: sectionLines as string[],
                         tags: extractTags(sectionText),
-                        taskLines: collectTaskLines(taskLineMap, startLine, endLine)
+                        taskLines: collectTaskLines(taskLineMap, startLine, endLine),
+                        startLine
                     });
                 }
             }
@@ -1056,6 +1191,7 @@ export async function generateMocMarkdown(
     const outputLines: string[] = [];
     // Recorded as blocks are emitted so the order matches the rendered output.
     const taskRefs: TaskRef[] = [];
+    const blockRanges: BlockRange[] = [];
 
     if (!config.groupBy) {
         const filesMap = new Map<string, MatchedBlock[]>();
@@ -1077,7 +1213,13 @@ export async function generateMocMarkdown(
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 if (block) {
+                    const blockStart = outputLines.length;
                     outputLines.push(...block.lines);
+                    blockRanges.push({
+                        ref: { file: block.file, line: block.startLine },
+                        start: blockStart,
+                        end: outputLines.length - 1
+                    });
                     for (const taskLine of block.taskLines) {
                         taskRefs.push({ file: block.file, ...taskLine });
                     }
@@ -1195,7 +1337,13 @@ export async function generateMocMarkdown(
                 for (let i = 0; i < fileBlocks.length; i++) {
                     const block = fileBlocks[i];
                     if (block) {
+                        const blockStart = outputLines.length;
                         outputLines.push(...block.lines);
+                        blockRanges.push({
+                            ref: { file: block.file, line: block.startLine },
+                            start: blockStart,
+                            end: outputLines.length - 1
+                        });
                         for (const taskLine of block.taskLines) {
                             taskRefs.push({ file: block.file, ...taskLine });
                         }
@@ -1239,7 +1387,7 @@ export async function generateMocMarkdown(
     }
 
     const markdownText = outputLines.join('\n');
-    return { markdownText, taskRefs, tasksTransformed };
+    return { markdownText, taskRefs, tasksTransformed, segments: buildSegments(outputLines, blockRanges) };
 }
 export async function processMocBlock(
     config: MocConfig,

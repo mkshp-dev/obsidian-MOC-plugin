@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate, toggleTaskMarker, isTaskLineChecked } from '../moc';
+import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate, toggleTaskMarker, isTaskLineChecked, buildSegments } from '../moc';
 import { TFile } from 'obsidian';
 
 void describe('MOC Filter - Primitive Filters', () => {
@@ -436,5 +436,66 @@ void describe('MOC Tasks - isTaskLineChecked', () => {
             assert.ok(toggled);
             assert.strictEqual(isTaskLineChecked(toggled), !isTaskLineChecked(line));
         }
+    });
+});
+
+void describe('MOC Segments - buildSegments', () => {
+    const fileA = new TFile();
+    fileA.path = 'notes/A.md';
+    const refA = { file: fileA, line: 3 };
+    const refB = { file: fileA, line: 9 };
+
+    void test('splits surrounding markdown away from blocks', () => {
+        const lines = ['### Heading', '', '- item one', '', '- item two', ''];
+        const segments = buildSegments(lines, [
+            { ref: refA, start: 2, end: 2 },
+            { ref: refB, start: 4, end: 4 }
+        ]);
+
+        assert.deepStrictEqual(segments.map(s => s.markdown), [
+            '### Heading\n',
+            '- item one',
+            '',
+            '- item two',
+            ''
+        ]);
+        assert.strictEqual(segments[1]?.ref, refA);
+        assert.strictEqual(segments[3]?.ref, refB);
+        assert.strictEqual(segments[0]?.ref, undefined);
+    });
+
+    void test('rejoining segments reproduces the flat output exactly', () => {
+        const lines = ['### Group (2)', '', '> quoted block', 'second line', '', '---', '', '- a task', ''];
+        const segments = buildSegments(lines, [
+            { ref: refA, start: 2, end: 3 },
+            { ref: refB, start: 7, end: 7 }
+        ]);
+        assert.strictEqual(segments.map(s => s.markdown).join('\n'), lines.join('\n'));
+    });
+
+    void test('handles a block spanning the entire output', () => {
+        const lines = ['- only block'];
+        const segments = buildSegments(lines, [{ ref: refA, start: 0, end: 0 }]);
+        assert.strictEqual(segments.length, 1);
+        assert.strictEqual(segments[0]?.ref, refA);
+        assert.strictEqual(segments.map(s => s.markdown).join('\n'), lines.join('\n'));
+    });
+
+    void test('multi-line blocks stay in one segment', () => {
+        const lines = ['## Section', 'body text', 'more body', ''];
+        const segments = buildSegments(lines, [{ ref: refA, start: 0, end: 2 }]);
+        assert.strictEqual(segments[0]?.markdown, '## Section\nbody text\nmore body');
+        assert.strictEqual(segments[0]?.ref, refA);
+        assert.strictEqual(segments.map(s => s.markdown).join('\n'), lines.join('\n'));
+    });
+
+    void test('no blocks yields a single plain segment', () => {
+        const lines = ['nothing', 'to see'];
+        const segments = buildSegments(lines, []);
+        assert.deepStrictEqual(segments, [{ markdown: 'nothing\nto see' }]);
+    });
+
+    void test('empty output yields no segments', () => {
+        assert.deepStrictEqual(buildSegments([], []), []);
     });
 });

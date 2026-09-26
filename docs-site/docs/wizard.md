@@ -101,6 +101,12 @@ Manage a sequence of Find & Replace text transformations to execute on the extra
 
 ---
 
+### Task read-only hint
+
+When **Element** is set to `Task` or `List` and you add a **Template** or a **Find and replace** rule, the wizard shows an inline hint that tasks in the resulting block will be read-only. Reshaping the output breaks the link between a rendered checkbox and its source line — see [Interactive tasks](./toolbar.md#interactive-tasks).
+
+The wizard has no options for interactive tasks or jump to source themselves. Both are plugin-wide settings rather than block options, so they apply to every block and are configured under **Settings → Maps of Content → Tasks**.
+
 ## Inserting the Block
 
 Once you have configured the options, click **Insert block**. The wizard will instantly write the generated `moc` block at your editor's current cursor position. For example:

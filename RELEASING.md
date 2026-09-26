@@ -1,177 +1,161 @@
 # Releasing the Plugin
 
-This document covers the full release process — first-time submission to the Obsidian community directory and all subsequent version updates.
+Releases are automated. You bump the version on `Dev` and push one commit with a specific message; GitHub Actions does the rest and leaves a **draft** release for you to publish.
 
-## Branch Strategy
+## Branches
 
 | Branch | Purpose |
 |--------|---------|
-| `Dev` | Active development — all new features and fixes go here |
-| `master` | Stable release branch — only receives merges from `Dev` via PR |
+| `Dev` | Active development — all features and fixes land here |
+| `main` | Stable release branch — only ever receives automated merges from `Dev` |
+| `gh-pages` | Published documentation site (managed by the docs workflow) |
 
-Tags are always created on `master`. The GitHub Actions workflow (`.github/workflows/release.yml`) triggers on any tag push and automatically builds the plugin and creates a draft GitHub Release.
-
----
-
-## One-Time Setup (do this once)
-
-### 1. Enable GitHub Actions write permissions
-
-Go to your repo on GitHub:
-**Settings → Actions → General → Workflow permissions → Read and write permissions → Save**
-
-This allows the workflow to create GitHub Releases on your behalf.
-
-### 2. Merge the release workflow into master
-
-The `release.yml` workflow lives in the `ci/add-release-workflow` branch (or has already been added to your repository). Ensure it is merged into `master` before attempting any release.
+Obsidian's community directory reads `manifest.json` from `main`, so the version there must always be the latest published release.
 
 ---
 
-## First Release
+## Releasing a new version
 
-### Step 1 — Ensure master has the release workflow
+### Step 1 — Make sure `Dev` is ready
 
-Confirm `.github/workflows/release.yml` is present on `master` (merged via PR as described above).
+- All work is committed and pushed to `Dev`.
+- CI is green on the latest `Dev` push (lint, build, test).
+- `CHANGELOG.md` has entries under `## In-progress`. **This section must not be empty** — it becomes the release notes, and the release fails if there is nothing there.
+- Entries under `## In-progress` read in the order you want them published. Put headline features first.
 
-### Step 2 — Bump the version on Dev
-
-Do this on `Dev` — it becomes the last commit before the release PR:
+### Step 2 — Bump the version
 
 ```bash
 git checkout Dev
 git pull origin Dev
-npm version 1.0.0 --no-git-tag-version
-git add manifest.json versions.json package.json
-git commit -m "Release 1.0.0"
-git push origin Dev
+npm version 1.5.0 --no-git-tag-version
 ```
 
-> `--no-git-tag-version` prevents npm from tagging automatically — you control the tag after the merge.
-> The `version-bump.mjs` script (wired to `npm version`) automatically keeps `manifest.json` and `versions.json` in sync.
+`--no-git-tag-version` stops npm from tagging — the workflow creates the tag later.
 
-### Step 3 — Open a PR from Dev → master and merge it
+This runs `version-bump.mjs`, which:
 
-1. Go to your repo on GitHub.
-2. Open a pull request from `Dev` → `master`.
-3. Merge it.
-4. Pull master locally so your local copy is up to date:
+1. writes the new version into `manifest.json`,
+2. adds a `version → minAppVersion` entry to `versions.json`,
+3. snapshots the current docs into `docs-site/versioned_docs/version-1.5.0`.
+
+Check that step 3 actually happened — the docs snapshot is wrapped in a `try/catch`, so a failure there is logged but does **not** fail the bump:
 
 ```bash
-git checkout master
-git pull origin master
+ls docs-site/versioned_docs
 ```
 
-### Step 4 — Create and push the release tag
+Pick the version with [semver](https://semver.org/):
 
-The tag **must exactly match** the version string in `manifest.json`:
-
-```bash
-git tag -a 1.0.0 -m "1.0.0"
-git push origin 1.0.0
-```
-
-This triggers the GitHub Actions workflow. Within a minute or two it will:
-1. Run `npm install && npm run build`
-2. Create a **draft** GitHub Release with `main.js`, `manifest.json`, and `styles.css` (if present) attached
-
-### Step 5 — Publish the draft release
-
-Go to your repo on GitHub → **Releases** → find the new draft → click the **pencil icon** → add release notes → click **Publish release**.
-
-### Step 6 — Submit to the Obsidian Community Directory (first time only)
-
-1. Go to [community.obsidian.md](https://community.obsidian.md) and sign in with your Obsidian account.
-2. Link your GitHub account in your profile settings.
-3. In the sidebar → **Plugins** → **New plugin**.
-4. Enter your repo URL: `https://github.com/mkshp-dev/obsidian-MOC-plugin`
-5. Agree to the Developer policies → click **Submit**.
-
-Obsidian reads `manifest.json` from the HEAD of `master`, so keep the version there accurate. After the automated review passes, users can install the plugin directly from within Obsidian.
-
----
-
-## Subsequent Updates
-
-### Step 1 — Develop on Dev as normal
-
-Commit and push all changes to the `Dev` branch.
-
-### Step 2 — Bump the version on Dev
-
-Do this on `Dev` — it becomes the last commit before the release PR:
-
-```bash
-git checkout Dev
-git pull origin Dev
-npm version 1.1.0 --no-git-tag-version
-git add manifest.json versions.json package.json
-git commit -m "Release 1.1.0"
-git push origin Dev
-```
-
-Replace `1.1.0` with the new version following [semver](https://semver.org/) (`x.y.z`):
 - `z` (patch) — bug fixes only
 - `y` (minor) — new features, backwards compatible
 - `x` (major) — breaking changes
 
-### Step 3 — Open a PR from Dev → master and merge it
-
-1. Go to your repo on GitHub.
-2. Open a pull request from `Dev` → `master`.
-3. Merge it.
-4. Pull master locally so your local copy is up to date:
+### Step 3 — Commit and push
 
 ```bash
-git checkout master
-git pull origin master
+git add -A
+git commit -m "Release 1.5.0"
+git push origin Dev
 ```
 
-### Step 4 — Tag and push
+> **The commit message is the trigger and it is matched strictly.**
+> `Release 1.5.0` and `Release v1.5.0` work. `release 1.5.0`, `Release 1.5.0 - features` and anything else do not — the push is simply treated as a normal commit and no release happens.
+
+The version in the message must match `manifest.json` and `package.json`, or the workflow fails the verification step.
+
+### Step 4 — Watch the automation
+
+Two workflows run in sequence. Open the **Actions** tab and confirm both:
+
+**Release Trigger** (on push to `Dev`)
+1. Confirms the commit message is a release.
+2. Verifies the version matches `manifest.json` and `package.json`.
+3. Opens a PR `Dev → main` and merges it.
+
+**Finalize Release** (on push to `main`)
+1. Skips everything if the tag already exists.
+2. Runs `npm ci`, build, lint and test.
+3. Generates a build provenance attestation for `main.js`, `manifest.json` and `styles.css`.
+4. Extracts `## In-progress` from `CHANGELOG.md` as the release notes.
+5. Creates and pushes the tag.
+6. Creates a **draft** GitHub release with the three assets attached.
+7. Rewrites `CHANGELOG.md` on `Dev`, moving the `## In-progress` entries under `## 1.5.0 - <date>` and leaving a fresh empty `## In-progress`, then commits as `chore: prepare changelog for next release`.
+
+### Step 5 — Publish the draft
+
+GitHub → **Releases** → open the draft → review the notes → **Publish release**.
+
+Obsidian notifies users of the update automatically. Nothing needs submitting to the community directory after the first release.
+
+### Step 6 — Sync locally
+
+The workflow pushed a changelog commit to `Dev`, so pull before doing more work:
 
 ```bash
-git tag -a 1.1.0 -m "1.1.0"
-git push origin 1.1.0
+git pull origin Dev
 ```
-
-GitHub Actions builds the plugin and creates a draft release automatically.
-
-### Step 5 — Publish the draft release
-
-Go to GitHub → **Releases** → edit the draft → add release notes → **Publish release**.
-
-Users on Obsidian will be notified of the update automatically.
 
 ---
 
-## Quick Reference
+## Beta releases (for BRAT testers)
+
+A commit on `Dev` titled `Beta-Release X.Y.Z-beta.W` publishes a GitHub prerelease without touching `main`:
 
 ```bash
-# 1. Bump version on Dev
-git checkout Dev && git pull origin Dev
-npm version <NEW_VERSION> --no-git-tag-version
-git add manifest.json versions.json package.json
-git commit -m "Release <NEW_VERSION>"
+npm version 1.6.0-beta.0 --no-git-tag-version
+git add -A
+git commit -m "Beta-Release 1.6.0-beta.0"
 git push origin Dev
-
-# 2. Open PR Dev → master on GitHub and merge it
-
-# 3. Pull master and tag it locally
-git checkout master && git pull origin master
-git tag -a <NEW_VERSION> -m "<NEW_VERSION>"
-git push origin <NEW_VERSION>
-
-# 4. Go to GitHub Releases and publish the draft
 ```
 
-## Files involved in a release
+Because the version contains a `-`, `version-bump.mjs` updates only `manifest.json` and deliberately skips `versions.json` and docs versioning, so betas leave no permanent artifacts behind.
+
+Betas are invisible to ordinary users: Obsidian's updater and the community directory only read `manifest.json` on `main`, which a beta never modifies.
+
+---
+
+## Workflows
+
+| Workflow | Trigger | Does |
+|----------|---------|------|
+| `ci.yml` | PR to `Dev`, push to `Dev`, manual | Lint, build, test |
+| `release-trigger.yml` | Push to `Dev` titled `Release X.Y.Z` | Verifies versions, opens and merges the PR to `main` |
+| `release-finalize.yml` | Push to `main` | Builds, attests, tags, drafts the release, rewrites the changelog on `Dev` |
+| `beta-release.yml` | Push to `Dev` titled `Beta-Release X.Y.Z-beta.W` | Builds, tags and publishes a prerelease; never touches `main` |
+| `deploy-docs.yml` | Push to `Dev` touching `docs-site/**`, `CHANGELOG.md`, or itself | Builds and deploys the documentation site |
+
+---
+
+## Requirements
+
+**`RELEASE_PAT` secret.** `release-trigger.yml` merges the PR into `main` using this token. A merge made with the default `GITHUB_TOKEN` will **not** trigger `release-finalize.yml` — GitHub deliberately prevents workflows from triggering other workflows — so without the PAT the release stops silently after the merge, with no tag and no draft.
+
+**Workflow permissions.** Repo → **Settings → Actions → General → Workflow permissions → Read and write permissions**.
+
+---
+
+## Troubleshooting
+
+**Nothing happened after pushing.** The commit message did not match. Check the **Release Trigger** run — it logs `Not a release commit. Skipping.` Fix by pushing a new commit with a correct message (an empty one is fine: `git commit --allow-empty -m "Release 1.5.0"`).
+
+**Trigger ran but failed on "Verify versions".** `manifest.json` or `package.json` disagrees with the version in the commit message. Usually means `npm version` was not run, or was run for a different version.
+
+**PR merged to `main` but no tag or draft appeared.** `release-finalize.yml` did not fire, which almost always means `RELEASE_PAT` is missing or expired. Re-run `Finalize Release` manually from the Actions tab once the secret is fixed.
+
+**Release failed on "Extract release notes".** `## In-progress` was empty. Add entries to `CHANGELOG.md` on `Dev` and re-run the workflow.
+
+**`Finalize Release` was skipped entirely.** The tag already exists — the check job short-circuits to keep re-pushes to `main` idempotent. Delete the tag if you genuinely need to rebuild it.
+
+---
+
+## Files involved
 
 | File | Role |
 |------|------|
-| `manifest.json` | Plugin metadata; `version` field must match the git tag |
-| `versions.json` | Maps each release version to minimum Obsidian app version |
-| `package.json` | `version` field kept in sync by `npm version` |
-| `version-bump.mjs` | Script run by `npm version` to update `manifest.json` and `versions.json` |
-| `.github/workflows/release.yml` | CI workflow that builds and creates the GitHub Release on tag push |
-| `main.js` | Built plugin bundle — uploaded as release asset |
-| `styles.css` | Plugin styles — uploaded as release asset |
+| `manifest.json` | Plugin metadata; `version` must match the tag, `minAppVersion` must be accurate |
+| `versions.json` | Maps each release to its minimum Obsidian version |
+| `package.json` | Kept in sync by `npm version`; verified by the trigger |
+| `version-bump.mjs` | Run by `npm version`; updates the manifest, `versions.json` and docs versioning |
+| `CHANGELOG.md` | `## In-progress` becomes the release notes, then is rewritten under the version heading |
+| `main.js`, `styles.css` | Built assets, attached to the release by CI (`main.js` is gitignored) |

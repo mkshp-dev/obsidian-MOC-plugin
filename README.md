@@ -18,7 +18,7 @@ Dynamically generate **Map of Content (MOC)** indexes by extracting matching ele
 
 **MOC Creation Wizard** — Generate `moc` blocks visually from the Command Palette. No YAML required.
 
-**Flexible output shaping** — Group by folder, tag, date, or any frontmatter property. Sort, limit, paginate with `offset`, and count results with `showCount`.
+**Flexible output shaping** — Group by folder, tag, date, or any frontmatter property. Sort, and limit by notes scanned (`fileLimit`), total results (`blockLimit`) or results per note (`blocksPerFile`), with matching offsets for pagination.
 
 **Templates** — Format each matched element using a reusable template note with `{{content}}`, `{{file}}`, `{{path}}`, `{{link}}` placeholders.
 

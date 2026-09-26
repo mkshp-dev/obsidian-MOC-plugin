@@ -20,8 +20,9 @@ The Obsidian MOC Plugin is a smart **Map of Content** generator for [Obsidian](h
 - **Advanced Filtering**: Match elements by exact word, text patterns, tags, task completion status, regular expressions, or frontmatter properties — with full boolean logic (`AND`, `OR`, `NOT`).
 - **Property Comparison Operators**: Filter by frontmatter values using `==`, `!=`, `>`, `<`, `>=`, `<=` for numeric and date comparisons.
 - **Hierarchical Grouping**: Group matching elements dynamically by **folder**, **creation date (cday)**, **modification date (mday)**, **tag**, or any **frontmatter property**.
-- **Sorting & Limiting**: Sort scanned files by filename, creation date, or modification date, and limit the maximum number of processed notes.
-- **Offset / Pagination**: Skip a number of files at the start of the result set to paginate large result sets together with `limit`.
+- **Sorting**: Sort scanned files by filename, creation date, or modification date.
+- **File and Result Limits**: Limit notes scanned (`fileLimit`), total results shown (`blockLimit`), or results taken from any one note (`blocksPerFile`).
+- **Pagination**: Page through notes with `fileOffset` or through results with `blockOffset`.
 - **Show Count**: Append result count summaries to MOC blocks and per-group headings.
 - **Exclude Options**: Skip specific folders or files from results using `excludeFolder` and `excludeFile`.
 - **Custom Output Templates**: Format each matched element using a reusable template note (referenced by name via the `template` option) with `{{content}}`, `{{file}}`, `{{path}}`, and `{{link}}` placeholders.

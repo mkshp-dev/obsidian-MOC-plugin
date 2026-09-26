@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Feature: Separate file and result limits** — Added `fileLimit`, `fileOffset`, `blockLimit`, `blockOffset` and `blocksPerFile`. `blockLimit` finally expresses "show me 20 results", which the old file-counting `limit` could not; `blocksPerFile` stops one busy note filling the whole result window; `blockOffset` paginates results rather than notes. `limit` and `offset` keep working as aliases for `fileLimit`/`fileOffset`, with the explicit key winning if both are set. `showCount` now reports `20 of 137 results in 8 files` when results were trimmed, and extraction stops reading files once the block window is full.
+
 - **UI: Wizard read-only hint** — The MOC Creation Wizard now warns inline when a `Task` or `List` block is given a template or a find-and-replace rule, since reshaping the output makes its task checkboxes read-only.
 
 - **Feature: Jump to source** — Every matched block now renders with a hover-revealed button that opens its source note scrolled to the exact line the block starts at, with mod-click to open in a new pane. Blocks are rendered into individual containers so each one has its own handle, and `blockSeparator` spacing is preserved. Can be turned off with the new **Jump to source** setting.

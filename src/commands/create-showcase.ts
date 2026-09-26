@@ -27,7 +27,7 @@ without writing a single line of YAML manually.
 | [[04 - Paragraphs and blockquotes]] | \`Paragraph\`, \`Blockquote\` elements |
 | [[05 - Advanced filters]] | \`AND\`, \`OR\`, \`NOT\`, \`properties()\`, comparison operators |
 | [[06 - Grouping and sorting]] | \`groupBy\`, \`sort\`, \`showCount\` |
-| [[07 - Limit offset and pagination]] | \`limit\`, \`offset\` |
+| [[07 - Limit offset and pagination]] | \`fileLimit\`, \`blockLimit\`, \`blocksPerFile\`, offsets |
 | [[08 - Exclude folders and files]] | \`excludeFolder\`, \`excludeFile\` |
 | [[09 - Template output formatting]] | \`template\` (template notes) |
 | [[10 - Find and replace rules]] | \`applyFnR\`, settings rules |
@@ -373,37 +373,92 @@ recursive: true
     },
     {
         path: `${SHOWCASE_FOLDER}/07 - Limit offset and pagination.md`,
-        content: `# 07 — Limit, offset and pagination
+        content: `# 07 — Limits, offsets and pagination
 
-Use \`limit\` and \`offset\` together to paginate large result sets.
+Limits come in two units, and mixing them up is the most common source of
+surprise. **Files** are the notes that get scanned. **Results** are the individual
+matched elements that come out.
 
-### First 2 files
+## Limiting files
+
+\`fileLimit\` caps how many notes are scanned. It is the only limit that saves work,
+because notes beyond it are never read at all.
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
 element: Heading
 filter: contains("Action items")
 sort: name asc
-limit: 2
+fileLimit: 2
 recursive: true
+showCount: true
 \`\`\`
 
-### Skip first file, take next 1
+\`fileOffset\` skips notes before that, so the two together page through notes:
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
 element: Heading
 filter: contains("Action items")
 sort: name asc
-offset: 1
-limit: 1
+fileOffset: 1
+fileLimit: 1
 recursive: true
+showCount: true
+\`\`\`
+
+## Limiting results
+
+\`blockLimit\` caps how many matched elements are shown in total, regardless of how
+many notes they came from. This is usually what you actually want:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+blockLimit: 3
+showCount: true
+\`\`\`
+
+Note the count at the bottom: it reads \`3 of N results\`, so a limited view never
+hides how much is really outstanding.
+
+\`blockOffset\` is the matching page control — this is the *next* page of the block
+above:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+blockOffset: 3
+blockLimit: 3
+showCount: true
+\`\`\`
+
+## Keeping one note from hogging the list
+
+A \`blockLimit\` on its own can be filled entirely by a single busy note, hiding every
+other note from view. \`blocksPerFile\` caps the contribution of any one note, so the
+result stays a map rather than an excerpt:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/data
+element: Task
+filter: is_incomplete()
+recursive: true
+blocksPerFile: 1
+blockLimit: 5
+showCount: true
 \`\`\`
 
 **What to notice:**
-- \`limit\` and \`offset\` apply to the **file** list, not individual result blocks.
-- Combine with \`sort\` for predictable, stable pages.
-- \`offset: 0\` is the same as omitting offset.
+- \`fileLimit\`/\`fileOffset\` count **notes**; \`blockLimit\`/\`blockOffset\` count **results**.
+- \`blocksPerFile\` keeps the first matches of each note, in document order.
+- Combine any of them with \`sort\` for stable, predictable pages.
+- An offset of \`0\` is the same as omitting it.
+- \`limit\` and \`offset\` still work as the old names for \`fileLimit\` and \`fileOffset\`.
 `,
     },
     {

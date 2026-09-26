@@ -101,20 +101,49 @@ Sorts the matching source notes before processing and extracting elements.
 
 ---
 
-### `limit` (Optional)
-Limits the maximum number of markdown files processed. Must be a positive integer.
-- *Example*: `limit: 10`
+### `fileLimit` (Optional)
+Limits the maximum number of markdown files scanned. Must be a positive integer. This is the only limit that reduces work: files beyond it are never read.
+- *Example*: `fileLimit: 10`
 
 ---
 
-### `offset` (Optional)
-Skips the specified number of files at the start of the (sorted) file list before processing. Must be a non-negative integer. Use together with `limit` to paginate results.
-- *Example*: `offset: 5` (skip the first 5 files, then apply `limit`)
+### `fileOffset` (Optional)
+Skips the specified number of files at the start of the (sorted) file list before scanning. Must be a non-negative integer. Use with `fileLimit` to page through notes.
+- *Example*: `fileOffset: 5`
+
+---
+
+### `blockLimit` (Optional)
+Limits the maximum number of matched elements shown in total, across all files. Must be a positive integer.
+
+This is usually what you want. `fileLimit: 20` means "look at 20 notes"; `blockLimit: 20` means "show me 20 results".
+- *Example*: `blockLimit: 20`
+
+---
+
+### `blockOffset` (Optional)
+Skips the specified number of matched elements before showing results. Must be a non-negative integer. Pair it with `blockLimit` to paginate results rather than files.
+- *Example*: `blockOffset: 20` with `blockLimit: 20` shows results 21–40.
+
+---
+
+### `blocksPerFile` (Optional)
+Limits how many matched elements are taken from any single note, keeping the first ones in document order. Must be a positive integer.
+
+Use it alongside `blockLimit` so that one busy note cannot fill the whole result window and hide every other note.
+- *Example*: `blocksPerFile: 3`
+
+---
+
+### `limit` / `offset` (Deprecated)
+`limit` and `offset` are the original names for `fileLimit` and `fileOffset` and continue to work unchanged. Prefer the explicit names in new blocks — `limit` counts *files*, which is easy to misread as counting results. If both are given, the explicit key wins.
 
 ---
 
 ### `showCount` (Optional)
 When set to `true`, appends a result count summary at the bottom of the MOC block (e.g. `3 results in 2 files`). When `groupBy` is active, each group heading also shows the number of elements in that group.
+
+If `blockLimit`, `blockOffset` or `blocksPerFile` trimmed the results, the summary reports both numbers (e.g. `20 of 137 results in 8 files`) so a limited view never understates the total.
 - **Values**: `true` or `false` (defaults to `false`).
 - *Example*: `showCount: true`
 

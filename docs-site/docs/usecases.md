@@ -81,7 +81,7 @@ showCount: true
 ```
 ````
 
-### Paginating results
+### Paginating notes
 Show only the second page of 5 notes (notes 6–10), sorted by modification time:
 
 ````yaml
@@ -90,8 +90,41 @@ folder: Diary
 element: List
 filter: contains("idea")
 sort: mtime desc
-limit: 5
-offset: 5
+fileOffset: 5
+fileLimit: 5
+```
+````
+
+### Paginating results
+Show results 21–40, counting matched elements rather than notes:
+
+````yaml
+```moc
+folder: Diary
+element: List
+filter: contains("idea")
+recursive: true
+sort: mtime desc
+blockOffset: 20
+blockLimit: 20
+showCount: true
+```
+````
+
+### A balanced digest of what is outstanding
+Show up to 20 open tasks, taking at most 2 from any single note so that one busy note
+cannot crowd out the rest:
+
+````yaml
+```moc
+folder: Projects
+element: Task
+filter: is_incomplete()
+recursive: true
+sort: mtime desc
+blocksPerFile: 2
+blockLimit: 20
+showCount: true
 ```
 ````
 

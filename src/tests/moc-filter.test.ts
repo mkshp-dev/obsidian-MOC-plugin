@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate, toggleTaskMarker, isTaskLineChecked, buildSegments } from '../moc';
+import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate, toggleTaskMarker, isTaskLineChecked, buildSegments, resolveLimitOptions } from '../moc';
 import { TFile } from 'obsidian';
 
 void describe('MOC Filter - Primitive Filters', () => {
@@ -497,5 +497,90 @@ void describe('MOC Segments - buildSegments', () => {
 
     void test('empty output yields no segments', () => {
         assert.deepStrictEqual(buildSegments([], []), []);
+    });
+});
+
+void describe('MOC Limits - resolveLimitOptions', () => {
+    const base = { folder: 'x', element: 'Task', filter: 'is_incomplete()' };
+
+    void test('no limit options resolves to all undefined', () => {
+        const result = resolveLimitOptions({ ...base });
+        assert.strictEqual(result.error, undefined);
+        assert.deepStrictEqual(result.limits, {
+            fileLimit: undefined,
+            fileOffset: undefined,
+            blockLimit: undefined,
+            blockOffset: undefined,
+            blocksPerFile: undefined
+        });
+    });
+
+    void test('legacy limit and offset map onto the file window', () => {
+        const result = resolveLimitOptions({ ...base, limit: 10, offset: 5 });
+        assert.strictEqual(result.limits?.fileLimit, 10);
+        assert.strictEqual(result.limits?.fileOffset, 5);
+        assert.strictEqual(result.limits?.blockLimit, undefined);
+    });
+
+    void test('explicit file keys win over the deprecated aliases', () => {
+        const result = resolveLimitOptions({ ...base, limit: 10, fileLimit: 3, offset: 5, fileOffset: 1 });
+        assert.strictEqual(result.limits?.fileLimit, 3);
+        assert.strictEqual(result.limits?.fileOffset, 1);
+    });
+
+    void test('all five keys resolve independently', () => {
+        const result = resolveLimitOptions({
+            ...base, fileLimit: 4, fileOffset: 2, blockLimit: 20, blockOffset: 10, blocksPerFile: 3
+        });
+        assert.deepStrictEqual(result.limits, {
+            fileLimit: 4, fileOffset: 2, blockLimit: 20, blockOffset: 10, blocksPerFile: 3
+        });
+    });
+
+    void test('offsets of zero are preserved, not treated as absent', () => {
+        const result = resolveLimitOptions({ ...base, fileOffset: 0, blockOffset: 0 });
+        assert.strictEqual(result.limits?.fileOffset, 0);
+        assert.strictEqual(result.limits?.blockOffset, 0);
+    });
+
+    void test('limits must be positive integers', () => {
+        for (const key of ['fileLimit', 'blockLimit', 'blocksPerFile']) {
+            for (const bad of [0, -1, 2.5]) {
+                const result = resolveLimitOptions({ ...base, [key]: bad });
+                assert.ok(result.error, `${key}=${bad} should fail`);
+                assert.ok(result.error?.includes(key));
+                assert.strictEqual(result.limits, undefined);
+            }
+        }
+    });
+
+    void test('offsets must be non-negative integers', () => {
+        for (const key of ['fileOffset', 'blockOffset']) {
+            for (const bad of [-1, 1.5]) {
+                const result = resolveLimitOptions({ ...base, [key]: bad });
+                assert.ok(result.error, `${key}=${bad} should fail`);
+                assert.ok(result.error?.includes(key));
+            }
+            assert.strictEqual(resolveLimitOptions({ ...base, [key]: 0 }).error, undefined);
+        }
+    });
+
+    void test('non-numeric values are rejected', () => {
+        const result = resolveLimitOptions({ ...base, blockLimit: 'ten' } as never);
+        assert.ok(result.error?.includes('blockLimit'));
+    });
+
+    void test('the deprecated aliases keep their original looser validation', () => {
+        // limit historically accepted any positive number; that must not regress
+        // into an error for blocks written before the file/block split.
+        assert.strictEqual(resolveLimitOptions({ ...base, limit: 10.5 }).error, undefined);
+        assert.ok(resolveLimitOptions({ ...base, limit: 0 }).error);
+        assert.ok(resolveLimitOptions({ ...base, offset: -1 }).error);
+    });
+
+    void test('an alias is not validated when the explicit key overrides it', () => {
+        const result = resolveLimitOptions({ ...base, limit: 0, fileLimit: 5 });
+        assert.strictEqual(result.error, undefined);
+        assert.strictEqual(result.limits?.fileLimit, 5);
     });
 });

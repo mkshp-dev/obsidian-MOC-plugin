@@ -322,6 +322,68 @@ export interface TaskRef extends TaskLineRef {
     file: TFile;
 }
 
+/** The limit and offset options, after aliases are resolved and validated. */
+export interface ResolvedLimits {
+    fileLimit?: number;
+    fileOffset?: number;
+    blockLimit?: number;
+    blockOffset?: number;
+    blocksPerFile?: number;
+}
+
+function validateCount(value: unknown, key: string, minimum: number): string | null {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < minimum) {
+        const requirement = minimum > 0 ? 'a positive integer' : 'a non-negative integer';
+        return `Error: invalid '${key}' in moc block. Must be ${requirement}.`;
+    }
+    return null;
+}
+
+/**
+ * Resolves the five limit options, honouring `limit` and `offset` as aliases of
+ * `fileLimit` and `fileOffset`. The explicit key wins when both are present.
+ *
+ * The deprecated aliases keep their original, looser validation so that blocks
+ * written before the split are never rejected; the newer keys require integers.
+ */
+export function resolveLimitOptions(config: MocConfig): { limits?: ResolvedLimits; error?: string } {
+    if (config.limit !== undefined && config.fileLimit === undefined) {
+        if (typeof config.limit !== 'number' || config.limit <= 0) {
+            return { error: "Error: invalid 'limit' in moc block. Must be a positive number." };
+        }
+    }
+
+    if (config.offset !== undefined && config.fileOffset === undefined) {
+        if (typeof config.offset !== 'number' || config.offset < 0 || !Number.isInteger(config.offset)) {
+            return { error: "Error: invalid 'offset' in moc block. Must be a non-negative integer." };
+        }
+    }
+
+    const checks: [unknown, string, number][] = [
+        [config.fileLimit, 'fileLimit', 1],
+        [config.blockLimit, 'blockLimit', 1],
+        [config.blocksPerFile, 'blocksPerFile', 1],
+        [config.fileOffset, 'fileOffset', 0],
+        [config.blockOffset, 'blockOffset', 0]
+    ];
+
+    for (const [value, key, minimum] of checks) {
+        if (value === undefined) continue;
+        const error = validateCount(value, key, minimum);
+        if (error) return { error };
+    }
+
+    return {
+        limits: {
+            fileLimit: config.fileLimit ?? config.limit,
+            fileOffset: config.fileOffset ?? config.offset,
+            blockLimit: config.blockLimit,
+            blockOffset: config.blockOffset,
+            blocksPerFile: config.blocksPerFile
+        }
+    };
+}
+
 /** Points at where a matched block begins in its source note. */
 export interface BlockRef {
     file: TFile;
@@ -517,8 +579,15 @@ export interface MocConfig {
     recursive?: boolean;
     groupBy?: string;
     sort?: string;
+    /** Deprecated alias for `fileLimit`, kept so existing blocks keep working. */
     limit?: number;
+    /** Deprecated alias for `fileOffset`, kept so existing blocks keep working. */
     offset?: number;
+    fileLimit?: number;
+    fileOffset?: number;
+    blockLimit?: number;
+    blockOffset?: number;
+    blocksPerFile?: number;
     applyFnR?: string | string[];
     template?: string;
     blockSeparator?: 'none' | 'divider' | 'newline';
@@ -861,17 +930,11 @@ export async function generateMocMarkdown(
         }
     }
 
-    if (config.limit !== undefined) {
-        if (typeof config.limit !== 'number' || config.limit <= 0) {
-            return { error: "Error: invalid 'limit' in moc block. Must be a positive number.", cls: 'moc-error' };
-        }
+    const limitResult = resolveLimitOptions(config);
+    if (limitResult.error) {
+        return { error: limitResult.error, cls: 'moc-error' };
     }
-
-    if (config.offset !== undefined) {
-        if (typeof config.offset !== 'number' || config.offset < 0 || !Number.isInteger(config.offset)) {
-            return { error: "Error: invalid 'offset' in moc block. Must be a non-negative integer.", cls: 'moc-error' };
-        }
-    }
+    const limits = limitResult.limits!;
 
     // 1. Find all matching files
     const allFiles = app.vault.getMarkdownFiles();
@@ -949,14 +1012,21 @@ export async function generateMocMarkdown(
         });
     }
 
-    if (config.offset !== undefined || config.limit !== undefined) {
-        const start = config.offset || 0;
-        const end = config.limit !== undefined ? start + config.limit : undefined;
+    if (limits.fileOffset !== undefined || limits.fileLimit !== undefined) {
+        const start = limits.fileOffset || 0;
+        const end = limits.fileLimit !== undefined ? start + limits.fileLimit : undefined;
         matchedFiles = matchedFiles.slice(start, end);
     }
 
     // 2. Extract elements
-    const matchedBlocks: MatchedBlock[] = [];
+    let matchedBlocks: MatchedBlock[] = [];
+
+    // Blocks are collected in file order and never reordered afterwards, so once
+    // enough of them exist to fill the block window the remaining files cannot
+    // affect the output and do not need reading. `showCount` reports the true
+    // total, which stopping early would make unknowable, so it opts out.
+    const blocksNeeded = (limits.blockOffset || 0) + (limits.blockLimit || 0);
+    const canStopEarly = limits.blockLimit !== undefined && config.showCount !== true;
 
     for (const file of matchedFiles) {
         const fileCache = app.metadataCache.getFileCache(file);
@@ -970,6 +1040,7 @@ export async function generateMocMarkdown(
         const fileContent = await app.vault.cachedRead(file);
         const lines = fileContent.split(/\r?\n/);
         const taskLineMap = buildTaskLineMap(fileCache, lines);
+        const fileBlockStart = matchedBlocks.length;
 
         if (config.element === 'List' || config.element === 'Task') {
             if (!fileCache.listItems || fileCache.listItems.length === 0) continue;
@@ -1108,6 +1179,37 @@ export async function generateMocMarkdown(
                 }
             }
         }
+
+        // Keep the first N matches from this file, in document order, so one
+        // busy note cannot crowd every other note out of a block window.
+        if (limits.blocksPerFile !== undefined) {
+            const keepUntil = fileBlockStart + limits.blocksPerFile;
+            if (matchedBlocks.length > keepUntil) {
+                matchedBlocks.length = keepUntil;
+            }
+        }
+
+        if (canStopEarly && matchedBlocks.length >= blocksNeeded) {
+            break;
+        }
+    }
+
+    // Captured before the block window is applied so showCount can report how much
+    // was trimmed. Stopping early would make this a partial count, which is why
+    // that optimisation stands down whenever showCount is on.
+    const totalMatchedBlocks = matchedBlocks.length;
+
+    if (limits.blockOffset !== undefined || limits.blockLimit !== undefined) {
+        const start = limits.blockOffset || 0;
+        const end = limits.blockLimit !== undefined ? start + limits.blockLimit : undefined;
+        matchedBlocks = matchedBlocks.slice(start, end);
+    }
+
+    if (matchedBlocks.length === 0 && totalMatchedBlocks > 0) {
+        return {
+            error: `No results left to show: blockOffset skips past all ${totalMatchedBlocks} matching elements.`,
+            cls: 'moc-empty'
+        };
     }
 
     // Set when a block's text is actually rewritten. Rewritten text can gain or
@@ -1377,13 +1479,19 @@ export async function generateMocMarkdown(
     }
 
     if (config.showCount) {
-        const totalBlocks = matchedBlocks.length;
+        const shownBlocks = matchedBlocks.length;
         const uniqueFiles = new Set(matchedBlocks.map(b => b.file.path)).size;
-        const resultText = totalBlocks === 1 ? 'result' : 'results';
+        const isTrimmed = totalMatchedBlocks > shownBlocks;
+        // Pluralise on the larger number so a trimmed count reads naturally.
+        const resultText = (isTrimmed ? totalMatchedBlocks : shownBlocks) === 1 ? 'result' : 'results';
         const fileText = uniqueFiles === 1 ? 'file' : 'files';
+        // Say how much was hidden, so a limited view never misreports the backlog.
+        const countText = isTrimmed
+            ? `${shownBlocks} of ${totalMatchedBlocks} ${resultText} in ${uniqueFiles} ${fileText}`
+            : `${shownBlocks} ${resultText} in ${uniqueFiles} ${fileText}`;
 
         outputLines.push("");
-        outputLines.push(`<div class="moc-count">${totalBlocks} ${resultText} in ${uniqueFiles} ${fileText}</div>`);
+        outputLines.push(`<div class="moc-count">${countText}</div>`);
     }
 
     const markdownText = outputLines.join('\n');

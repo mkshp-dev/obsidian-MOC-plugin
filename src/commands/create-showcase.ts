@@ -35,6 +35,7 @@ without writing a single line of YAML manually.
 | [[12 - Separators and dynamic parameters]] | \`blockSeparator\`, \`noteSeparator\`, \`{{this.folder}}\` |
 | [[13 - Interactive tasks]] | Ticking tasks in place, write-back safety |
 | [[14 - Jump to source]] | Per-block jump-to-source buttons |
+| [[15 - Renames and moves]] | Refresh on rename and move, template edits, missing folders |
 `,
     },
 
@@ -143,7 +144,68 @@ This note lives in a subfolder that is excluded in the showcase examples.
     },
 
     // -----------------------------------------------------------------------
-    // Template notes (used by the `template` option, see note 09)
+    // Rename lab (sandbox for note 15, safe to move and rename things in)
+    // -----------------------------------------------------------------------
+    {
+        path: `${SHOWCASE_FOLDER}/rename-lab/inbox/Idea one.md`,
+        content: `# Idea one
+
+- Sketch a weekly review template #idea
+- Try time-blocking on Mondays #idea
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/rename-lab/inbox/Idea two.md`,
+        content: `# Idea two
+
+- Collect reading notes in one place #idea
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/rename-lab/parking/Parked idea.md`,
+        content: `# Parked idea
+
+This note starts outside the watched \`inbox\` folder. Move it in and out to see
+the blocks in [[15 - Renames and moves]] react.
+
+- A parked idea waiting to be moved #idea
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/rename-lab/hosts/Alpha.md`,
+        content: `# Alpha
+
+This block reads from the folder named after **this note**, using
+\`{{this.filename}}\`. Right now that is \`hosts/Alpha\`.
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/rename-lab/hosts/{{this.filename}}
+element: List
+filter: contains("item")
+\`\`\`
+
+**Try it:** rename this note to \`Beta\` while it is open. The block switches to the
+\`hosts/Beta\` folder straight away, and **Copy** and **Bake** keep working.
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/rename-lab/hosts/Alpha/Alpha items.md`,
+        content: `# Alpha items
+
+- First item from the Alpha folder
+- Second item from the Alpha folder
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/rename-lab/hosts/Beta/Beta items.md`,
+        content: `# Beta items
+
+- Only item from the Beta folder
+`,
+    },
+
+    // -----------------------------------------------------------------------
+    // Template notes (used by the `template` option, see notes 09 and 15)
     // -----------------------------------------------------------------------
     {
         path: `${SHOWCASE_FOLDER}/templates/bullet-link.md`,
@@ -152,6 +214,10 @@ This note lives in a subfolder that is excluded in the showcase examples.
     {
         path: `${SHOWCASE_FOLDER}/templates/compact-table.md`,
         content: `| {{file}} | {{content}} |\n`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/templates/idea-suffix.md`,
+        content: `{{content}} · {{file}}\n`,
     },
 
     // -----------------------------------------------------------------------
@@ -503,6 +569,7 @@ excludeFile: ["${SHOWCASE_FOLDER}/data/Meeting Notes Gamma"]
 - Paths are relative to vault root, without leading slash.
 - You can pass a single string or a JSON array for multiple exclusions.
 - \`excludeFile\` accepts paths with or without the \`.md\` extension.
+- Edits to excluded notes don't trigger a refresh, since they can't change the output.
 `,
     },
     {
@@ -642,7 +709,9 @@ showCount: true
 ## Live auto-refresh
 
 MOC blocks **automatically re-render** whenever a Markdown file in the watched
-folder is created, modified, or deleted — no need to close and reopen the note.
+folder is created, modified, deleted, renamed, or moved — no need to close and
+reopen the note. Renames and moves have their own walkthrough in
+[[15 - Renames and moves]].
 
 **Try it:**
 1. Keep this note open in Obsidian.
@@ -838,6 +907,80 @@ recursive: true
   [[13 - Interactive tasks]], which does write back.
 - To hide the buttons, go to **Settings → Maps of Content → Tasks** and turn off
   **Jump to source**.
+`,
+    },
+    {
+        path: `${SHOWCASE_FOLDER}/15 - Renames and moves.md`,
+        content: `# 15 — Renames and moves
+
+Blocks stay current when notes are renamed or moved, not just when they're edited.
+Everything here works on the sandbox folder \`${SHOWCASE_FOLDER}/rename-lab\`, so
+feel free to drag things around. Running **Create showcase** again resets it.
+
+## Notes moving in, out and around
+
+This block watches \`rename-lab/inbox\`:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/rename-lab/inbox
+element: List
+filter: has_tag("#idea")
+showCount: true
+\`\`\`
+
+**Try it** — keep this note open with the file explorer visible:
+1. **Move in:** drag [[Parked idea]] from \`rename-lab/parking\` into \`rename-lab/inbox\`.
+   It appears in the block above and the count goes up.
+2. **Move out:** drag it back to \`parking\`. It disappears again.
+3. **Rename:** rename [[Idea one]] to something else. The note heading in the block
+   updates, and its link still opens the note.
+
+## Template edits
+
+This block formats each idea with the [[idea-suffix]] template, which lives in
+\`${SHOWCASE_FOLDER}/templates\` — outside the watched folder.
+
+> Needs **Settings → Maps of Content → Template folder** set to
+> \`${SHOWCASE_FOLDER}/templates\`, as in [[09 - Template output formatting]].
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/rename-lab/inbox
+element: List
+filter: has_tag("#idea")
+template: idea-suffix
+\`\`\`
+
+**Try it:** open [[idea-suffix]] and change \`· {{file}}\` to \`· from {{link}}\`.
+The block above picks up the new format as soon as you stop typing.
+
+## A folder that no longer exists
+
+When the watched folder is renamed or moved, the block says so rather than claiming
+the folder is empty. This block points at a folder that was never created:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/rename-lab/folder-that-was-renamed
+element: List
+filter: has_tag("#idea")
+\`\`\`
+
+**Try it:** rename the \`rename-lab/inbox\` folder. The first two blocks in this note
+switch to the same error. Rename it back to \`inbox\` and they recover on their own.
+Blocks are not rewritten to follow the folder — update \`folder:\` to the new name.
+
+## Renaming the note that holds the block
+
+Blocks using \`{{this.filename}}\`, \`{{this.folder}}\` or \`{{this.path}}\` follow
+the note they're in when it's renamed. Open [[Alpha]] and follow the steps there:
+renaming it to \`Beta\` makes its block switch from the \`hosts/Alpha\` folder to
+\`hosts/Beta\`.
+
+**What to notice:**
+- A move is caught from both ends: a note entering the watched folder and a note
+  leaving it both refresh the block.
+- Renaming a folder counts as a move for every note inside it.
+- Refreshes are debounced, so moving many notes at once causes a single re-render.
+- Edits inside an \`excludeFolder\` or to an \`excludeFile\` don't trigger a refresh.
 `,
     },
 ];

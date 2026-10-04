@@ -1,4 +1,4 @@
-import { App, CachedMetadata, Keymap, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, setIcon, TFile, debounce, TAbstractFile } from 'obsidian';
+import { App, CachedMetadata, Keymap, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, setIcon, TFile, TFolder, debounce, TAbstractFile } from 'obsidian';
 import { MOCPluginSettings } from './settings';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
@@ -562,6 +562,83 @@ export function applyFindReplace(text: string, find?: string, replace?: string):
     return text.split(find).join(replacement);
 }
 
+/** Replaces `{{this.filename}}`, `{{this.folder}}` and `{{this.path}}` with values from the note hosting the block. */
+export function expandDynamicParams(text: string, sourceFile: TFile | null): string {
+    if (!sourceFile) return text;
+    const folderName = sourceFile.parent ? sourceFile.parent.name : '';
+    const pathNoExt = sourceFile.path.replace(/\.md$/, '');
+    return text
+        .replace(/\{\{this\.filename\}\}/g, sourceFile.basename)
+        .replace(/\{\{this\.folder\}\}/g, folderName)
+        .replace(/\{\{this\.path\}\}/g, pathNoExt);
+}
+
+export function normalizeFolderPath(path: string): string {
+    return path.trim().replace(/^\/+|\/+$/g, '');
+}
+
+/** Which notes a block reads from, resolved from its folder, recursion and exclusion options. */
+export interface MocScope {
+    folderPath: string;
+    isRecursive: boolean;
+    excludeFolders: string[];
+    excludeFiles: string[];
+}
+
+export function resolveScope(config: MocConfig, sourceFile: TFile | null): MocScope {
+    const toList = (value: unknown): string[] => {
+        const items = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
+        return items.filter((item): item is string => typeof item === 'string').map(normalizeFolderPath);
+    };
+
+    return {
+        folderPath: typeof config.folder === 'string' ? normalizeFolderPath(expandDynamicParams(config.folder, sourceFile)) : '',
+        isRecursive: config.recursive === true,
+        excludeFolders: toList(config.excludeFolder),
+        excludeFiles: toList(config.excludeFile)
+    };
+}
+
+function parentPathOf(path: string): string {
+    const normalized = normalizeFolderPath(path);
+    const slash = normalized.lastIndexOf('/');
+    return slash === -1 ? '' : normalized.slice(0, slash);
+}
+
+/** True when `folderPath` is `root` or, if `recursive`, any folder beneath it. */
+function isFolderWithin(folderPath: string, root: string, recursive: boolean): boolean {
+    if (folderPath === root) return true;
+    if (!recursive) return false;
+    return root === '' || folderPath.startsWith(root + '/');
+}
+
+/**
+ * True when the note at `path` is one this block would scan. Works on a plain
+ * path so it can be asked about where a renamed note used to be, which no
+ * longer exists as a file.
+ */
+export function isPathInScope(path: string, scope: MocScope): boolean {
+    const normalizedPath = normalizeFolderPath(path);
+    const parentPath = parentPathOf(normalizedPath);
+
+    if (!isFolderWithin(parentPath, scope.folderPath, scope.isRecursive)) return false;
+
+    if (scope.excludeFolders.some(exFolder => isFolderWithin(parentPath, exFolder, true))) return false;
+
+    // An excluded file given without an extension still matches its .md note.
+    return !scope.excludeFiles.some(exFile => {
+        const exFileWithExt = exFile.endsWith('.md') ? exFile : exFile + '.md';
+        return normalizedPath === exFile || normalizedPath === exFileWithExt;
+    });
+}
+
+/** True when the note at `path` lives anywhere under the template folder. */
+export function isPathInTemplateFolder(path: string, templateFolder: string): boolean {
+    const folder = normalizeFolderPath(templateFolder);
+    if (folder === '') return false;
+    return isFolderWithin(parentPathOf(path), folder, true);
+}
+
 export function applyTemplate(text: string, template: string, file: TFile): string {
     return template.replace(/\{\{(content|file|path|link)\}\}/g, (match, p1) => {
         if (p1 === 'content') return text;
@@ -623,8 +700,7 @@ class MocRenderChild extends MarkdownRenderChild {
     app: App;
     sourcePath: string;
     settings: MOCPluginSettings;
-    folderPath: string;
-    isRecursive: boolean;
+    scope: MocScope;
     updateDebounced: () => void;
     el: HTMLElement;
     ctx: MarkdownPostProcessorContext;
@@ -637,8 +713,6 @@ class MocRenderChild extends MarkdownRenderChild {
         app: App,
         sourcePath: string,
         settings: MOCPluginSettings,
-        folderPath: string,
-        isRecursive: boolean,
         el: HTMLElement,
         ctx: MarkdownPostProcessorContext
     ) {
@@ -647,14 +721,18 @@ class MocRenderChild extends MarkdownRenderChild {
         this.app = app;
         this.sourcePath = sourcePath;
         this.settings = settings;
-        this.folderPath = folderPath;
-        this.isRecursive = isRecursive;
         this.el = el;
         this.ctx = ctx;
+        this.scope = this.resolveScope();
 
         this.updateDebounced = debounce(async () => {
             await this.renderMoc();
         }, 500, true);
+    }
+
+    private resolveScope(): MocScope {
+        const sourceFile = this.app.vault.getAbstractFileByPath(this.sourcePath);
+        return resolveScope(this.config, sourceFile instanceof TFile ? sourceFile : null);
     }
 
     onload() {
@@ -662,32 +740,48 @@ class MocRenderChild extends MarkdownRenderChild {
         this.registerEvent(this.app.vault.on('modify', this.onFileChange.bind(this)));
         this.registerEvent(this.app.vault.on('create', this.onFileChange.bind(this)));
         this.registerEvent(this.app.vault.on('delete', this.onFileChange.bind(this)));
+        this.registerEvent(this.app.vault.on('rename', this.onFileRename.bind(this)));
 
         // Initial render is handled by processMocBlock
     }
 
     onFileChange(file: TAbstractFile) {
-        if (file instanceof TFile && file.extension === 'md') {
-            // Check if file is in the watched folder
-            const parentPath = file.parent ? file.parent.path : '';
-            const normalizedParent = parentPath.replace(/^\/+|\/+$/g, '');
-
-            let shouldUpdate = false;
-
-            if (normalizedParent === this.folderPath) {
-                shouldUpdate = true;
-            } else if (this.isRecursive) {
-                if (this.folderPath === '') {
-                    shouldUpdate = true;
-                } else if (normalizedParent.startsWith(this.folderPath + '/')) {
-                    shouldUpdate = true;
-                }
-            }
-
-            if (shouldUpdate) {
-                this.updateDebounced();
-            }
+        if (file instanceof TFile && this.affectsOutput(file.path)) {
+            this.updateDebounced();
         }
+    }
+
+    /**
+     * Handles renames and moves, which Obsidian reports as one event. Checking
+     * both ends of the move catches notes entering the scope, leaving it, and
+     * being renamed within it. Renaming a folder fires this for every note
+     * inside, so a renamed watched folder lands here too.
+     */
+    onFileRename(file: TAbstractFile, oldPath: string) {
+        if (!(file instanceof TFile)) return;
+
+        if (oldPath === this.sourcePath) {
+            // The note hosting this block moved, so `{{this.*}}` parameters
+            // and the folder they expand into may now point somewhere else.
+            this.sourcePath = file.path;
+            this.scope = this.resolveScope();
+            this.updateDebounced();
+            return;
+        }
+
+        if (this.affectsOutput(file.path) || this.affectsOutput(oldPath)) {
+            this.updateDebounced();
+        }
+    }
+
+    /** True when a change to the note at `path` could alter what this block renders. */
+    private affectsOutput(path: string): boolean {
+        if (!path.endsWith('.md')) return false;
+        if (isPathInScope(path, this.scope)) return true;
+
+        // Templates usually live outside the scanned folder, so edits to them
+        // would otherwise never reach blocks that use them.
+        return this.config.template !== undefined && isPathInTemplateFolder(path, this.settings.templateFolder || '');
     }
 
     async renderMoc() {
@@ -868,14 +962,7 @@ export async function generateMocMarkdown(
         return { error: "Error: invalid or missing 'folder' in moc block.", cls: 'moc-error' };
     }
 
-    let expandedFolder = config.folder;
-    if (sourceFile && sourceFile instanceof TFile) {
-        expandedFolder = expandedFolder.replace(/\{\{this\.filename\}\}/g, sourceFile.basename);
-        const folderName = sourceFile.parent ? sourceFile.parent.name : '';
-        expandedFolder = expandedFolder.replace(/\{\{this\.folder\}\}/g, folderName);
-        const pathNoExt = sourceFile.path.replace(/\.md$/, '');
-        expandedFolder = expandedFolder.replace(/\{\{this\.path\}\}/g, pathNoExt);
-    }
+    const hostFile = sourceFile instanceof TFile ? sourceFile : null;
 
     const validElements = ['List', 'Task', 'Heading', 'Paragraph', 'Blockquote'];
     if (!validElements.includes(config.element as string)) {
@@ -886,24 +973,18 @@ export async function generateMocMarkdown(
         return { error: "Error: invalid or missing 'filter' in moc block.", cls: 'moc-error' };
     }
 
-    let expandedFilter = config.filter;
-    if (sourceFile && sourceFile instanceof TFile) {
-        expandedFilter = expandedFilter.replace(/\{\{this\.filename\}\}/g, sourceFile.basename);
-
-        const folderName = sourceFile.parent ? sourceFile.parent.name : '';
-        expandedFilter = expandedFilter.replace(/\{\{this\.folder\}\}/g, folderName);
-
-        const pathNoExt = sourceFile.path.replace(/\.md$/, '');
-        expandedFilter = expandedFilter.replace(/\{\{this\.path\}\}/g, pathNoExt);
-    }
-
-    const parsedFilter = parseFilter(expandedFilter);
+    const parsedFilter = parseFilter(expandDynamicParams(config.filter, hostFile));
     if (!parsedFilter) {
         return { error: `Error: unsupported or invalid filter format '${config.filter}'.`, cls: 'moc-error' };
     }
 
-    const folderPath = expandedFolder.trim().replace(/^\/+|\/+$/g, '');
-    const isRecursive = config.recursive === true;
+    const scope = resolveScope(config, hostFile);
+
+    // Most often the folder was renamed or moved after the block was written,
+    // which would otherwise read as an empty folder.
+    if (scope.folderPath !== '' && !(app.vault.getAbstractFileByPath(scope.folderPath) instanceof TFolder)) {
+        return { error: `Error: folder '${scope.folderPath}' does not exist. It may have been renamed or moved.`, cls: 'moc-error' };
+    }
 
     let sortField = 'name';
     let sortDirection = 'desc';
@@ -939,49 +1020,7 @@ export async function generateMocMarkdown(
     // 1. Find all matching files
     const allFiles = app.vault.getMarkdownFiles();
 
-    let matchedFiles = allFiles.filter(file => {
-        const parentPath = file.parent ? file.parent.path : '';
-        const normalizedParent = parentPath.replace(/^\/+|\/+$/g, '');
-
-        if (normalizedParent === folderPath) {
-            return true;
-        }
-
-        if (isRecursive) {
-            if (folderPath === '') {
-                return true;
-            }
-            if (normalizedParent.startsWith(folderPath + '/')) {
-                return true;
-            }
-        }
-
-        return false;
-    });
-
-    if (config.excludeFolder) {
-        let excludeFolders = Array.isArray(config.excludeFolder) ? config.excludeFolder : [config.excludeFolder];
-        excludeFolders = excludeFolders.map(folder => folder.trim().replace(/^\/+|\/+$/g, ''));
-        matchedFiles = matchedFiles.filter(file => {
-            return !excludeFolders.some(exFolder => {
-                const parentPath = file.parent ? file.parent.path.replace(/^\/+|\/+$/g, '') : '';
-                return parentPath === exFolder || parentPath.startsWith(exFolder + '/');
-            });
-        });
-    }
-
-    if (config.excludeFile) {
-        let excludeFiles = Array.isArray(config.excludeFile) ? config.excludeFile : [config.excludeFile];
-        excludeFiles = excludeFiles.map(file => file.trim().replace(/^\/+|\/+$/g, ''));
-        matchedFiles = matchedFiles.filter(file => {
-            const normalizedPath = file.path.replace(/^\/+|\/+$/g, '');
-            return !excludeFiles.some(exFile => {
-                // If exFile doesn't have an extension, try appending .md for a match
-                const exFileWithExt = exFile.endsWith('.md') ? exFile : exFile + '.md';
-                return normalizedPath === exFile || normalizedPath === exFileWithExt;
-            });
-        });
-    }
+    let matchedFiles = allFiles.filter(file => isPathInScope(file.path, scope));
 
     if (matchedFiles.length === 0) {
         return { error: `No markdown files found in folder '${config.folder}'.`, cls: 'moc-empty' };
@@ -1523,32 +1562,12 @@ export async function processMocBlock(
 
     const container = wrapper.createDiv({ cls: 'moc-container' });
 
-    // Determine folderPath and isRecursive for the MocRenderChild
-    let folderPath = '';
-    let isRecursive = false;
-
-    if (config.folder && typeof config.folder === 'string') {
-        let expandedFolder = config.folder;
-        const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
-        if (sourceFile && sourceFile instanceof TFile) {
-            expandedFolder = expandedFolder.replace(/\{\{this\.filename\}\}/g, sourceFile.basename);
-            const folderName = sourceFile.parent ? sourceFile.parent.name : '';
-            expandedFolder = expandedFolder.replace(/\{\{this\.folder\}\}/g, folderName);
-            const pathNoExt = sourceFile.path.replace(/\.md$/, '');
-            expandedFolder = expandedFolder.replace(/\{\{this\.path\}\}/g, pathNoExt);
-        }
-        folderPath = expandedFolder.trim().replace(/^\/+|\/+$/g, '');
-        isRecursive = config.recursive === true;
-    }
-
     const childComponent = new MocRenderChild(
         container,
         config,
         app,
         sourcePath,
         settings,
-        folderPath,
-        isRecursive,
         el,
         ctx
     );
@@ -1558,7 +1577,7 @@ export async function processMocBlock(
 
     copyButton.onClickEvent(async (e) => {
         e.preventDefault();
-        const result = await generateMocMarkdown(config, app, sourcePath, settings);
+        const result = await generateMocMarkdown(config, app, childComponent.sourcePath, settings);
         if (result.markdownText) {
             await navigator.clipboard.writeText(result.markdownText);
             new Notice("Copied to clipboard");
@@ -1574,9 +1593,11 @@ export async function processMocBlock(
             new Notice("Could not determine section to bake");
             return;
         }
-        const file = app.vault.getAbstractFileByPath(sourcePath);
+        // Read from the child rather than the closure, which goes stale if the
+        // note is renamed while this block stays on screen.
+        const file = app.vault.getAbstractFileByPath(childComponent.sourcePath);
         if (file instanceof TFile) {
-            const result = await generateMocMarkdown(config, app, sourcePath, settings);
+            const result = await generateMocMarkdown(config, app, childComponent.sourcePath, settings);
             if (result.markdownText) {
                 await app.vault.process(file, (data) => {
                     const lines = data.split(/\r?\n/);

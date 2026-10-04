@@ -6,7 +6,7 @@ const config = {
   tagline: "Smart Map of Content for Obsidian",
   favicon: "img/favicon.png",
 
-  url: "https://mkshp-dev.github.io",
+  url: "https://docs.mkshp.dev",
   baseUrl: "/obsidian-MOC-plugin/",
 
   organizationName: "mkshp-dev",

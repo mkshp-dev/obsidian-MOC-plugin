@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate, toggleTaskMarker, isTaskLineChecked, buildSegments, resolveLimitOptions } from '../moc';
+import { parseFilter, evaluateFilter, evaluateFrontmatter, applyFindReplace, applyTemplate, toggleTaskMarker, isTaskLineChecked, buildSegments, resolveLimitOptions, resolveScope, isPathInScope, isPathInTemplateFolder } from '../moc';
 import { TFile } from 'obsidian';
 
 void describe('MOC Filter - Primitive Filters', () => {
@@ -582,5 +582,79 @@ void describe('MOC Limits - resolveLimitOptions', () => {
         const result = resolveLimitOptions({ ...base, limit: 0, fileLimit: 5 });
         assert.strictEqual(result.error, undefined);
         assert.strictEqual(result.limits?.fileLimit, 5);
+    });
+});
+
+void describe('MOC Scope - isPathInScope', () => {
+    const scopeFor = (config: Record<string, unknown>) => resolveScope({ element: 'List', filter: 'contains("x")', ...config }, null);
+
+    void test('non-recursive scope only covers the folder itself', () => {
+        const scope = scopeFor({ folder: 'Projects' });
+        assert.strictEqual(isPathInScope('Projects/a.md', scope), true);
+        assert.strictEqual(isPathInScope('Projects/sub/a.md', scope), false);
+        assert.strictEqual(isPathInScope('Other/a.md', scope), false);
+        // A sibling folder sharing the prefix must not match
+        assert.strictEqual(isPathInScope('Projects-old/a.md', scope), false);
+    });
+
+    void test('recursive scope covers subfolders', () => {
+        const scope = scopeFor({ folder: 'Projects', recursive: true });
+        assert.strictEqual(isPathInScope('Projects/sub/deep/a.md', scope), true);
+        assert.strictEqual(isPathInScope('Projects-old/a.md', scope), false);
+    });
+
+    void test('vault root scope', () => {
+        assert.strictEqual(isPathInScope('a.md', scopeFor({ folder: '/' })), true);
+        assert.strictEqual(isPathInScope('sub/a.md', scopeFor({ folder: '/' })), false);
+        assert.strictEqual(isPathInScope('sub/a.md', scopeFor({ folder: '/', recursive: true })), true);
+    });
+
+    void test('folder paths are normalised', () => {
+        const scope = scopeFor({ folder: ' /Projects/ ' });
+        assert.strictEqual(isPathInScope('Projects/a.md', scope), true);
+    });
+
+    void test('excludeFolder removes the folder and its subfolders', () => {
+        const scope = scopeFor({ folder: 'Projects', recursive: true, excludeFolder: ['Projects/Archive'] });
+        assert.strictEqual(isPathInScope('Projects/a.md', scope), true);
+        assert.strictEqual(isPathInScope('Projects/Archive/a.md', scope), false);
+        assert.strictEqual(isPathInScope('Projects/Archive/2025/a.md', scope), false);
+        assert.strictEqual(isPathInScope('Projects/Archived/a.md', scope), true);
+    });
+
+    void test('excludeFile matches with or without the .md extension', () => {
+        const scope = scopeFor({ folder: 'Projects', excludeFile: ['Projects/index', 'Projects/readme.md'] });
+        assert.strictEqual(isPathInScope('Projects/index.md', scope), false);
+        assert.strictEqual(isPathInScope('Projects/readme.md', scope), false);
+        assert.strictEqual(isPathInScope('Projects/other.md', scope), true);
+    });
+
+    void test('exclusions accept a single string', () => {
+        const scope = scopeFor({ folder: 'Projects', recursive: true, excludeFolder: 'Projects/Archive', excludeFile: 'Projects/index' });
+        assert.strictEqual(isPathInScope('Projects/Archive/a.md', scope), false);
+        assert.strictEqual(isPathInScope('Projects/index.md', scope), false);
+    });
+
+    void test('a rename is caught from either end', () => {
+        // Moves are checked against both the old and new path; a note leaving
+        // the scope is only visible through its old path.
+        const scope = scopeFor({ folder: 'Projects' });
+        const oldPath = 'Projects/a.md';
+        const newPath = 'Archive/a.md';
+        assert.strictEqual(isPathInScope(newPath, scope), false);
+        assert.strictEqual(isPathInScope(oldPath, scope), true);
+    });
+});
+
+void describe('MOC Scope - isPathInTemplateFolder', () => {
+    void test('matches notes anywhere under the template folder', () => {
+        assert.strictEqual(isPathInTemplateFolder('Templates/card.md', 'Templates'), true);
+        assert.strictEqual(isPathInTemplateFolder('Templates/moc/card.md', '/Templates/'), true);
+        assert.strictEqual(isPathInTemplateFolder('Templates-old/card.md', 'Templates'), false);
+    });
+
+    void test('an unset template folder matches nothing', () => {
+        assert.strictEqual(isPathInTemplateFolder('card.md', ''), false);
+        assert.strictEqual(isPathInTemplateFolder('card.md', '  '), false);
     });
 });

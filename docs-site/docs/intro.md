@@ -30,7 +30,7 @@ The Obsidian MOC Plugin is a smart **Map of Content** generator for [Obsidian](h
 - **Decoupled Block & Note Separators**: Separately control separators (e.g. blank lines, horizontal rules) between blocks from the same note and different note sections.
 - **Interactive Tasks**: Tick a task checkbox inside a rendered MOC block and the change is written straight back to its source note.
 - **Jump to Source**: Every matched block gets a button that opens its source note at the exact line the block starts at.
-- **Live Auto-refresh**: MOC blocks automatically re-render when files in the watched folder are created, modified, or deleted — no manual refresh needed.
+- **Live Auto-refresh**: MOC blocks automatically re-render when files in the watched folder are created, modified, deleted, renamed, or moved — no manual refresh needed.
 - **Copy as Markdown**: Copy the rendered MOC output to clipboard without modifying the note.
 - **Bake to Markdown**: Instantly convert dynamic blocks into static markdown notes directly inside the editor.
 - **Create Showcase**: Generate a ready-to-explore demo folder covering every feature with a single command.

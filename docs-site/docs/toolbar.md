@@ -46,11 +46,16 @@ The **Bake** button permanently replaces the dynamic `moc` code block with its r
 
 ## Live Auto-refresh
 
-MOC blocks **automatically re-render** whenever a Markdown file in the watched folder is created, modified, or deleted. You do not need to close and reopen the note.
+MOC blocks **automatically re-render** whenever a Markdown file in the watched folder is created, modified, deleted, renamed, or moved. You do not need to close and reopen the note.
 
 The refresh is **debounced by 500 ms** to avoid excessive re-renders during rapid consecutive saves.
 
-The watched folder is determined by the `folder` and `recursive` settings of each individual block. Only file changes within the relevant folder (and subfolders, if `recursive: true`) trigger a refresh.
+The watched folder is determined by the `folder` and `recursive` settings of each individual block. Only file changes within the relevant folder (and subfolders, if `recursive: true`) trigger a refresh, and changes inside an `excludeFolder` or to an `excludeFile` are ignored.
+
+- **Renames and moves** refresh the block when the note moves into the watched folder, out of it, or is renamed within it, so links and file headings never go stale.
+- **Template edits** refresh every block that uses a `template`, even though the template folder is usually outside the watched folder.
+- **Renaming the watched folder** shows an error that the folder no longer exists, rather than an empty result. Update the block's `folder` to the new name.
+- **Renaming the note containing the block** re-resolves `{{this.filename}}`, `{{this.folder}}` and `{{this.path}}` against the new name.
 
 ---
 

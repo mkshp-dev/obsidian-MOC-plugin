@@ -27,6 +27,7 @@ recursive: true
 The folder path relative to the vault root where the plugin will search for markdown notes.
 - *Examples*: `Diary`, `Projects/Marketing`, or `""` (empty string to search the entire vault).
 - Supports dynamic parameters: `{{this.filename}}`, `{{this.folder}}`, `{{this.path}}` (see [Dynamic Parameters](#dynamic-parameters)).
+- If the folder does not exist, the block shows an error saying so. Renaming or moving a folder does not update `moc` blocks that point at it, so update `folder` to the new path.
 
 ### `element` (Required)
 The specific markdown element to extract from matching notes. Must be one of the following:
@@ -172,6 +173,8 @@ Templates are resolved against the **Template folder** configured in **Settings 
 1. Set a **Template folder** in the plugin settings (e.g. `Templates`).
 2. Create a note inside that folder whose *content* is the format string, using handlebars-style `{{placeholder}}` syntax — for example a note named `bullet-link.md` containing `- {{content}} — [[{{path}}|{{file}}]]`.
 3. Reference the note's basename (without `.md`) in the `template` key: `template: bullet-link`.
+
+Editing a template note refreshes every block that uses it, even though the template folder is usually outside the block's `folder`.
 
 Available placeholders (used inside the template note's content):
 

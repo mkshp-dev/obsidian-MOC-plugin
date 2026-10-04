@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Fix: Refresh on rename and move** — `moc` blocks now refresh when a note is renamed or moved into, out of, or within the watched folder. Previously a moved-in note stayed missing, and a moved-out or renamed note lingered with a dead link, until some other edit triggered a refresh. Renaming a folder refreshes every block watching notes inside it.
+- **Fix: Renaming the note that holds a block** — The block now follows its note's new path, so `{{this.filename}}`, `{{this.folder}}` and `{{this.path}}` re-resolve against the new name, and **Copy** and **Bake** keep working instead of reporting "Source file not found".
+- **Fix: Refresh on template edits** — Editing a template note now refreshes the blocks that use it. Template folders usually sit outside the watched folder, so these edits were previously ignored.
+- **Fix: Missing folder error** — A block whose `folder` does not exist, for example after the folder was renamed, now says so instead of reporting that the folder contains no notes.
+- **Fix: Excluded notes no longer trigger refreshes** — Edits inside an `excludeFolder` or to an `excludeFile` no longer re-render the block. Scanning and auto-refresh now share one scope check, so they can no longer disagree about which notes a block covers.
+- **Showcase: Renames and moves** — **Create showcase** now adds note 15 and a `rename-lab` sandbox folder with step-by-step walkthroughs for each of the fixes above.
+
 ## 1.5.1 - 2026-09-26
 
 - **Feature: Interactive tasks** — Task checkboxes in a rendered `moc` block now write back to their source note. Clicking a checkbox toggles the matching `- [ ]` in the original file, and the block's existing auto-refresh reconciles the view. Works for nested subtasks, ordered-list tasks, and tasks inside extracted headings, blockquotes and callouts. Writes are guarded by a source-line match, so a stale block can never overwrite a newer edit. Blocks render their checkboxes disabled when `template` or `applyFnR` actually rewrites the matched text, since rewriting breaks the mapping back to source lines; output that comes back unchanged stays interactive. Can be turned off with the new **Interactive tasks** setting.

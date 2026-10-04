@@ -88,17 +88,8 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Extract release notes
-        run: |
-          awk '
-          /^## In-progress/ {flag=1; next}
-          /^## / && flag {exit}
-          flag
-          ' CHANGELOG.md > release_notes.md
-
-          if [ ! -s release_notes.md ]; then
-            echo "_Beta build — no changelog entries yet. See commit history for details._" > release_notes.md
-          fi
+      - name: Build release notes
+        run: node release-notes.mjs --allow-empty > release_notes.md
 
       - name: Create tag
         run: |

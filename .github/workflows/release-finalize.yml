@@ -70,18 +70,10 @@ jobs:
             manifest.json
             styles.css
 
-      - name: Extract release notes
-        run: |
-          awk '
-          /^## In-progress/ {flag=1; next}
-          /^## / && flag {exit}
-          flag
-          ' CHANGELOG.md > release_notes.md
-
-          if [ ! -s release_notes.md ]; then
-            echo "No changelog entries"
-            exit 1
-          fi
+      - name: Build release notes
+        # Fails if `## In-progress` is empty. The notes are formatted to paste
+        # straight into Obsidian's Discord, links footer included.
+        run: node release-notes.mjs > release_notes.md
 
       - name: Create tag
         run: |

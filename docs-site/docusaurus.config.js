@@ -4,7 +4,7 @@ import { themes as prismThemes } from "prism-react-renderer";
 const config = {
   title: "Maps of Content",
   tagline: "Smart Map of Content for Obsidian",
-  favicon: "img/favicon.png",
+  favicon: "img/favicon.ico",
 
   url: "https://docs.mkshp.dev",
   baseUrl: "/obsidian-MOC-plugin/",
@@ -44,6 +44,10 @@ const config = {
   themeConfig: {
     navbar: {
       title: "Maps of Content",
+      logo: {
+        alt: "mkshp",
+        src: "img/mkshp.png",
+      },
       items: [
         {
           type: "docSidebar",

@@ -2,6 +2,10 @@
 
 Dynamically generate **Map of Content (MOC)** indexes by extracting matching elements (lists, tasks, headings, paragraphs, blockquotes) from notes in your vault — powered by a simple code block.
 
+[![Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=downloads&query=%24%5B%22maps-of-content%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json)](https://obsidian.md/plugins?id=maps-of-content)
+
+[![Install in Obsidian](https://img.shields.io/badge/Install-Obsidian%20Community%20Plugins-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md/plugins?id=maps-of-content)
+
 📖 **[Full documentation →](https://mkshp-dev.github.io/obsidian-MOC-plugin/)**
 
 ---

@@ -24,6 +24,34 @@ export default defineConfig([
 		},
 	},
 
+	// Build scripts and tests run in Node, never inside Obsidian, so Node's
+	// built-ins, `process` and console output are expected there. Every other
+	// rule still applies to them.
+	{
+		files: ["*.mjs", "obsidian-mock.js", "src/tests/**"],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
+		},
+		rules: {
+			"obsidianmd/no-nodejs-modules": "off",
+			// Only its no-console message is relaxed; no-new-func still applies.
+			"obsidianmd/rule-custom-message": "off",
+			"no-new-func": "error",
+		},
+	},
+
+	// The test mock stands in for Obsidian itself, including the copy of
+	// moment that Obsidian bundles, so it is the one file that imports it.
+	{
+		files: ["obsidian-mock.js"],
+		rules: {
+			"@typescript-eslint/no-restricted-imports": "off",
+			"import/no-extraneous-dependencies": "off",
+		},
+	},
+
 	// Generated output only, matching .gitignore. Everything committed is linted.
 	{
 		ignores: [

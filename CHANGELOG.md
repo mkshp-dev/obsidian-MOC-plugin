@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Fix: Obsidian plugin review** — The date features from 1.6.0 now pass the review's type checks, which use TypeScript 6. The plugin works exactly as before.
+- **Maintenance** — The project now builds with TypeScript 6 and the latest Obsidian lint rules, and lints its build scripts and tests too, so the same issues are caught before a release.
+
 ## 1.6.0 - 2026-10-18
 
 - **Feature: Date parameters** — Filter against moments relative to now, such as `{{startOfDay}}`, `{{endOfWeek}}` or `{{now-24h}}`: `properties(due < {{startOfDay}})` lists overdue items. A format turns a date into text, as in `folder: Journal/{{now:YYYY/MM}}`. Parameters work in `folder`, `filter` and the exclusions, and blocks move on to a new day by themselves.

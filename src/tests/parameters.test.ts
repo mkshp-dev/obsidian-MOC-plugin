@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { TFile } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 import { moment } from '../utils/moment';
 import { describeFilterError, findParameterError } from '../parameters';
 import { configUsesDateParams, evaluateFilter, findConfigParameterError, isPathInScope, MocConfig, parseFilter, resolveScope } from '../moc';
@@ -8,7 +8,11 @@ import { configUsesDateParams, evaluateFilter, findConfigParameterError, isPathI
 const now = () => moment('2026-10-21 15:30', 'YYYY-MM-DD HH:mm');
 
 /** The note a block lives in, with just the fields parameters read. */
-const host = { basename: 'Alpha', path: 'Projects/Alpha.md', parent: { name: 'Projects' } } as unknown as TFile;
+const host = Object.assign(new TFile(), {
+    basename: 'Alpha',
+    path: 'Projects/Alpha.md',
+    parent: Object.assign(new TFolder(), { name: 'Projects' }),
+});
 
 const base: MocConfig = { folder: 'Notes', element: 'List', filter: 'contains("x")' };
 

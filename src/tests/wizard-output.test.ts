@@ -43,13 +43,13 @@ void describe('Wizard - Relative dates', () => {
     void test('compiles to a valid filter', () => {
         const compiled = compileRule(dateRule({ relativeAnchor: 'endOfDay', relativeOffset: '7', relativeUnit: 'd' }));
         assert.strictEqual(compiled, 'properties(due <= {{endOfDay+7d}})');
-        assertValidFilter(compiled!);
+        assertValidFilter(compiled);
     });
 
     void test('works for file dates', () => {
         const compiled = compileRule(dateRule({ propertyKey: 'file.mtime', operator: '>=', relativeAnchor: 'now', relativeOffset: '-24', relativeUnit: 'h' }));
         assert.strictEqual(compiled, 'properties(file.mtime >= {{now-24h}})');
-        assertValidFilter(compiled!);
+        assertValidFilter(compiled);
     });
 
     void test('needs no fixed value but rejects fractional offsets', () => {
@@ -96,7 +96,7 @@ void describe('Wizard - Date presets', () => {
         ];
         const compiled = compileFilterTree(group);
         assert.strictEqual(compiled, 'contains("urgent") OR (properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay}}))');
-        assertValidFilter(compiled!);
+        assertValidFilter(compiled);
     });
 
     void test('presets need only a property', () => {

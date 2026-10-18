@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+## 1.6.0 - 2026-10-18
+
 - **Feature: Date parameters** — Filter against moments relative to now, such as `{{startOfDay}}`, `{{endOfWeek}}` or `{{now-24h}}`: `properties(due < {{startOfDay}})` lists overdue items. A format turns a date into text, as in `folder: Journal/{{now:YYYY/MM}}`. Parameters work in `folder`, `filter` and the exclusions, and blocks move on to a new day by themselves.
 - **Feature: File dates** — `properties()` reads `file.day` (the date in a daily note's filename), `file.ctime` and `file.mtime`.
 - **Feature: Parameter errors** — A `{{…}}` that cannot be replaced, such as `{{now-0.5h}}` or `{{this.filname}}`, shows an error instead of silently matching nothing.
@@ -16,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fix: Whole-vault blocks** — `folder: ""` scans the entire vault, as documented.
 - **Fix: Wizard YAML** — The wizard quotes values such as `{{this.folder}}`, so the blocks it writes always load.
 - **Showcase** — Note 16 walks through every date feature with sample notes dated when the showcase is created, and a broken block in note 12 is fixed.
+
 
 ## 1.5.2 - 2026-10-04
 

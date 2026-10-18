@@ -18,9 +18,11 @@ jobs:
 
       - name: Check commit message
         id: check
+        # Passed through the environment rather than pasted into the script,
+        # so quotes or $(...) in a commit message are never run as shell.
+        env:
+          MSG: ${{ github.event.head_commit.message }}
         run: |
-          MSG="${{ github.event.head_commit.message }}"
-
           if [[ "$MSG" =~ ^Release[[:space:]]v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
             VERSION="${BASH_REMATCH[1]}"
             echo "is_release=true" >> $GITHUB_OUTPUT

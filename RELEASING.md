@@ -135,7 +135,7 @@ Betas are invisible to ordinary users: Obsidian's updater and the community dire
 
 - **Fix: …** — …
 
-[Repository](<https://github.com/…>) · [Documentation](<https://docs.mkshp.dev/…>) · [Community page](<https://obsidian.md/plugins?id=maps-of-content>)
+[Repository](<https://github.com/…>) · [Documentation](<https://docs.mkshp.dev/…>) · [Community page](<https://community.obsidian.md/plugins/maps-of-content>)
 ```
 
 - The name and version come from `manifest.json`, and the documentation link from `url` and `baseUrl` in `docs-site/docusaurus.config.js`, so they never need updating by hand.

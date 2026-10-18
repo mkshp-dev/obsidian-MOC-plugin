@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { moment } from 'obsidian';
+import { moment } from '../utils/moment';
 import { compareTimes, expandDateParams, filenameToTime, hasDateParams, msUntilNextDay, parseDateExpression, parseDateValue, resolveDate } from '../relative-dates';
 import { configUsesDateParams, evaluateFrontmatter, expandDynamicParams, MocConfig, parseFilter, resolveScope } from '../moc';
 

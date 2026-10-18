@@ -68,7 +68,7 @@ const repository = process.env.GITHUB_REPOSITORY || FALLBACK_REPOSITORY;
 const links = [
     `[Repository](<https://github.com/${repository}>)`,
     `[Documentation](<${readDocsUrl()}>)`,
-    `[Community page](<https://obsidian.md/plugins?id=${manifest.id}>)`
+    `[Community page](<https://community.obsidian.md/plugins/${manifest.id}>)`
 ].join(" · ");
 
 const notes = `## ${manifest.name} ${version}\n\n${entries}\n\n${links}\n`;

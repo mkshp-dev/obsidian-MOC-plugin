@@ -1,6 +1,10 @@
 {
 	"compilerOptions": {
-		"baseUrl": "src",
+		// TypeScript 6 turned these on and off by default. Set explicitly to the
+		// TypeScript 5 defaults this project was written against; the strict
+		// checks it does want are enabled individually below.
+		"strict": false,
+		"types": ["node"],
 		"inlineSourceMap": true,
 		"inlineSources": true,
 		"module": "ESNext",
@@ -9,7 +13,7 @@
 		"noImplicitAny": true,
 		"noImplicitThis": true,
 		"noImplicitReturns": true,
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"importHelpers": true,
 		"noUncheckedIndexedAccess": true,
 		"isolatedModules": true,
@@ -22,10 +26,7 @@
 			"ES5",
 			"ES6",
 			"ES7"
-		],
-		"paths": {
-			"moment": ["../node_modules/moment"]
-		}
+		]
 	},
 	"include": [
 		"src/**/*.ts"

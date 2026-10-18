@@ -1,5 +1,6 @@
-import { App, CachedMetadata, Keymap, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, setIcon, TFile, TFolder, debounce, TAbstractFile } from 'obsidian';
+import { App, CachedMetadata, Keymap, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, setIcon, TFile, TFolder, debounce, TAbstractFile } from 'obsidian';
 import { MOCPluginSettings } from './settings';
+import { moment } from './utils/moment';
 import { compareTimes, currentDay, expandDateParams, FILE_DATE_KEYS, filenameToTime, hasDateParams, Moment, msUntilNextDay, parseDateValue } from './relative-dates';
 import { describeFilterError, findParameterError } from './parameters';
 
@@ -1527,11 +1528,9 @@ export async function generateMocMarkdown(
                 const parentPath = block.file.parent ? block.file.parent.path : '/';
                 groupKeys.push(parentPath);
             } else if (config.groupBy === 'cday') {
-                const safeMoment = moment as unknown as (date?: number | string | Date) => { format(formatStr: string): string };
-                groupKeys.push(safeMoment(block.file.stat.ctime).format('YYYY-MM-DD'));
+                groupKeys.push(moment(block.file.stat.ctime).format('YYYY-MM-DD'));
             } else if (config.groupBy === 'mday') {
-                const safeMoment = moment as unknown as (date?: number | string | Date) => { format(formatStr: string): string };
-                groupKeys.push(safeMoment(block.file.stat.mtime).format('YYYY-MM-DD'));
+                groupKeys.push(moment(block.file.stat.mtime).format('YYYY-MM-DD'));
             } else if (config.groupBy === 'tag') {
                 if (block.tags.length > 0) {
                     groupKeys.push(...block.tags);

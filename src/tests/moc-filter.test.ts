@@ -306,10 +306,10 @@ void describe('MOC Find & Replace', () => {
 
 void describe('MOC Template', () => {
     // Mock TFile for testing
-    const mockFile = {
+    const mockFile = Object.assign(new TFile(), {
         basename: 'my-file',
         path: 'folder/my-file.md'
-    } as TFile;
+    });
 
     void test('template replacement', () => {
         const text = '- [ ] Task 1';

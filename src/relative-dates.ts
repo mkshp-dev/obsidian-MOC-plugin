@@ -1,4 +1,4 @@
-import { moment } from 'obsidian';
+import { moment, type Moment } from './utils/moment';
 
 /**
  * Date parameters such as `{{now-2h}}`, `{{startOfDay}}` or `{{startOfMonth-1m:YYYY-MM}}`.
@@ -9,7 +9,7 @@ import { moment } from 'obsidian';
  * boundaries follow the locale Obsidian sets from the app language.
  */
 
-export type Moment = ReturnType<typeof moment>;
+export type { Moment };
 
 export type DateAnchor =
     | 'now'

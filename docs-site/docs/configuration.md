@@ -158,6 +158,7 @@ Explicitly excludes one or more folders from the search results, even when they 
 - **Format**: a single string or a JSON array of strings.
 - *Example (single)*: `excludeFolder: Projects/Archive`
 - *Example (multiple)*: `excludeFolder: ["Projects/Archive", "Templates"]`
+- Supports `{{this.…}}` and date parameters, as in `excludeFolder: Journal/{{now:YYYY}}` to leave out this year's folder.
 
 ---
 
@@ -166,6 +167,7 @@ Explicitly excludes one or more files from the search results. Paths are relativ
 - **Format**: a single string or a JSON array of strings.
 - *Example (single)*: `excludeFile: Projects/Template`
 - *Example (multiple)*: `excludeFile: ["Projects/Template", "Daily/2024-01-01"]`
+- Supports `{{this.…}}` and date parameters, as in `excludeFile: Daily/{{now:YYYY-MM-DD}}` to leave out today's daily note.
 
 ---
 
@@ -226,7 +228,7 @@ Defines the separator rendered between block groups from **different notes**.
 
 ## Dynamic Parameters
 
-You can dynamically include the current note's parameters in the `folder` and `filter` options using the following variables:
+You can dynamically include the current note's parameters in `folder`, `filter`, `excludeFolder` and `excludeFile` using the following variables:
 - `{{this.filename}}`: Expands to the current note's name (without the `.md` extension).
 - `{{this.folder}}`: Expands to the name of the folder containing the current note.
 - `{{this.path}}`: Expands to the full path of the current note (without the `.md` extension).
@@ -248,7 +250,7 @@ recursive: true
 
 ## Date parameters
 
-A date parameter in double braces stands for a **point in time** relative to now. Like `{{this.filename}}`, it is replaced with text before the block runs, in both `folder` and `filter`.
+A date parameter in double braces stands for a **point in time** relative to now. Like `{{this.filename}}`, it is replaced with text before the block runs, in `folder`, `filter`, `excludeFolder` and `excludeFile`.
 
 ````yaml
 ```moc
@@ -310,7 +312,22 @@ The word `"today"` in quotes is just text. Only parameters in double braces are 
 
 ### Mistakes are reported
 
-A parameter that looks like a date but does not parse, such as `{{now-0.5h}}` (offsets are whole numbers) or `{{startOfDya}}`, shows an error in the block rather than being searched for as text. `{{today}}` is reported too, with a pointer to `{{startOfDay}}` and `{{endOfDay}}`, because a whole day is a range rather than a point.
+A parameter that cannot be replaced shows an error in the block instead of being left as text. The MOC Creation Wizard runs the same checks before it inserts a block.
+
+| You write | What the block says |
+|-----------|---------------------|
+| `{{now-0.5h}}` | Offsets must be whole numbers |
+| `{{now-7x}}` | Unknown unit, with the list of units |
+| `{{startOfDya}}` | Unknown date, with the list of anchors |
+| `{{today}}` | A whole day is a range, so use `{{startOfDay}}` and `{{endOfDay}}` |
+| `{{this.filname}}` | Unknown parameter, with the list of `{{this.…}}` parameters |
+| `{{nwo:YYYY}}`, `{{custom}}` | Unknown parameter, with the parameters you can use |
+
+Every `{{…}}` in a block is a parameter, so one the plugin does not know is always reported, in `folder`, `filter` and the exclusions alike.
+
+**Searching for literal braces:** to find notes that contain text such as `{{title}}`, for example where a template was never filled in, escape the braces in a regular expression: `matches("\{\{title\}\}")`. Escaped braces are not a parameter. Writing `contains("{{title}}")` shows an error that suggests this.
+
+If a filter only breaks once its parameters are replaced, the error shows the replaced text, since that is what failed. The usual cause is a formatted value with spaces in it: write `properties(month == "{{now:MMMM YYYY}}")` with quotes, not `properties(month == {{now:MMMM YYYY}})`.
 
 ### Refreshing
 
@@ -351,7 +368,7 @@ filter: is_incomplete()
 ```
 ````
 
-If a dated folder does not exist yet, for example on the first day of a new month, the block says so instead of reporting an error. It fills in as soon as you create a note there.
+If a dated folder does not exist yet, for example on the first day of a new month, the block shows the same error as any missing folder. It recovers as soon as you create a note there.
 
 > **Note**: If `folder` starts with `{{`, wrap it in quotes, as in `folder: "{{now:YYYY}}"`. Without quotes, YAML reads the braces as something else and the block fails to load. The MOC Creation Wizard adds the quotes for you.
 

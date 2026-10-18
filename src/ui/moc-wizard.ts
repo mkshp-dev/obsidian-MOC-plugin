@@ -29,6 +29,8 @@ import {
     isDatePropertyType,
 } from './moc-filter-builder';
 import { toYamlString } from '../utils/yaml';
+import { expandDynamicParams, findConfigParameterError, parseFilter } from '../moc';
+import { describeFilterError } from '../parameters';
 
 const RELATIVE_ANCHOR_OPTIONS: [string, string][] = [
     ['now', 'Now'],
@@ -119,7 +121,7 @@ export class MocWizardModal extends Modal {
         // Folder row with Recursive toggle
         const folderRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
         const folderLabel = folderRow.createSpan({ text: 'Folder', cls: 'moc-shaping-title' });
-        folderLabel.title = 'Root folder to scan for elements';
+        folderLabel.title = 'Root folder to scan for elements. Type {{ for parameters such as {{this.folder}} or {{now:YYYY/MM}}';
         const folderGroup = folderRow.createDiv({ cls: 'moc-shaping-input-group' });
         const folderInput = folderGroup.createEl('input', {
             type: 'text',
@@ -169,7 +171,7 @@ export class MocWizardModal extends Modal {
         // Exclude folder row
         const excludeFolderRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
         const excludeFolderLabel = excludeFolderRow.createSpan({ text: 'Exclude folder', cls: 'moc-shaping-title' });
-        excludeFolderLabel.title = 'Folders to exclude from scan (comma-separated)';
+        excludeFolderLabel.title = 'Folders to exclude from scan (comma-separated). Parameters such as {{now:YYYY}} work here too';
         const excludeFolderGroup = excludeFolderRow.createDiv({ cls: 'moc-shaping-input-group' });
         const excludeFolderInput = excludeFolderGroup.createEl('input', {
             type: 'text',
@@ -185,7 +187,7 @@ export class MocWizardModal extends Modal {
         // Exclude file row
         const excludeFileRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
         const excludeFileLabel = excludeFileRow.createSpan({ text: 'Exclude file', cls: 'moc-shaping-title' });
-        excludeFileLabel.title = 'Files to exclude from scan (comma-separated)';
+        excludeFileLabel.title = 'Files to exclude from scan (comma-separated). Parameters such as {{now:YYYY-MM-DD}} work here too';
         const excludeFileGroup = excludeFileRow.createDiv({ cls: 'moc-shaping-input-group' });
         const excludeFileInput = excludeFileGroup.createEl('input', {
             type: 'text',
@@ -1033,6 +1035,26 @@ export class MocWizardModal extends Modal {
         });
     }
 
+    splitList(value: string): string[] {
+        return value.split(',').map(s => s.trim()).filter(s => s !== '');
+    }
+
+    /** A parameter or filter mistake in the block about to be inserted, or null. */
+    findBlockProblem(filter: string, excludeFolders: string[], excludeFiles: string[]): string | null {
+        const parameterError = findConfigParameterError({
+            folder: this.folder,
+            filter,
+            excludeFolder: excludeFolders,
+            excludeFile: excludeFiles,
+        });
+        if (parameterError) return parameterError;
+
+        // `{{this.…}}` stays unreplaced because the block is not in its note
+        // yet. The placeholder text parses wherever its value would.
+        const expandedFilter = expandDynamicParams(filter, null);
+        return parseFilter(expandedFilter) ? null : describeFilterError(filter, expandedFilter);
+    }
+
     insertMocBlock() {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (view) {
@@ -1064,6 +1086,17 @@ export class MocWizardModal extends Modal {
                 if (!this.isValidCount(raw, label, minimum)) return;
             }
 
+            const excludeFolders = this.splitList(this.excludeFolder);
+            const excludeFiles = this.splitList(this.excludeFile);
+
+            // The same checks a block runs when it renders, so a mistake is
+            // caught here instead of after the block is written.
+            const problem = this.findBlockProblem(filterString, excludeFolders, excludeFiles);
+            if (problem) {
+                new Notice(problem, 10000);
+                return;
+            }
+
             const yamlLines = [
                 '```moc',
                 `folder: ${toYamlString(this.folder)}`,
@@ -1075,22 +1108,16 @@ export class MocWizardModal extends Modal {
                 yamlLines.push('recursive: true');
             }
 
-            if (this.excludeFolder.trim() !== '') {
-                const parts = this.excludeFolder.split(',').map(s => s.trim()).filter(s => s !== '');
-                if (parts.length === 1) {
-                    yamlLines.push(`excludeFolder: ${parts[0]}`);
-                } else if (parts.length > 1) {
-                    yamlLines.push(`excludeFolder: ${JSON.stringify(parts)}`);
-                }
+            if (excludeFolders.length === 1) {
+                yamlLines.push(`excludeFolder: ${toYamlString(excludeFolders[0]!)}`);
+            } else if (excludeFolders.length > 1) {
+                yamlLines.push(`excludeFolder: ${JSON.stringify(excludeFolders)}`);
             }
 
-            if (this.excludeFile.trim() !== '') {
-                const parts = this.excludeFile.split(',').map(s => s.trim()).filter(s => s !== '');
-                if (parts.length === 1) {
-                    yamlLines.push(`excludeFile: ${parts[0]}`);
-                } else if (parts.length > 1) {
-                    yamlLines.push(`excludeFile: ${JSON.stringify(parts)}`);
-                }
+            if (excludeFiles.length === 1) {
+                yamlLines.push(`excludeFile: ${toYamlString(excludeFiles[0]!)}`);
+            } else if (excludeFiles.length > 1) {
+                yamlLines.push(`excludeFile: ${JSON.stringify(excludeFiles)}`);
             }
 
             if (this.groupBy) {

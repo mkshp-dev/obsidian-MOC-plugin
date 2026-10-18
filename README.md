@@ -16,7 +16,9 @@ Dynamically generate **Map of Content (MOC)** indexes by extracting matching ele
 
 **Powerful filter DSL** — Boolean logic (`AND`, `OR`, `NOT`), text matching, tag matching, regex, and frontmatter property comparisons with full numeric/date operator support (`>`, `<`, `>=`, `<=`, `!=`).
 
-**MOC Creation Wizard** — Generate `moc` blocks visually from the Command Palette. No YAML required.
+**Dates relative to now** — Filter with `{{startOfDay}}`, `{{now-24h}}`, `{{endOfWeek}}` and friends, as in `properties(due < {{startOfDay}})` for overdue items. Read dates from daily-note filenames with `file.day`, point at dated folders with `{{now:YYYY/MM}}`, and blocks move on to the new day by themselves.
+
+**MOC Creation Wizard** — Generate `moc` blocks visually from the Command Palette. No YAML required. Date filters have presets such as **is today** and **is this week**, and the wizard checks the block before inserting it.
 
 **Flexible output shaping** — Group by folder, tag, date, or any frontmatter property. Sort, and limit by notes scanned (`fileLimit`), total results (`blockLimit`) or results per note (`blocksPerFile`), with matching offsets for pagination.
 

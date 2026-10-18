@@ -1191,6 +1191,18 @@ sort: name desc
 The entry from ten days ago is left out. Swap \`{{startOfDay-7d}}\` for
 \`{{startOfMonth}}\` to see everything from this month instead.
 
+## Everything but today's entry
+
+Parameters work in \`excludeFolder\` and \`excludeFile\` too. This block
+leaves out today's daily note:
+
+\`\`\`moc
+folder: ${lab}/journal
+element: List
+filter: has_tag("#idea")
+excludeFile: ${lab}/journal/{{now:YYYY-MM-DD}}
+\`\`\`
+
 ## Recently edited
 
 \`file.mtime\` and \`file.ctime\` are the moments a note was last modified and
@@ -1227,14 +1239,17 @@ element: List
 filter: contains("")
 \`\`\`
 
-Next month's folder has not been created yet, which a dated folder treats as
-expected rather than as an error:
+Next month's folder has not been created yet, so this block reports it as
+missing, the same as any folder that does not exist:
 
 \`\`\`moc
 folder: ${lab}/months/{{now+1m:YYYY-MM}}
 element: List
 filter: contains("")
 \`\`\`
+
+**Try it:** create a note in the folder named in the error. The block picks it
+up straight away.
 
 ## Mistakes are reported
 
@@ -1253,6 +1268,33 @@ Offsets are whole numbers, so half an hour is reported too:
 folder: ${lab}/meetings
 element: Heading
 filter: properties(start >= {{now-0.5h}})
+\`\`\`
+
+A misspelt note parameter is reported, wherever it is used:
+
+\`\`\`moc
+folder: ${lab}/journal
+element: List
+filter: contains("{{this.filname}}")
+\`\`\`
+
+Every \`{{…}}\` in a block is a parameter, so one the plugin does not know is
+always a mistake, such as this typo for \`{{now}}\`:
+
+\`\`\`moc
+folder: ${lab}/months/{{nwo:YYYY-MM}}
+element: List
+filter: contains("")
+\`\`\`
+
+To search notes for literal braces, escape them in a regular expression. This
+finds template placeholders such as \`{{content}}\` in the showcase's template
+notes; the error from \`contains("{{content}}")\` suggests the same:
+
+\`\`\`moc
+folder: ${SHOWCASE_FOLDER}/templates
+element: Paragraph
+filter: matches("\\{\\{content\\}\\}")
 \`\`\`
 
 ## Build one with the wizard

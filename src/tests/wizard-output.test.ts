@@ -2,7 +2,8 @@ import assert from 'node:assert';
 import { test, describe } from 'node:test';
 import { compileDateParameter, compileDatePreset, compileFilterTree, createDefaultFilterGroup, createDefaultFilterRule, FilterRuleNode, getFilterValidationMessage } from '../ui/moc-filter-builder';
 import { toYamlString } from '../utils/yaml';
-import { findDateParamError, hasDateParams } from '../relative-dates';
+import { hasDateParams } from '../relative-dates';
+import { findParameterError } from '../parameters';
 import { parseFilter } from '../moc';
 
 function dateRule(overrides: Partial<FilterRuleNode>): FilterRuleNode {
@@ -25,7 +26,7 @@ function compileRule(rule: FilterRuleNode): string | null {
 
 /** A compiled filter must be a valid block filter once its date parameters are expanded. */
 function assertValidFilter(filter: string) {
-    assert.strictEqual(findDateParamError(filter), null, filter);
+    assert.strictEqual(findParameterError(filter, 'filter'), null, filter);
     assert.ok(hasDateParams(filter), filter);
     assert.ok(parseFilter(filter.replace(/\{\{[^}]*\}\}/g, '2026-10-21')), filter);
 }

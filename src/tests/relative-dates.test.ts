@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
 import { moment } from 'obsidian';
-import { compareTimes, expandDateParams, filenameToTime, findDateParamError, hasDateParams, msUntilNextDay, parseDateExpression, parseDateValue, resolveDate } from '../relative-dates';
+import { compareTimes, expandDateParams, filenameToTime, hasDateParams, msUntilNextDay, parseDateExpression, parseDateValue, resolveDate } from '../relative-dates';
 import { configUsesDateParams, evaluateFrontmatter, expandDynamicParams, MocConfig, parseFilter, resolveScope } from '../moc';
 
 // A zone west of UTC exposes the trap where a date-only string parsed as UTC
@@ -128,34 +128,6 @@ void describe('Date parameters - Expansion', () => {
         assert.strictEqual(expandDynamicParams('contains("{{now:YYYY-MM-DD}}")', null, now()), 'contains("2026-10-21")');
         const config: MocConfig = { folder: 'Journal/{{now:YYYY/MM}}', element: 'List', filter: 'contains("x")' };
         assert.strictEqual(resolveScope(config, null, now()).folderPath, 'Journal/2026/10');
-    });
-});
-
-void describe('Date parameters - Errors', () => {
-    void test('fractional offsets', () => {
-        assert.match(findDateParamError('properties(due < {{now-0.5h}})') ?? '', /'\{\{now-0\.5h\}\}': offsets must be whole numbers/);
-    });
-
-    void test('unknown units and unreadable offsets', () => {
-        assert.match(findDateParamError('{{now-7x}}') ?? '', /unknown unit 'x'/);
-        assert.match(findDateParamError('{{now-7}}') ?? '', /unknown unit ''/);
-        assert.match(findDateParamError('{{now 7d}}') ?? '', /could not read ' 7d'/);
-    });
-
-    void test('misspelt anchors', () => {
-        assert.match(findDateParamError('{{startofdya}}') ?? '', /unknown date 'startofdya'/);
-        assert.match(findDateParamError('{{endOfFortnight}}') ?? '', /unknown date/);
-    });
-
-    void test('whole-day words point to the day anchors', () => {
-        assert.match(findDateParamError('{{today}}') ?? '', /'today' is a whole day.*\{\{startOfDay\}\}/);
-        assert.match(findDateParamError('{{yesterday:YYYY}}') ?? '', /'yesterday' is a whole day/);
-    });
-
-    void test('valid parameters and other placeholders are fine', () => {
-        for (const text of ['{{now}}', '{{startOfMonth-1m:YYYY-MM}}', '{{this.filename}}', '{{content}}', 'contains("{{custom}}")', 'plain']) {
-            assert.strictEqual(findDateParamError(text), null, text);
-        }
     });
 });
 

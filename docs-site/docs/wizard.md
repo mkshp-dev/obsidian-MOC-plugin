@@ -60,6 +60,8 @@ The property list also offers `file.day`, `file.ctime` and `file.mtime`. See [Da
 
 When typing a filter by hand, the suggester offers date parameters such as `{{startOfDay}}` and `{{now}}` after `{{`.
 
+Before inserting the block, the wizard checks its parameters and filter the same way a block does when it renders. If something is wrong, such as `{{now-0.5h}}` or a misspelt `{{this.filname}}`, it shows the message and leaves the wizard open so you can fix it.
+
 ### 7. Show count
 Toggle on to append a result count summary at the bottom of the block (e.g. `3 results in 2 files`). Per-group counts are also shown when **Group by** is active.
 

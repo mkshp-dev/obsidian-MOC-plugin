@@ -1,6 +1,7 @@
 import { App, CachedMetadata, Keymap, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, setIcon, TFile, TFolder, debounce, TAbstractFile } from 'obsidian';
 import { MOCPluginSettings } from './settings';
-import { compareTimes, currentDay, expandDateParams, FILE_DATE_KEYS, filenameToTime, findDateParamError, hasDateParams, Moment, msUntilNextDay, parseDateValue } from './relative-dates';
+import { compareTimes, currentDay, expandDateParams, FILE_DATE_KEYS, filenameToTime, hasDateParams, Moment, msUntilNextDay, parseDateValue } from './relative-dates';
+import { describeFilterError, findParameterError } from './parameters';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
 
@@ -622,18 +623,41 @@ export interface MocScope {
     excludeFiles: string[];
 }
 
+/** The string entries of an option that takes one string or a list of them. */
+function toStringList(value: unknown): string[] {
+    const items = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
+    return items.filter((item): item is string => typeof item === 'string');
+}
+
+/** Every path a block is configured with: its folder and each exclusion. */
+function configPaths(config: MocConfig): string[] {
+    const folder = typeof config.folder === 'string' ? [config.folder] : [];
+    return [...folder, ...toStringList(config.excludeFolder), ...toStringList(config.excludeFile)];
+}
+
 export function resolveScope(config: MocConfig, sourceFile: TFile | null, now?: Moment): MocScope {
-    const toList = (value: unknown): string[] => {
-        const items = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
-        return items.filter((item): item is string => typeof item === 'string').map(normalizeFolderPath);
-    };
+    const toPaths = (value: unknown): string[] =>
+        toStringList(value).map(path => normalizeFolderPath(expandDynamicParams(path, sourceFile, now)));
 
     return {
         folderPath: typeof config.folder === 'string' ? normalizeFolderPath(expandDynamicParams(config.folder, sourceFile, now)) : '',
         isRecursive: config.recursive === true,
-        excludeFolders: toList(config.excludeFolder),
-        excludeFiles: toList(config.excludeFile)
+        excludeFolders: toPaths(config.excludeFolder),
+        excludeFiles: toPaths(config.excludeFile)
     };
+}
+
+/**
+ * Describes the first `{{…}}` in a block's paths or filter that cannot be
+ * replaced, or returns null. Shared by blocks and the wizard so a mistake is
+ * reported the same way in both.
+ */
+export function findConfigParameterError(config: MocConfig): string | null {
+    for (const path of configPaths(config)) {
+        const error = findParameterError(path, 'path');
+        if (error) return error;
+    }
+    return typeof config.filter === 'string' ? findParameterError(config.filter, 'filter') : null;
 }
 
 function parentPathOf(path: string): string {
@@ -716,7 +740,8 @@ export interface MocConfig {
  * shows can change with the date even when no file does.
  */
 export function configUsesDateParams(config: MocConfig): boolean {
-    return [config.folder, config.filter].some(text => typeof text === 'string' && hasDateParams(text));
+    const texts = [...configPaths(config), ...(typeof config.filter === 'string' ? [config.filter] : [])];
+    return texts.some(hasDateParams);
 }
 
 export interface MocRenderResult {
@@ -1067,14 +1092,15 @@ export async function generateMocMarkdown(
         return { error: "Error: invalid or missing 'filter' in moc block.", cls: 'moc-error' };
     }
 
-    const dateParamError = findDateParamError(config.folder) ?? findDateParamError(config.filter);
-    if (dateParamError) {
-        return { error: dateParamError, cls: 'moc-error' };
+    const parameterError = findConfigParameterError(config);
+    if (parameterError) {
+        return { error: parameterError, cls: 'moc-error' };
     }
 
-    const parsedFilter = parseFilter(expandDynamicParams(config.filter, hostFile, now));
+    const expandedFilter = expandDynamicParams(config.filter, hostFile, now);
+    const parsedFilter = parseFilter(expandedFilter);
     if (!parsedFilter) {
-        return { error: `Error: unsupported or invalid filter format '${config.filter}'.`, cls: 'moc-error' };
+        return { error: describeFilterError(config.filter, expandedFilter), cls: 'moc-error' };
     }
 
     const scope = resolveScope(config, hostFile, now);
@@ -1082,11 +1108,6 @@ export async function generateMocMarkdown(
     // Most often the folder was renamed or moved after the block was written,
     // which would otherwise read as an empty folder.
     if (scope.folderPath !== '' && !(app.vault.getAbstractFileByPath(scope.folderPath) instanceof TFolder)) {
-        // A dated folder, such as this month's, is often only created along
-        // with its first note, so its absence is expected rather than an error.
-        if (hasDateParams(config.folder)) {
-            return { error: `Folder '${scope.folderPath}' does not exist yet.`, cls: 'moc-empty' };
-        }
         return { error: `Error: folder '${scope.folderPath}' does not exist. It may have been renamed or moved.`, cls: 'moc-error' };
     }
 

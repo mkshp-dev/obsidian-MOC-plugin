@@ -73,12 +73,14 @@ const DATE_WORD_PATTERN = /^(?:now|start|end|today|yesterday|tomorrow)/i;
 
 const PARAM_PATTERN = /\{\{([^{}]*)\}\}/g;
 
-type ParamParse =
+/** What the inside of a `{{…}}` is, as far as date parameters are concerned. */
+export type DateParam =
     | { kind: 'date'; date: DateExpression; format: string }
     | { kind: 'invalid'; reason: string }
     | { kind: 'other' };
 
-function parseParamBody(body: string): ParamParse {
+/** Classifies the inside of a `{{…}}`: a valid date, a date that does not parse, or something else. */
+export function parseDateParam(body: string): DateParam {
     const colon = body.indexOf(':');
     const expression = (colon === -1 ? body : body.slice(0, colon)).trim();
     const format = colon === -1 ? '' : body.slice(colon + 1).trim();
@@ -122,7 +124,7 @@ function parseParamBody(body: string): ParamParse {
 
 /** Parses the inside of a date parameter, such as `startOfMonth-1m`. Null if it is not one. */
 export function parseDateExpression(expression: string): DateExpression | null {
-    const parsed = parseParamBody(expression);
+    const parsed = parseDateParam(expression);
     return parsed.kind === 'date' ? parsed.date : null;
 }
 
@@ -158,11 +160,11 @@ export function resolveDate(date: DateExpression, now: Moment): Moment {
 /**
  * Replaces date parameters with formatted points in time. The format after
  * the colon is a moment format string and defaults to `YYYY-MM-DDTHH:mm:ss`.
- * Invalid parameters are left as they are; `findDateParamError` reports them.
+ * Invalid parameters are left as they are; `findParameterError` reports them.
  */
 export function expandDateParams(text: string, now: Moment = moment()): string {
     return text.replace(PARAM_PATTERN, (match, body: string) => {
-        const parsed = parseParamBody(body);
+        const parsed = parseDateParam(body);
         return parsed.kind === 'date' ? resolveDate(parsed.date, now).format(parsed.format) : match;
     });
 }
@@ -170,20 +172,9 @@ export function expandDateParams(text: string, now: Moment = moment()): string {
 /** True when `text` contains a valid date parameter. */
 export function hasDateParams(text: string): boolean {
     for (const match of text.match(PARAM_PATTERN) ?? []) {
-        if (parseParamBody(match.slice(2, -2)).kind === 'date') return true;
+        if (parseDateParam(match.slice(2, -2)).kind === 'date') return true;
     }
     return false;
-}
-
-/** Describes the first date parameter in `text` that was meant as a date but does not parse. */
-export function findDateParamError(text: string): string | null {
-    for (const match of text.match(PARAM_PATTERN) ?? []) {
-        const parsed = parseParamBody(match.slice(2, -2));
-        if (parsed.kind === 'invalid') {
-            return `Error: invalid date parameter '${match}': ${parsed.reason}`;
-        }
-    }
-    return null;
 }
 
 /**

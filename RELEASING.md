@@ -22,6 +22,7 @@ Obsidian's community directory reads `manifest.json` from `main`, so the version
 - CI is green on the latest `Dev` push (lint, build, test).
 - `CHANGELOG.md` has entries under `## In-progress`. **This section must not be empty** — it becomes the release notes, and the release fails if there is nothing there.
 - Entries under `## In-progress` read in the order you want them published. Put headline features first.
+- Preview the release notes exactly as they will be published with `npm run release-notes`. Keep them under 2,000 characters so they fit in a single Discord message; the workflow warns if they don't.
 
 ### Step 2 — Bump the version
 
@@ -77,7 +78,7 @@ Two workflows run in sequence. Open the **Actions** tab and confirm both:
 1. Skips everything if the tag already exists.
 2. Runs `npm ci`, build, lint and test.
 3. Generates a build provenance attestation for `main.js`, `manifest.json` and `styles.css`.
-4. Extracts `## In-progress` from `CHANGELOG.md` as the release notes.
+4. Builds the release notes from `## In-progress` in `CHANGELOG.md` with `release-notes.mjs` (see [Release notes](#release-notes)).
 5. Creates and pushes the tag.
 6. Creates a **draft** GitHub release with the three assets attached.
 7. Rewrites `CHANGELOG.md` on `Dev`, moving the `## In-progress` entries under `## 1.5.0 - <date>` and leaving a fresh empty `## In-progress`, then commits as `chore: prepare changelog for next release`.
@@ -88,7 +89,17 @@ GitHub → **Releases** → open the draft → review the notes → **Publish re
 
 Obsidian notifies users of the update automatically. Nothing needs submitting to the community directory after the first release.
 
-### Step 6 — Sync locally
+### Step 6 — Announce on Discord
+
+Open the published release, copy its notes, and paste them into the **#updates** channel on Obsidian's Discord. They are written to be posted as-is: a `## Maps of Content X.Y.Z` heading, the changelog entries, and links to the repository, documentation and community page at the bottom.
+
+To regenerate the notes for a version that is already released, run:
+
+```bash
+node release-notes.mjs --version 1.5.2
+```
+
+### Step 7 — Sync locally
 
 The workflow pushed a changelog commit to `Dev`, so pull before doing more work:
 
@@ -112,6 +123,30 @@ git push origin Dev
 Because the version contains a `-`, `version-bump.mjs` updates only `manifest.json` and deliberately skips `versions.json` and docs versioning, so betas leave no permanent artifacts behind.
 
 Betas are invisible to ordinary users: Obsidian's updater and the community directory only read `manifest.json` on `main`, which a beta never modifies.
+
+---
+
+## Release notes
+
+`release-notes.mjs` turns a section of `CHANGELOG.md` into release notes that serve as both the GitHub release body and the Discord announcement:
+
+```markdown
+## Maps of Content 1.5.2
+
+- **Fix: …** — …
+
+[Repository](<https://github.com/…>) · [Documentation](<https://docs.mkshp.dev/…>) · [Community page](<https://obsidian.md/plugins?id=maps-of-content>)
+```
+
+- The name and version come from `manifest.json`, and the documentation link from `url` and `baseUrl` in `docs-site/docusaurus.config.js`, so they never need updating by hand.
+- The angle brackets inside each link stop Discord expanding it into a preview card. GitHub renders them as ordinary links.
+- Discord rejects messages over 2,000 characters. Longer notes still publish, but the workflow run shows a warning.
+
+| Command | Prints |
+|---------|--------|
+| `npm run release-notes` | Notes for `## In-progress`, i.e. the next release |
+| `node release-notes.mjs --version 1.5.2` | Notes for an already-released version |
+| `node release-notes.mjs --allow-empty` | A placeholder instead of failing when the section is empty (used for betas) |
 
 ---
 
@@ -143,7 +178,7 @@ Betas are invisible to ordinary users: Obsidian's updater and the community dire
 
 **PR merged to `main` but no tag or draft appeared.** `release-finalize.yml` did not fire, which almost always means `RELEASE_PAT` is missing or expired. Re-run `Finalize Release` manually from the Actions tab once the secret is fixed.
 
-**Release failed on "Extract release notes".** `## In-progress` was empty. Add entries to `CHANGELOG.md` on `Dev` and re-run the workflow.
+**Release failed on "Build release notes".** `## In-progress` was empty. Add entries to `CHANGELOG.md` on `Dev` and re-run the workflow.
 
 **`Finalize Release` was skipped entirely.** The tag already exists — the check job short-circuits to keep re-pushes to `main` idempotent. Delete the tag if you genuinely need to rebuild it.
 
@@ -157,5 +192,6 @@ Betas are invisible to ordinary users: Obsidian's updater and the community dire
 | `versions.json` | Maps each release to its minimum Obsidian version |
 | `package.json` | Kept in sync by `npm version`; verified by the trigger |
 | `version-bump.mjs` | Run by `npm version`; updates the manifest, `versions.json` and docs versioning |
+| `release-notes.mjs` | Builds the release notes from `CHANGELOG.md`, with the links footer for Discord |
 | `CHANGELOG.md` | `## In-progress` becomes the release notes, then is rewritten under the version heading |
 | `main.js`, `styles.css` | Built assets, attached to the release by CI (`main.js` is gitignored) |

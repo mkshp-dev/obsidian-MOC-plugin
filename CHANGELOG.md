@@ -7,12 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Feature: Date parameters** — Filter against moments relative to now, such as `{{startOfDay}}`, `{{endOfWeek}}` or `{{now-24h}}`: `properties(due < {{startOfDay}})` lists overdue items. A format turns a date into text, as in `folder: Journal/{{now:YYYY/MM}}`. Parameters work in `folder`, `filter` and the exclusions, and blocks move on to a new day by themselves.
+- **Feature: File dates** — `properties()` reads `file.day` (the date in a daily note's filename), `file.ctime` and `file.mtime`.
+- **Feature: Parameter errors** — A `{{…}}` that cannot be replaced, such as `{{now-0.5h}}` or `{{this.filname}}`, shows an error instead of silently matching nothing.
+- **UI: Dates in the wizard** — Presets such as **is today** and **is this week**, relative values with an offset, and a check of the block before it is inserted.
+- **Change: Date comparisons** — Dates compare as moments in local time, so comparing a date with a date and time gives the same result in every time zone.
+- **Change: Literal braces** — `contains("{{title}}")` is now an error. Search for braces with `matches("\{\{title\}\}")`.
+- **Fix: Whole-vault blocks** — `folder: ""` scans the entire vault, as documented.
+- **Fix: Wizard YAML** — The wizard quotes values such as `{{this.folder}}`, so the blocks it writes always load.
+- **Showcase** — Note 16 walks through every date feature with sample notes dated when the showcase is created, and a broken block in note 12 is fixed.
+
+## 1.5.2 - 2026-10-04
+
 - **Fix: Refresh on rename and move** — `moc` blocks now refresh when a note is renamed or moved into, out of, or within the watched folder. Previously a moved-in note stayed missing, and a moved-out or renamed note lingered with a dead link, until some other edit triggered a refresh. Renaming a folder refreshes every block watching notes inside it.
 - **Fix: Renaming the note that holds a block** — The block now follows its note's new path, so `{{this.filename}}`, `{{this.folder}}` and `{{this.path}}` re-resolve against the new name, and **Copy** and **Bake** keep working instead of reporting "Source file not found".
 - **Fix: Refresh on template edits** — Editing a template note now refreshes the blocks that use it. Template folders usually sit outside the watched folder, so these edits were previously ignored.
 - **Fix: Missing folder error** — A block whose `folder` does not exist, for example after the folder was renamed, now says so instead of reporting that the folder contains no notes.
 - **Fix: Excluded notes no longer trigger refreshes** — Edits inside an `excludeFolder` or to an `excludeFile` no longer re-render the block. Scanning and auto-refresh now share one scope check, so they can no longer disagree about which notes a block covers.
 - **Showcase: Renames and moves** — **Create showcase** now adds note 15 and a `rename-lab` sandbox folder with step-by-step walkthroughs for each of the fixes above.
+
 
 ## 1.5.1 - 2026-09-26
 

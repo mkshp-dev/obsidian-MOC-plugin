@@ -31,6 +31,7 @@ export default defineConfig([
 			"eslint.config.js",
 			"eslint.config.mts",
 			"version-bump.mjs",
+			"release-notes.mjs",
 			"versions.json",
 			"main.js",
 			".test-out.cjs",

@@ -51,6 +51,18 @@ You can use primitive functions such as `contains("")`, `has_tag("")`, `is_compl
 
 - *Example*: `contains("Meeting") AND NOT is_completed()`
 
+**Dates:** a **file property** filter on a date or a date-and-time property reads left to right: the property, a comparison, then a value.
+- **Comparison:** the operator menu has `==`, `!=`, `>`, `>=`, `<` and `<=`, and under **Presets** common ranges such as **is today**, **is this week**, **is before today** and **is in the next 7 days**. A preset needs no value; **is today** produces `properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay}})`.
+- **Value:** the value menu starts with **Pick a date…** (or **Pick a date and time…**), which shows a date picker. Below it, under **Relative to now**, are **Now**, **Start of day**, **End of week** and the other anchors. Choosing one shows an offset and a unit (use a negative number for the past), so **Start of day**, `-7`, **days** produces `properties(due >= {{startOfDay-7d}})`.
+
+Switching from a preset back to a comparison keeps the value you had before.
+
+The property list also offers `file.day` (a date) and `file.ctime` and `file.mtime` (dates and times). See [Date parameters](./configuration.md#date-parameters).
+
+When typing a filter by hand, the suggester offers date parameters such as `{{startOfDay}}` and `{{now}}` after `{{`.
+
+Before inserting the block, the wizard checks its parameters and filter the same way a block does when it renders. If something is wrong, such as `{{now-0.5h}}` or a misspelt `{{this.filname}}`, it shows the message and leaves the wizard open so you can fix it.
+
 ### 7. Show count
 Toggle on to append a result count summary at the bottom of the block (e.g. `3 results in 2 files`). Per-group counts are also shown when **Group by** is active.
 

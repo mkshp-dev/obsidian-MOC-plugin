@@ -30,9 +30,11 @@ jobs:
 
       - name: Check commit message
         id: check
+        # Passed through the environment rather than pasted into the script,
+        # so quotes or $(...) in a commit message are never run as shell.
+        env:
+          MSG: ${{ github.event.head_commit.message }}
         run: |
-          MSG="${{ github.event.head_commit.message }}"
-
           if [[ "$MSG" =~ ^Beta-Release[[:space:]]v?([0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+)$ ]]; then
             VERSION="${BASH_REMATCH[1]}"
             echo "is_beta=true" >> $GITHUB_OUTPUT
@@ -88,17 +90,8 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Extract release notes
-        run: |
-          awk '
-          /^## In-progress/ {flag=1; next}
-          /^## / && flag {exit}
-          flag
-          ' CHANGELOG.md > release_notes.md
-
-          if [ ! -s release_notes.md ]; then
-            echo "_Beta build — no changelog entries yet. See commit history for details._" > release_notes.md
-          fi
+      - name: Build release notes
+        run: node release-notes.mjs --allow-empty > release_notes.md
 
       - name: Create tag
         run: |

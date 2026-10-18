@@ -541,6 +541,11 @@ select.dropdown.moc-shaping-pill-select {
     width: 72px;
 }
 
+.moc-filter-rule-input.moc-filter-rule-offset {
+    min-width: 64px;
+    flex: 0 0 72px;
+}
+
 .moc-filter-rule-code,
 .moc-filter-builder-preview {
     border: 1px solid var(--background-modifier-border);

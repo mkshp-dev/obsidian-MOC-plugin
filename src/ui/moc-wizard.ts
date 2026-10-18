@@ -13,17 +13,55 @@ import {
 } from './moc-wizard-suggests';
 import {
     FilterBuilderNode,
+    FilterDatePreset,
     FilterGroupMode,
     FilterGroupNode,
     FilterPropertyOperator,
     FilterPropertyValueType,
+    FilterRelativeUnit,
     FilterRuleKind,
     FilterRuleNode,
     compileFilterTree,
     createDefaultFilterGroup,
     createDefaultFilterRule,
     getFilterValidationMessage,
+    isDatePreset,
+    isDatePropertyType,
 } from './moc-filter-builder';
+import { toYamlString } from '../utils/yaml';
+import { expandDynamicParams, findConfigParameterError, parseFilter } from '../moc';
+import { describeFilterError } from '../parameters';
+
+const RELATIVE_ANCHOR_OPTIONS: [string, string][] = [
+    ['now', 'Now'],
+    ['startOfDay', 'Start of day'],
+    ['endOfDay', 'End of day'],
+    ['startOfWeek', 'Start of week'],
+    ['endOfWeek', 'End of week'],
+    ['startOfMonth', 'Start of month'],
+    ['endOfMonth', 'End of month'],
+    ['startOfYear', 'Start of year'],
+    ['endOfYear', 'End of year'],
+];
+
+const RELATIVE_UNIT_OPTIONS: [FilterRelativeUnit, string][] = [
+    ['h', 'hours'],
+    ['d', 'days'],
+    ['w', 'weeks'],
+    ['m', 'months'],
+    ['y', 'years'],
+];
+
+const DATE_PRESET_OPTIONS: [FilterDatePreset, string][] = [
+    ['today', 'is today'],
+    ['thisWeek', 'is this week'],
+    ['thisMonth', 'is this month'],
+    ['thisYear', 'is this year'],
+    ['beforeToday', 'is before today'],
+    ['afterToday', 'is after today'],
+    ['past7Days', 'is in the past 7 days'],
+    ['next7Days', 'is in the next 7 days'],
+];
 
 export class MocWizardModal extends Modal {
     folder: string = '';
@@ -83,7 +121,7 @@ export class MocWizardModal extends Modal {
         // Folder row with Recursive toggle
         const folderRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
         const folderLabel = folderRow.createSpan({ text: 'Folder', cls: 'moc-shaping-title' });
-        folderLabel.title = 'Root folder to scan for elements';
+        folderLabel.title = 'Root folder to scan for elements. Type {{ for parameters such as {{this.folder}} or {{now:YYYY/MM}}';
         const folderGroup = folderRow.createDiv({ cls: 'moc-shaping-input-group' });
         const folderInput = folderGroup.createEl('input', {
             type: 'text',
@@ -133,7 +171,7 @@ export class MocWizardModal extends Modal {
         // Exclude folder row
         const excludeFolderRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
         const excludeFolderLabel = excludeFolderRow.createSpan({ text: 'Exclude folder', cls: 'moc-shaping-title' });
-        excludeFolderLabel.title = 'Folders to exclude from scan (comma-separated)';
+        excludeFolderLabel.title = 'Folders to exclude from scan (comma-separated). Parameters such as {{now:YYYY}} work here too';
         const excludeFolderGroup = excludeFolderRow.createDiv({ cls: 'moc-shaping-input-group' });
         const excludeFolderInput = excludeFolderGroup.createEl('input', {
             type: 'text',
@@ -149,7 +187,7 @@ export class MocWizardModal extends Modal {
         // Exclude file row
         const excludeFileRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
         const excludeFileLabel = excludeFileRow.createSpan({ text: 'Exclude file', cls: 'moc-shaping-title' });
-        excludeFileLabel.title = 'Files to exclude from scan (comma-separated)';
+        excludeFileLabel.title = 'Files to exclude from scan (comma-separated). Parameters such as {{now:YYYY-MM-DD}} work here too';
         const excludeFileGroup = excludeFileRow.createDiv({ cls: 'moc-shaping-input-group' });
         const excludeFileInput = excludeFileGroup.createEl('input', {
             type: 'text',
@@ -601,23 +639,19 @@ export class MocWizardModal extends Modal {
                 rule.propertyType = option.type;
                 rule.value = '';
                 rule.operator = this.getPropertyOperators(option.type)[0] ?? '==';
+                rule.datePreset = null;
                 this.renderFilterBuilder(rootContainerEl);
             });
 
-            const operatorSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-operator' });
-            for (const operator of this.getPropertyOperators(rule.propertyType)) {
-                this.addSelectOption(operatorSelectEl, operator, operator);
-            }
-            if (!this.getPropertyOperators(rule.propertyType).includes(rule.operator)) {
-                rule.operator = this.getPropertyOperators(rule.propertyType)[0] ?? '==';
-            }
-            operatorSelectEl.value = rule.operator;
-            operatorSelectEl.onchange = () => {
-                rule.operator = this.parseFilterPropertyOperator(operatorSelectEl.value);
-                this.updateFilterPreview(rootContainerEl);
-            };
+            const isDate = isDatePropertyType(rule.propertyType);
+            this.renderOperatorSelect(rowEl, rule, rootContainerEl);
 
-            this.renderRuleValueInput(rowEl, rule, rootContainerEl, this.getPropertyValuePlaceholder(rule.propertyType));
+            // A preset stands for the comparison and its value together.
+            if (isDate && !rule.datePreset) {
+                this.renderDateValueInput(rowEl, rule, rootContainerEl);
+            } else if (!isDate) {
+                this.renderRuleValueInput(rowEl, rule, rootContainerEl, this.getPropertyValuePlaceholder(rule.propertyType));
+            }
         } else if (rule.kind !== 'is_completed' && rule.kind !== 'is_incomplete') {
             const placeholder = rule.kind === 'matches'
                 ? 'Regex'
@@ -678,6 +712,104 @@ export class MocWizardModal extends Modal {
         } else if (rule.kind === 'contains' || rule.kind === 'matches' || (rule.kind === 'properties' && rule.propertyType === 'text')) {
             new DynamicParameterSuggest(this.app, inputEl);
         }
+    }
+
+    /**
+     * Comparison operators, and for date properties the range presets too,
+     * since a preset such as "is this week" reads as a comparison.
+     */
+    renderOperatorSelect(rowEl: HTMLElement, rule: FilterRuleNode, rootContainerEl: HTMLElement) {
+        const selectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-operator' });
+        const operators = this.getPropertyOperators(rule.propertyType);
+        if (!operators.includes(rule.operator)) {
+            rule.operator = operators[0] ?? '==';
+        }
+
+        const isDate = isDatePropertyType(rule.propertyType);
+        const operatorParent = isDate ? selectEl.createEl('optgroup', { attr: { label: 'Compare' } }) : selectEl;
+        for (const operator of operators) {
+            this.addSelectOption(operatorParent, operator, operator);
+        }
+        if (isDate) {
+            const presetGroup = selectEl.createEl('optgroup', { attr: { label: 'Presets' } });
+            for (const [value, label] of DATE_PRESET_OPTIONS) {
+                this.addSelectOption(presetGroup, `preset:${value}`, label);
+            }
+        }
+
+        selectEl.value = isDate && rule.datePreset ? `preset:${rule.datePreset}` : rule.operator;
+        selectEl.onchange = () => {
+            const value = selectEl.value;
+            const preset = value.startsWith('preset:') ? value.slice('preset:'.length) : '';
+            if (isDate && isDatePreset(preset)) {
+                rule.datePreset = preset;
+            } else {
+                rule.datePreset = null;
+                rule.operator = this.parseFilterPropertyOperator(value);
+            }
+            this.renderFilterBuilder(rootContainerEl);
+        };
+    }
+
+    /**
+     * The value of a date comparison: either a picked date, or a moment
+     * relative to now with an optional offset, compiled to a parameter such
+     * as `{{startOfDay-7d}}`.
+     */
+    renderDateValueInput(rowEl: HTMLElement, rule: FilterRuleNode, rootContainerEl: HTMLElement) {
+        const sourceSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-date-source' });
+        const fixedGroup = sourceSelectEl.createEl('optgroup', { attr: { label: 'Fixed' } });
+        this.addSelectOption(fixedGroup, 'fixed', rule.propertyType === 'datetime' ? 'Pick a date and time…' : 'Pick a date…');
+        const relativeGroup = sourceSelectEl.createEl('optgroup', { attr: { label: 'Relative to now' } });
+        for (const [value, label] of RELATIVE_ANCHOR_OPTIONS) {
+            this.addSelectOption(relativeGroup, value, label);
+        }
+
+        sourceSelectEl.value = rule.dateMode === 'fixed' ? 'fixed' : rule.relativeAnchor;
+        sourceSelectEl.onchange = () => {
+            if (sourceSelectEl.value === 'fixed') {
+                rule.dateMode = 'fixed';
+            } else {
+                rule.dateMode = 'relative';
+                rule.relativeAnchor = sourceSelectEl.value;
+            }
+            this.renderFilterBuilder(rootContainerEl);
+        };
+
+        if (rule.dateMode === 'fixed') {
+            this.renderRuleValueInput(rowEl, rule, rootContainerEl, this.getPropertyValuePlaceholder(rule.propertyType));
+            return;
+        }
+
+        const offsetInputEl = rowEl.createEl('input', {
+            type: 'number',
+            placeholder: '± 0',
+            cls: 'moc-filter-rule-input moc-filter-rule-offset',
+            attr: { 'aria-label': 'Offset, negative for the past' },
+        });
+        offsetInputEl.step = '1';
+        offsetInputEl.value = rule.relativeOffset;
+        offsetInputEl.oninput = () => {
+            rule.relativeOffset = offsetInputEl.value;
+            this.updateFilterPreview(rootContainerEl);
+        };
+
+        const unitSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-unit' });
+        for (const [value, label] of RELATIVE_UNIT_OPTIONS) {
+            this.addSelectOption(unitSelectEl, value, label);
+        }
+        unitSelectEl.value = rule.relativeUnit;
+        unitSelectEl.onchange = () => {
+            rule.relativeUnit = this.parseRelativeUnit(unitSelectEl.value);
+            this.updateFilterPreview(rootContainerEl);
+        };
+    }
+
+    parseRelativeUnit(value: string): FilterRelativeUnit {
+        if (value === 'h' || value === 'w' || value === 'm' || value === 'y') {
+            return value;
+        }
+        return 'd';
     }
 
     updateFilterPreview(containerEl: HTMLElement) {
@@ -770,7 +902,7 @@ export class MocWizardModal extends Modal {
         return true;
     }
 
-    addSelectOption(selectEl: HTMLSelectElement, value: string, label: string) {
+    addSelectOption(selectEl: HTMLSelectElement | HTMLOptGroupElement, value: string, label: string) {
         const optionEl = selectEl.createEl('option', { text: label });
         optionEl.value = value;
     }
@@ -917,6 +1049,26 @@ export class MocWizardModal extends Modal {
         });
     }
 
+    splitList(value: string): string[] {
+        return value.split(',').map(s => s.trim()).filter(s => s !== '');
+    }
+
+    /** A parameter or filter mistake in the block about to be inserted, or null. */
+    findBlockProblem(filter: string, excludeFolders: string[], excludeFiles: string[]): string | null {
+        const parameterError = findConfigParameterError({
+            folder: this.folder,
+            filter,
+            excludeFolder: excludeFolders,
+            excludeFile: excludeFiles,
+        });
+        if (parameterError) return parameterError;
+
+        // `{{this.…}}` stays unreplaced because the block is not in its note
+        // yet. The placeholder text parses wherever its value would.
+        const expandedFilter = expandDynamicParams(filter, null);
+        return parseFilter(expandedFilter) ? null : describeFilterError(filter, expandedFilter);
+    }
+
     insertMocBlock() {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (view) {
@@ -948,33 +1100,38 @@ export class MocWizardModal extends Modal {
                 if (!this.isValidCount(raw, label, minimum)) return;
             }
 
+            const excludeFolders = this.splitList(this.excludeFolder);
+            const excludeFiles = this.splitList(this.excludeFile);
+
+            // The same checks a block runs when it renders, so a mistake is
+            // caught here instead of after the block is written.
+            const problem = this.findBlockProblem(filterString, excludeFolders, excludeFiles);
+            if (problem) {
+                new Notice(problem, 10000);
+                return;
+            }
+
             const yamlLines = [
                 '```moc',
-                `folder: ${this.folder}`,
+                `folder: ${toYamlString(this.folder)}`,
                 `element: ${this.element}`,
-                `filter: ${filterString}`,
+                `filter: ${toYamlString(filterString)}`,
             ];
 
             if (this.recursive) {
                 yamlLines.push('recursive: true');
             }
 
-            if (this.excludeFolder.trim() !== '') {
-                const parts = this.excludeFolder.split(',').map(s => s.trim()).filter(s => s !== '');
-                if (parts.length === 1) {
-                    yamlLines.push(`excludeFolder: ${parts[0]}`);
-                } else if (parts.length > 1) {
-                    yamlLines.push(`excludeFolder: ${JSON.stringify(parts)}`);
-                }
+            if (excludeFolders.length === 1) {
+                yamlLines.push(`excludeFolder: ${toYamlString(excludeFolders[0]!)}`);
+            } else if (excludeFolders.length > 1) {
+                yamlLines.push(`excludeFolder: ${JSON.stringify(excludeFolders)}`);
             }
 
-            if (this.excludeFile.trim() !== '') {
-                const parts = this.excludeFile.split(',').map(s => s.trim()).filter(s => s !== '');
-                if (parts.length === 1) {
-                    yamlLines.push(`excludeFile: ${parts[0]}`);
-                } else if (parts.length > 1) {
-                    yamlLines.push(`excludeFile: ${JSON.stringify(parts)}`);
-                }
+            if (excludeFiles.length === 1) {
+                yamlLines.push(`excludeFile: ${toYamlString(excludeFiles[0]!)}`);
+            } else if (excludeFiles.length > 1) {
+                yamlLines.push(`excludeFile: ${JSON.stringify(excludeFiles)}`);
             }
 
             if (this.groupBy) {

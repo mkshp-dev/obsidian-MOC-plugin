@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+## 1.6.1 - 2026-10-18
+
 - **Fix: Obsidian plugin review** — The date features from 1.6.0 now pass the review's type checks, which use TypeScript 6. The plugin works exactly as before.
 - **Maintenance** — The project now builds with TypeScript 6 and the latest Obsidian lint rules, and lints its build scripts and tests too, so the same issues are caught before a release.
+
 
 ## 1.6.0 - 2026-10-18
 

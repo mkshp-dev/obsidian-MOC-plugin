@@ -51,6 +51,15 @@ You can use primitive functions such as `contains("")`, `has_tag("")`, `is_compl
 
 - *Example*: `contains("Meeting") AND NOT is_completed()`
 
+**Dates relative to now:** in a **file property** filter on a date property, the menu after the property chooses how to compare it:
+- **a fixed date**: pick a date.
+- **a relative date**: pick a starting point such as **Start of day** or **Now**, and optionally an offset (use a negative number for the past). For example, **Start of day**, `-7`, **days** produces `properties(due >= {{startOfDay-7d}})`.
+- **Presets** such as **is today**, **is this week** and **is before today** write the whole range for you. **is today** produces `properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay}})`.
+
+The property list also offers `file.day`, `file.ctime` and `file.mtime`. See [Date parameters](./configuration.md#date-parameters).
+
+When typing a filter by hand, the suggester offers date parameters such as `{{startOfDay}}` and `{{now}}` after `{{`.
+
 ### 7. Show count
 Toggle on to append a result count summary at the bottom of the block (e.g. `3 results in 2 files`). Per-group counts are also shown when **Group by** is active.
 

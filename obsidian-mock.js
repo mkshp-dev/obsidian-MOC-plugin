@@ -1,4 +1,6 @@
-export const moment = function() { return { format: () => '' }; };
+// Obsidian ships moment and re-exports it; tests run outside Obsidian, so they
+// use the identical copy the obsidian package already installs.
+export { default as moment } from 'moment';
 export class Notice {}
 export class TFile {}
 export const MarkdownRenderer = { render: async () => {} };

@@ -26,7 +26,7 @@ recursive: true
 ### `folder` (Required)
 The folder path relative to the vault root where the plugin will search for markdown notes.
 - *Examples*: `Diary`, `Projects/Marketing`, or `""` (empty string to search the entire vault).
-- Supports dynamic parameters: `{{this.filename}}`, `{{this.folder}}`, `{{this.path}}` (see [Dynamic Parameters](#dynamic-parameters)).
+- Supports dynamic parameters: `{{this.filename}}`, `{{this.folder}}`, `{{this.path}}` (see [Dynamic Parameters](#dynamic-parameters)), and date parameters such as `{{now:YYYY/MM}}` (see [Date parameters](#date-parameters)).
 - If the folder does not exist, the block shows an error saying so. Renaming or moving a folder does not update `moc` blocks that point at it, so update `folder` to the new path.
 
 ### `element` (Required)
@@ -59,11 +59,14 @@ The matching condition applied to each candidate element. Supports both primitiv
 - **Frontmatter properties**:
   - `properties(key == value)`: Matches files where the frontmatter property `key` equals `value`.
   - Supported operators: `==`, `!=`, `>`, `<`, `>=`, `<=`.
-  - Numeric values are compared numerically; ISO date strings (`YYYY-MM-DD`) are compared as dates; all other values are compared as strings.
+  - Numeric values are compared numerically; ISO dates and datetimes are compared as points in time (see [How dates are compared](#how-dates-are-compared)); all other values are compared as strings.
+  - Compare with a moment relative to now using a date parameter, such as `properties(due < {{startOfDay}})`. See [Date parameters](#date-parameters).
+  - Three keys read the note itself instead of its frontmatter: `file.day`, `file.ctime` and `file.mtime`. See [File dates](#file-dates).
   - *Examples*:
     - `properties(status == "active")`
     - `properties(priority <= 2)`
     - `properties(date >= "2024-01-01")`
+    - `properties(due < {{startOfDay}})`
   
     ![Filtering by frontmatter properties](/img/Showcase_4.png)
 
@@ -240,5 +243,116 @@ recursive: true
 ````
 
 ![Dynamic parameters usage](/img/Showcase_5.png)
+
+---
+
+## Date parameters
+
+A date parameter in double braces stands for a **point in time** relative to now. Like `{{this.filename}}`, it is replaced with text before the block runs, in both `folder` and `filter`.
+
+````yaml
+```moc
+folder: Projects
+element: Task
+filter: is_incomplete() AND properties(due < {{startOfDay}})
+recursive: true
+```
+````
+
+A parameter is an **anchor**, optionally followed by one or more **offsets**, optionally followed by a **format**:
+
+| Part | Values |
+|------|--------|
+| Anchor | `now`, `startOfDay`, `endOfDay`, `startOfWeek`, `endOfWeek`, `startOfMonth`, `endOfMonth`, `startOfYear`, `endOfYear` |
+| Offset | `+` or `-`, a whole number, then `h` (hours), `d` (days), `w` (weeks), `m` (months) or `y` (years). Offsets can be chained, as in `{{now+1w-2h}}`. |
+| Format | `:` followed by a [moment.js format](https://momentjs.com/docs/#/displaying/format/), as in `{{now:YYYY/MM}}`. Without one, the parameter becomes a full date and time such as `2026-10-21T00:00:00`. |
+
+Anchors are not case-sensitive.
+
+| You write | Means |
+|-----------|-------|
+| `{{now}}` | This moment |
+| `{{startOfDay}}` / `{{endOfDay}}` | The first and last moment of today |
+| `{{now-2h}}` | Two hours ago |
+| `{{startOfDay-7d}}` | Midnight at the start of the day a week ago |
+| `{{endOfDay+7d}}` | The last moment of the day a week from today |
+| `{{startOfWeek}}` / `{{endOfWeek}}` | The first and last moment of this week |
+| `{{startOfMonth-1m}}` | The first moment of last month |
+| `{{endOfMonth+1m}}` | The last moment of next month |
+| `{{now:YYYY-MM}}` | This month as text, such as `2026-10` |
+
+Offsets move the point first, then the anchor snaps it to the edge of the day, week, month or year it lands in. That is why `{{endOfMonth+1m}}` always lands on the last day of next month, however many days this month has.
+
+Weeks start on the day your Obsidian language uses, so `{{startOfWeek}}` is a Sunday in some languages and a Monday in others.
+
+### Ranges
+
+Every parameter is a single point, so a range is written as two comparisons:
+
+| Intent | Filter |
+|--------|--------|
+| Due today | `properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay}})` |
+| Overdue | `properties(due < {{startOfDay}})` |
+| Due within a week | `properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay+7d}})` |
+| This month | `properties(due >= {{startOfMonth}}) AND properties(due <= {{endOfMonth}})` |
+| Edited in the last day | `properties(file.mtime >= {{now-24h}})` |
+
+The MOC Creation Wizard has presets such as **is today** and **is this week** that write these ranges for you.
+
+### How dates are compared
+
+When both sides of a `properties()` comparison are ISO dates or datetimes, they are compared as points in time:
+- **A date without a time means midnight at the start of that day, in your local time.** So `due: 2026-10-21` is 21 October at 00:00, and it falls between `{{startOfDay}}` and `{{endOfDay}}` all day on the 21st.
+- A date with a time, such as `2026-10-21T09:30`, is that exact moment.
+- `==` only matches the exact same moment. To match a whole day, week or month, use a range.
+
+The word `"today"` in quotes is just text. Only parameters in double braces are replaced.
+
+### Mistakes are reported
+
+A parameter that looks like a date but does not parse, such as `{{now-0.5h}}` (offsets are whole numbers) or `{{startOfDya}}`, shows an error in the block rather than being searched for as text. `{{today}}` is reported too, with a pointer to `{{startOfDay}}` and `{{endOfDay}}`, because a whole day is a range rather than a point.
+
+### Refreshing
+
+Blocks that use date parameters move on to the new day by themselves, even with no file changes. They check once at midnight and again whenever the Obsidian window comes back into focus, which covers a device that was asleep at midnight. `{{now}}` is evaluated each time the block renders.
+
+> **Note**: **Bake** writes a snapshot. Baked text keeps the results of the moment you baked it.
+
+### File dates
+
+Three keys in `properties()` read the note itself rather than its frontmatter. They work with date parameters and fixed dates alike:
+
+| Key | Value |
+|-----|-------|
+| `file.day` | Midnight at the start of the first `YYYY-MM-DD` date in the note's filename, as used by daily notes. A note without one never matches. |
+| `file.ctime` | The moment the note was created |
+| `file.mtime` | The moment the note was last modified |
+
+````yaml
+```moc
+folder: Journal
+element: List
+filter: has_tag("#idea") AND properties(file.day >= {{startOfDay-7d}})
+sort: name desc
+```
+````
+
+Creation and modification times come from your file system, so sync tools and copying files can change them. For daily notes, `file.day` is usually the more dependable choice.
+
+### Dated folders
+
+With a format, a parameter becomes any text you need, such as a folder name:
+
+````yaml
+```moc
+folder: Journal/{{now:YYYY/MM}}
+element: Task
+filter: is_incomplete()
+```
+````
+
+If a dated folder does not exist yet, for example on the first day of a new month, the block says so instead of reporting an error. It fills in as soon as you create a note there.
+
+> **Note**: If `folder` starts with `{{`, wrap it in quotes, as in `folder: "{{now:YYYY}}"`. Without quotes, YAML reads the braces as something else and the block fails to load. The MOC Creation Wizard adds the quotes for you.
 
 ---

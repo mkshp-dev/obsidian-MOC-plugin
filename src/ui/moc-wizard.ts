@@ -13,17 +13,53 @@ import {
 } from './moc-wizard-suggests';
 import {
     FilterBuilderNode,
+    FilterDatePreset,
     FilterGroupMode,
     FilterGroupNode,
     FilterPropertyOperator,
     FilterPropertyValueType,
+    FilterRelativeUnit,
     FilterRuleKind,
     FilterRuleNode,
     compileFilterTree,
     createDefaultFilterGroup,
     createDefaultFilterRule,
     getFilterValidationMessage,
+    isDatePreset,
+    isDatePropertyType,
 } from './moc-filter-builder';
+import { toYamlString } from '../utils/yaml';
+
+const RELATIVE_ANCHOR_OPTIONS: [string, string][] = [
+    ['now', 'Now'],
+    ['startOfDay', 'Start of day'],
+    ['endOfDay', 'End of day'],
+    ['startOfWeek', 'Start of week'],
+    ['endOfWeek', 'End of week'],
+    ['startOfMonth', 'Start of month'],
+    ['endOfMonth', 'End of month'],
+    ['startOfYear', 'Start of year'],
+    ['endOfYear', 'End of year'],
+];
+
+const RELATIVE_UNIT_OPTIONS: [FilterRelativeUnit, string][] = [
+    ['h', 'hours'],
+    ['d', 'days'],
+    ['w', 'weeks'],
+    ['m', 'months'],
+    ['y', 'years'],
+];
+
+const DATE_PRESET_OPTIONS: [FilterDatePreset, string][] = [
+    ['today', 'is today'],
+    ['thisWeek', 'is this week'],
+    ['thisMonth', 'is this month'],
+    ['thisYear', 'is this year'],
+    ['beforeToday', 'is before today'],
+    ['afterToday', 'is after today'],
+    ['past7Days', 'is in the past 7 days'],
+    ['next7Days', 'is in the next 7 days'],
+];
 
 export class MocWizardModal extends Modal {
     folder: string = '';
@@ -604,20 +640,32 @@ export class MocWizardModal extends Modal {
                 this.renderFilterBuilder(rootContainerEl);
             });
 
-            const operatorSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-operator' });
-            for (const operator of this.getPropertyOperators(rule.propertyType)) {
-                this.addSelectOption(operatorSelectEl, operator, operator);
+            const isDate = isDatePropertyType(rule.propertyType);
+            if (isDate) {
+                this.renderDateModeSelect(rowEl, rule, rootContainerEl);
             }
-            if (!this.getPropertyOperators(rule.propertyType).includes(rule.operator)) {
-                rule.operator = this.getPropertyOperators(rule.propertyType)[0] ?? '==';
-            }
-            operatorSelectEl.value = rule.operator;
-            operatorSelectEl.onchange = () => {
-                rule.operator = this.parseFilterPropertyOperator(operatorSelectEl.value);
-                this.updateFilterPreview(rootContainerEl);
-            };
 
-            this.renderRuleValueInput(rowEl, rule, rootContainerEl, this.getPropertyValuePlaceholder(rule.propertyType));
+            // A preset carries its own comparisons, so it has no operator or value.
+            if (!(isDate && rule.dateMode === 'preset')) {
+                const operatorSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-operator' });
+                for (const operator of this.getPropertyOperators(rule.propertyType)) {
+                    this.addSelectOption(operatorSelectEl, operator, operator);
+                }
+                if (!this.getPropertyOperators(rule.propertyType).includes(rule.operator)) {
+                    rule.operator = this.getPropertyOperators(rule.propertyType)[0] ?? '==';
+                }
+                operatorSelectEl.value = rule.operator;
+                operatorSelectEl.onchange = () => {
+                    rule.operator = this.parseFilterPropertyOperator(operatorSelectEl.value);
+                    this.updateFilterPreview(rootContainerEl);
+                };
+
+                if (isDate && rule.dateMode === 'relative') {
+                    this.renderRelativeDateInput(rowEl, rule, rootContainerEl);
+                } else {
+                    this.renderRuleValueInput(rowEl, rule, rootContainerEl, this.getPropertyValuePlaceholder(rule.propertyType));
+                }
+            }
         } else if (rule.kind !== 'is_completed' && rule.kind !== 'is_incomplete') {
             const placeholder = rule.kind === 'matches'
                 ? 'Regex'
@@ -678,6 +726,74 @@ export class MocWizardModal extends Modal {
         } else if (rule.kind === 'contains' || rule.kind === 'matches' || (rule.kind === 'properties' && rule.propertyType === 'text')) {
             new DynamicParameterSuggest(this.app, inputEl);
         }
+    }
+
+    /** Fixed date, relative date, or one of the range presets. */
+    renderDateModeSelect(rowEl: HTMLElement, rule: FilterRuleNode, rootContainerEl: HTMLElement) {
+        const selectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-date-mode' });
+        const compareGroup = selectEl.createEl('optgroup', { attr: { label: 'Compare with' } });
+        this.addSelectOption(compareGroup, 'fixed', 'a fixed date');
+        this.addSelectOption(compareGroup, 'relative', 'a relative date');
+        const presetGroup = selectEl.createEl('optgroup', { attr: { label: 'Presets' } });
+        for (const [value, label] of DATE_PRESET_OPTIONS) {
+            this.addSelectOption(presetGroup, `preset:${value}`, label);
+        }
+
+        selectEl.value = rule.dateMode === 'preset' ? `preset:${rule.datePreset}` : rule.dateMode;
+        selectEl.onchange = () => {
+            const value = selectEl.value;
+            const preset = value.startsWith('preset:') ? value.slice('preset:'.length) : '';
+            if (isDatePreset(preset)) {
+                rule.dateMode = 'preset';
+                rule.datePreset = preset;
+            } else {
+                rule.dateMode = value === 'relative' ? 'relative' : 'fixed';
+            }
+            this.renderFilterBuilder(rootContainerEl);
+        };
+    }
+
+    /** Anchor, signed offset and unit, compiled to a parameter such as `{{startOfDay-7d}}`. */
+    renderRelativeDateInput(rowEl: HTMLElement, rule: FilterRuleNode, rootContainerEl: HTMLElement) {
+        const anchorSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-input' });
+        for (const [value, label] of RELATIVE_ANCHOR_OPTIONS) {
+            this.addSelectOption(anchorSelectEl, value, label);
+        }
+        anchorSelectEl.value = rule.relativeAnchor;
+        anchorSelectEl.onchange = () => {
+            rule.relativeAnchor = anchorSelectEl.value;
+            this.updateFilterPreview(rootContainerEl);
+        };
+
+        const offsetInputEl = rowEl.createEl('input', {
+            type: 'number',
+            placeholder: '± 0',
+            cls: 'moc-filter-rule-input moc-filter-rule-offset',
+            attr: { 'aria-label': 'Offset, negative for the past' },
+        });
+        offsetInputEl.step = '1';
+        offsetInputEl.value = rule.relativeOffset;
+        offsetInputEl.oninput = () => {
+            rule.relativeOffset = offsetInputEl.value;
+            this.updateFilterPreview(rootContainerEl);
+        };
+
+        const unitSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-unit' });
+        for (const [value, label] of RELATIVE_UNIT_OPTIONS) {
+            this.addSelectOption(unitSelectEl, value, label);
+        }
+        unitSelectEl.value = rule.relativeUnit;
+        unitSelectEl.onchange = () => {
+            rule.relativeUnit = this.parseRelativeUnit(unitSelectEl.value);
+            this.updateFilterPreview(rootContainerEl);
+        };
+    }
+
+    parseRelativeUnit(value: string): FilterRelativeUnit {
+        if (value === 'h' || value === 'w' || value === 'm' || value === 'y') {
+            return value;
+        }
+        return 'd';
     }
 
     updateFilterPreview(containerEl: HTMLElement) {
@@ -770,7 +886,7 @@ export class MocWizardModal extends Modal {
         return true;
     }
 
-    addSelectOption(selectEl: HTMLSelectElement, value: string, label: string) {
+    addSelectOption(selectEl: HTMLSelectElement | HTMLOptGroupElement, value: string, label: string) {
         const optionEl = selectEl.createEl('option', { text: label });
         optionEl.value = value;
     }
@@ -950,9 +1066,9 @@ export class MocWizardModal extends Modal {
 
             const yamlLines = [
                 '```moc',
-                `folder: ${this.folder}`,
+                `folder: ${toYamlString(this.folder)}`,
                 `element: ${this.element}`,
-                `filter: ${filterString}`,
+                `filter: ${toYamlString(filterString)}`,
             ];
 
             if (this.recursive) {

@@ -1,4 +1,4 @@
-import { App, Notice, TFolder, TFile } from 'obsidian';
+import { App, moment, Notice, TFolder, TFile } from 'obsidian';
 
 const SHOWCASE_FOLDER = 'MOC Showcase';
 
@@ -21,7 +21,7 @@ without writing a single line of YAML manually.
 
 | Note | Feature demonstrated |
 |------|---------------------|
-| [[01 - Basic list extraction]] | \`folder\`, \`element\`, \`filter\` |
+| [[01 - Basic list extraction]] | \`folder\`, \`element\`, \`filter\`, whole-vault blocks |
 | [[02 - Tasks and completion filters]] | \`Task\` element, \`is_completed\`, \`is_incomplete\` |
 | [[03 - Headings extraction]] | \`Heading\` element |
 | [[04 - Paragraphs and blockquotes]] | \`Paragraph\`, \`Blockquote\` elements |
@@ -32,10 +32,11 @@ without writing a single line of YAML manually.
 | [[09 - Template output formatting]] | \`template\` (template notes) |
 | [[10 - Find and replace rules]] | \`applyFnR\`, settings rules |
 | [[11 - Copy Bake and live refresh]] | Toolbar buttons, auto-refresh |
-| [[12 - Separators and dynamic parameters]] | \`blockSeparator\`, \`noteSeparator\`, \`{{this.folder}}\` |
+| [[12 - Separators and dynamic parameters]] | \`blockSeparator\`, \`noteSeparator\`, \`{{this.folder}}\`, quoting |
 | [[13 - Interactive tasks]] | Ticking tasks in place, write-back safety |
 | [[14 - Jump to source]] | Per-block jump-to-source buttons |
 | [[15 - Renames and moves]] | Refresh on rename and move, template edits, missing folders |
+| [[16 - Relative dates]] | Date parameters, ranges, \`file.*\` dates, dated folders, wizard presets |
 `,
     },
 
@@ -208,6 +209,13 @@ filter: contains("item")
     // Template notes (used by the `template` option, see notes 09 and 15)
     // -----------------------------------------------------------------------
     {
+        path: `${SHOWCASE_FOLDER}/vault-lab/Anywhere.md`,
+        content: `# Anywhere
+
+- This line can be found from anywhere in the vault #moc-anywhere
+`,
+    },
+    {
         path: `${SHOWCASE_FOLDER}/templates/bullet-link.md`,
         content: `- {{content}} — {{link}}\n`,
     },
@@ -241,6 +249,25 @@ recursive: false
 - \`element: Heading\` extracts the heading and all content below it until the next same-level heading.
 - \`filter\` accepts any text filter — here \`contains()\` does a simple substring match.
 - Hover over the block to reveal the **Copy** and **Bake** toolbar buttons.
+
+## The whole vault
+
+An empty \`folder\` scans the entire vault. With \`recursive: true\` that
+includes every subfolder, so this block finds a note in
+\`${SHOWCASE_FOLDER}/vault-lab\` that no other block in the showcase watches:
+
+\`\`\`moc
+folder: ""
+element: List
+filter: has_tag("#moc-anywhere")
+recursive: true
+\`\`\`
+
+**What to notice:**
+- \`folder: ""\` needs the quotes. Without them, YAML reads an empty value as
+  "nothing" and the block reports a missing folder.
+- Whole-vault blocks read every note on each refresh, so in a large vault prefer
+  a narrower folder, or a \`fileLimit\`, when you can.
 `,
     },
     {
@@ -772,7 +799,7 @@ expands to \`${SHOWCASE_FOLDER}\` — the block below resolves to the same
 \`data\` folder used throughout this showcase:
 
 \`\`\`moc
-folder: {{this.folder}}/data
+folder: "{{this.folder}}/data"
 element: List
 filter: contains("Action items")
 recursive: true
@@ -781,6 +808,11 @@ recursive: true
 **What to notice:**
 - Dynamic parameters work inside both \`folder\` and \`filter\`.
 - They're expanded relative to whichever note the \`moc\` block lives in, not the showcase notes specifically.
+- A \`folder\` that starts with \`{{\` must be quoted. Without the quotes, YAML
+  reads the braces as something else and the block fails to load. The
+  **Create map of content block** wizard adds them for you.
+- Date parameters such as \`{{now:YYYY-MM}}\` work the same way. See
+  [[16 - Relative dates]].
 `,
     },
     {
@@ -985,6 +1017,271 @@ renaming it to \`Beta\` makes its block switch from the \`hosts/Alpha\` folder t
     },
 ];
 
+/**
+ * Notes for the relative dates walkthrough. Their dates are set relative to the
+ * moment the showcase is created, so the examples show results whenever it is
+ * run instead of drifting out of range like fixed sample dates would.
+ */
+function buildRelativeDateNotes(): { path: string; content: string }[] {
+    const now = moment();
+    const day = (offset: number) => now.clone().add(offset, 'days').format('YYYY-MM-DD');
+    const hour = (offset: number) => now.clone().add(offset, 'hours').format('YYYY-MM-DDTHH:mm');
+    const thisMonth = now.format('YYYY-MM');
+    const lab = `${SHOWCASE_FOLDER}/date-lab`;
+
+    const project = (name: string, due: string, tasks: string) => ({
+        path: `${lab}/projects/${name}.md`,
+        content: `---
+due: ${due}
+---
+# ${name}
+
+${tasks}
+`,
+    });
+
+    const meeting = (name: string, start: string, agenda: string) => ({
+        path: `${lab}/meetings/${name}.md`,
+        content: `---
+start: ${start}
+---
+# ${name}
+
+${agenda}
+`,
+    });
+
+    return [
+        project('Quarterly report', day(-2), '- [ ] Collect figures from finance\n- [ ] Draft summary\n- [x] Book review meeting'),
+        project('Client demo', day(0), '- [ ] Rehearse the walkthrough\n- [ ] Send the agenda'),
+        project('Website refresh', day(3), '- [ ] Review new homepage copy\n- [x] Pick hero image'),
+        project('Annual planning', day(35), '- [ ] Gather team goals'),
+        meeting('Retro', hour(-5), '- What went well\n- What to change'),
+        meeting('Design review', hour(3), '- Walk through the new layouts'),
+        meeting('Roadmap planning', hour(50), '- Agree next quarter priorities'),
+        {
+            path: `${lab}/journal/${day(0)}.md`,
+            content: `# ${day(0)}
+
+- Try a weekly review template #idea
+- Lunch with Sam
+`,
+        },
+        {
+            path: `${lab}/journal/${day(-3)}.md`,
+            content: `# ${day(-3)}
+
+- Batch all meetings into Tuesdays #idea
+- Follow up on the ${day(0)} demo
+`,
+        },
+        {
+            path: `${lab}/journal/${day(-10)}.md`,
+            content: `# ${day(-10)}
+
+- Start a reading list #idea
+`,
+        },
+        {
+            path: `${lab}/months/${thisMonth}/Month goals.md`,
+            content: `# Goals for ${thisMonth}
+
+- Ship the website refresh
+- Clear the reading list backlog
+`,
+        },
+        {
+            path: `${SHOWCASE_FOLDER}/16 - Relative dates.md`,
+            content: `# 16 — Relative dates
+
+A date parameter in double braces stands for a **point in time** relative to
+now, such as \`{{startOfDay}}\` or \`{{now-2h}}\`. Like \`{{this.filename}}\`, it is
+replaced with text before the block runs, so a block such as "due this week"
+stays current without editing.
+
+The sample notes in \`date-lab\` were dated relative to the moment you ran
+**Create showcase**. Run it again to refresh them.
+
+## Building blocks
+
+| You write | Means |
+|-----------|-------|
+| \`{{now}}\` | This moment |
+| \`{{startOfDay}}\`, \`{{endOfDay}}\` | The first and last moment of today |
+| \`{{startOfWeek}}\`, \`{{endOfMonth}}\`, \`{{startOfYear}}\`, … | Edges of the current week, month or year |
+| \`{{now-2h}}\`, \`{{startOfDay-7d}}\`, \`{{endOfDay+2w}}\` | Moved by hours (\`h\`), days (\`d\`), weeks (\`w\`), months (\`m\`) or years (\`y\`) |
+| \`{{startOfMonth-1m}}\`, \`{{endOfWeek+1w}}\` | Edges of last month, next week, and so on |
+| \`{{now:YYYY-MM}}\` | Formatted as text, for folders and \`contains()\` |
+
+Every parameter is a single moment, so a range is written as two comparisons.
+
+## Due today
+
+From the first to the last moment of today:
+
+\`\`\`moc
+folder: ${lab}/projects
+element: Task
+filter: is_incomplete() AND properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay}})
+\`\`\`
+
+\`due: ${day(0)}\` has no time, so it means midnight at the start of that day in
+your time zone, which falls inside today's range.
+
+## Overdue
+
+Due before today began:
+
+\`\`\`moc
+folder: ${lab}/projects
+element: Task
+filter: is_incomplete() AND properties(due < {{startOfDay}})
+\`\`\`
+
+## Due this week
+
+\`\`\`moc
+folder: ${lab}/projects
+element: Task
+filter: is_incomplete() AND properties(due >= {{startOfWeek}}) AND properties(due <= {{endOfWeek}})
+\`\`\`
+
+Weeks start on the day your Obsidian language uses.
+
+## Due in the next 7 days
+
+From the start of today to the end of the day a week from now:
+
+\`\`\`moc
+folder: ${lab}/projects
+element: Task
+filter: is_incomplete() AND properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay+7d}})
+groupBy: property(due)
+showCount: true
+\`\`\`
+
+"Annual planning", due in 35 days, stays out until it comes within a week.
+
+## Meetings in the next 12 hours
+
+The meetings in \`date-lab/meetings\` have a \`start\` date and time. \`{{now}}\`
+keeps the time of day, and \`h\` moves it by hours:
+
+\`\`\`moc
+folder: ${lab}/meetings
+element: Heading
+filter: properties(start >= {{now}}) AND properties(start <= {{now+12h}})
+\`\`\`
+
+The retro started five hours ago and roadmap planning is two days away, so only
+the design review shows. \`{{now}}\` is as of the last time the block rendered.
+
+## This week's journal ideas
+
+Daily notes rarely have a date property, but their filename is a date.
+\`file.day\` reads it as midnight of that day:
+
+\`\`\`moc
+folder: ${lab}/journal
+element: List
+filter: has_tag("#idea") AND properties(file.day >= {{startOfDay-7d}})
+sort: name desc
+\`\`\`
+
+The entry from ten days ago is left out. Swap \`{{startOfDay-7d}}\` for
+\`{{startOfMonth}}\` to see everything from this month instead.
+
+## Recently edited
+
+\`file.mtime\` and \`file.ctime\` are the moments a note was last modified and
+created:
+
+\`\`\`moc
+folder: ${lab}/projects
+element: Heading
+filter: properties(file.mtime >= {{now-1h}})
+\`\`\`
+
+**Try it:** every project shows now, because the showcase was just created. An
+hour from now the list is empty; edit one project note and it comes back.
+
+## Mentions of today's date
+
+A format after the colon controls the text a parameter becomes. Here it is just
+the date, to search for it:
+
+\`\`\`moc
+folder: ${lab}/journal
+element: List
+filter: contains("{{now:YYYY-MM-DD}}")
+\`\`\`
+
+## This month's folder
+
+\`{{now:YYYY-MM}}\` becomes the current month, so this block always reads the
+folder for the month you are in:
+
+\`\`\`moc
+folder: ${lab}/months/{{now:YYYY-MM}}
+element: List
+filter: contains("")
+\`\`\`
+
+Next month's folder has not been created yet, which a dated folder treats as
+expected rather than as an error:
+
+\`\`\`moc
+folder: ${lab}/months/{{now+1m:YYYY-MM}}
+element: List
+filter: contains("")
+\`\`\`
+
+## Mistakes are reported
+
+A parameter that looks like a date but isn't one shows an error instead of
+being searched for as text. \`today\` is a whole day, not a moment:
+
+\`\`\`moc
+folder: ${lab}/projects
+element: Task
+filter: properties(due < {{today}})
+\`\`\`
+
+Offsets are whole numbers, so half an hour is reported too:
+
+\`\`\`moc
+folder: ${lab}/meetings
+element: Heading
+filter: properties(start >= {{now-0.5h}})
+\`\`\`
+
+## Build one with the wizard
+
+**Try it:**
+1. Run **Create map of content block** from the command palette.
+2. Set **Folder** to \`${lab}/projects\` and **Element** to \`Task\`.
+3. Add a filter, choose **file property**, and pick \`due\`.
+4. In the menu after the property, choose a preset such as **is this week**. The
+   wizard writes the range with \`{{startOfWeek}}\` and \`{{endOfWeek}}\` for you.
+5. Or choose **a relative date**, then a starting point, an offset and a unit,
+   such as **Start of day**, \`-7\`, **days**.
+
+The property list also offers \`file.day\`, \`file.ctime\` and \`file.mtime\`.
+
+**What to notice:**
+- When both sides are dates, they compare as moments. A date without a time is
+  midnight at the start of that day in your time zone, and \`==\` only matches
+  the exact same moment, so use a range to match a whole day.
+- Leave this note open past midnight and the blocks move on to the new day by
+  themselves, also after your device wakes from sleep.
+- **Bake** writes a snapshot: the baked text keeps the results of the moment you
+  baked it.
+- The word \`"today"\` in quotes is just text, compared like any other.
+`,
+        },
+    ];
+}
+
 // ---------------------------------------------------------------------------
 // Command implementation
 // ---------------------------------------------------------------------------
@@ -999,9 +1296,11 @@ export async function createShowcase(app: App): Promise<void> {
     const notice = new Notice('Creating showcase…', 0);
 
     try {
+        const notes = [...NOTES, ...buildRelativeDateNotes()];
+
         // Collect all unique folder paths needed
         const folderPaths = new Set<string>();
-        for (const note of NOTES) {
+        for (const note of notes) {
             const parts = note.path.split('/');
             for (let i = 1; i < parts.length; i++) {
                 folderPaths.add(parts.slice(0, i).join('/'));
@@ -1014,7 +1313,7 @@ export async function createShowcase(app: App): Promise<void> {
         }
 
         // Create or overwrite notes
-        for (const note of NOTES) {
+        for (const note of notes) {
             const existing = app.vault.getAbstractFileByPath(note.path);
             if (existing instanceof TFile) {
                 await app.vault.modify(existing, note.content);

@@ -1,5 +1,6 @@
 import { App, AbstractInputSuggest, setIcon, TFolder } from 'obsidian';
 import { FilterPropertyValueType } from './moc-filter-builder';
+import { FILE_DATE_KEYS } from '../relative-dates';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -102,9 +103,22 @@ export function getKnownTags(app: App): string[] {
     return Array.from(tags).sort();
 }
 
+/** `file.*` keys, offered after real frontmatter keys. They all compare as dates. */
+const FILE_PROPERTY_OPTIONS: FrontmatterPropertyOption[] = FILE_DATE_KEYS.map(key => ({ key, type: 'date' }));
+
 const DYNAMIC_FOLDER_PARAMETERS = [
     '{{this.folder}}',
+    '{{now:YYYY}}',
+    '{{now:YYYY/MM}}',
+    '{{now:YYYY-MM}}',
 ];
+
+/** Labels a `{{…}}` suggestion by where its value comes from. */
+function renderDynamicParameter(value: string, el: HTMLElement): void {
+    el.createSpan({ text: value, cls: 'moc-dynamic-parameter-suggestion' });
+    const source = value.startsWith('{{this.') ? ' (current note)' : ' (date)';
+    el.createSpan({ text: source, cls: 'moc-dynamic-parameter-desc' });
+}
 
 export interface FolderSuggestOptions {
     allowVaultRoot?: boolean;
@@ -170,8 +184,7 @@ export class FolderSuggest extends AbstractInputSuggest<string> {
         if (value === '') {
             el.setText('/ (entire vault)');
         } else if (value.startsWith('{{')) {
-            el.createSpan({ text: value, cls: 'moc-dynamic-parameter-suggestion' });
-            el.createSpan({ text: ' (current note)', cls: 'moc-dynamic-parameter-desc' });
+            renderDynamicParameter(value, el);
         } else {
             el.setText(value);
         }
@@ -362,7 +375,7 @@ export class TypedPropertySuggest extends AbstractInputSuggest<FrontmatterProper
 
     getSuggestions(query: string): FrontmatterPropertyOption[] {
         const lower = query.toLowerCase();
-        return getFrontmatterPropertyOptions(this.app, this.getFolder())
+        return [...getFrontmatterPropertyOptions(this.app, this.getFolder()), ...FILE_PROPERTY_OPTIONS]
             .filter(option => option.key.toLowerCase().contains(lower));
     }
 
@@ -487,6 +500,18 @@ const DYNAMIC_FILTER_PARAMETERS = [
     '{{this.filename}}',
     '{{this.folder}}',
     '{{this.path}}',
+    '{{now}}',
+    '{{startOfDay}}',
+    '{{endOfDay}}',
+    '{{startOfDay-7d}}',
+    '{{endOfDay+7d}}',
+    '{{startOfWeek}}',
+    '{{endOfWeek}}',
+    '{{startOfMonth}}',
+    '{{endOfMonth}}',
+    '{{startOfYear}}',
+    '{{endOfYear}}',
+    '{{now:YYYY-MM-DD}}',
 ];
 
 export class DynamicParameterSuggest extends AbstractInputSuggest<string> {
@@ -508,8 +533,7 @@ export class DynamicParameterSuggest extends AbstractInputSuggest<string> {
     }
 
     renderSuggestion(value: string, el: HTMLElement): void {
-        el.createSpan({ text: value, cls: 'moc-dynamic-parameter-suggestion' });
-        el.createSpan({ text: ' (current note)', cls: 'moc-dynamic-parameter-desc' });
+        renderDynamicParameter(value, el);
     }
 
     selectSuggestion(value: string): void {
@@ -562,10 +586,10 @@ export class FilterSuggest extends AbstractInputSuggest<string> {
         }
 
         // Context 1: completing a property key inside properties(key...
-        const propKeyMatch = before.match(/properties\(\s*([a-zA-Z0-9_-]*)$/);
+        const propKeyMatch = before.match(/properties\(\s*([a-zA-Z0-9_.-]*)$/);
         if (propKeyMatch) {
             const partial = (propKeyMatch[1] ?? '').toLowerCase();
-            return getFrontmatterKeys(this.app, this.getFolder())
+            return [...getFrontmatterKeys(this.app, this.getFolder()), ...FILE_DATE_KEYS]
                 .filter(k => k.toLowerCase().startsWith(partial));
         }
 
@@ -625,8 +649,7 @@ export class FilterSuggest extends AbstractInputSuggest<string> {
 
     renderSuggestion(suggestion: string, el: HTMLElement): void {
         if (suggestion.startsWith('{{')) {
-            el.createSpan({ text: suggestion, cls: 'moc-dynamic-parameter-suggestion' });
-            el.createSpan({ text: ' (current note)', cls: 'moc-dynamic-parameter-desc' });
+            renderDynamicParameter(suggestion, el);
         } else {
             el.setText(suggestion);
         }
@@ -649,7 +672,7 @@ export class FilterSuggest extends AbstractInputSuggest<string> {
         }
 
         // Context 1: splice a property key into properties(
-        const propKeyMatch = before.match(/^(.*properties\(\s*)([a-zA-Z0-9_-]*)$/);
+        const propKeyMatch = before.match(/^(.*properties\(\s*)([a-zA-Z0-9_.-]*)$/);
         if (propKeyMatch && !suggestion.startsWith('properties(')) {
             const prefix = propKeyMatch[1]!;
             const after = inputStr.substring(cursor);

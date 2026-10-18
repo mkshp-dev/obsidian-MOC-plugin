@@ -1,5 +1,6 @@
 import { App, CachedMetadata, Keymap, MarkdownRenderer, MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, setIcon, TFile, TFolder, debounce, TAbstractFile } from 'obsidian';
 import { MOCPluginSettings } from './settings';
+import { compareTimes, currentDay, expandDateParams, FILE_DATE_KEYS, filenameToTime, findDateParamError, hasDateParams, Moment, msUntilNextDay, parseDateValue } from './relative-dates';
 
 export type FilterType = 'has_word' | 'contains' | 'has_text' | 'matches' | 'has_tag' | 'is_completed' | 'is_incomplete' | 'properties';
 
@@ -26,7 +27,7 @@ export interface ParsedFilter {
 
 
 function tokenizeFilter(input: string): string[] | null {
-    const tokenRegex = /\s*(AND\b|OR\b|NOT\b|\(|\)|properties\(\s*[a-zA-Z0-9_-]+\s*(?:==|!=|>=|<=|>|<)\s*(?:["'].*?["']|[^"\s)]+)\s*\)|(?:has_word|contains|has_text|matches|has_tag)\(\s*["'].*?["']\s*\)|(?:is_completed|is_incomplete)\(\s*\))\s*/iy;
+    const tokenRegex = /\s*(AND\b|OR\b|NOT\b|\(|\)|properties\(\s*[a-zA-Z0-9_.-]+\s*(?:==|!=|>=|<=|>|<)\s*(?:["'].*?["']|[^"\s)]+)\s*\)|(?:has_word|contains|has_text|matches|has_tag)\(\s*["'].*?["']\s*\)|(?:is_completed|is_incomplete)\(\s*\))\s*/iy;
     let lastIndex = 0;
     const tokens: string[] = [];
     tokenRegex.lastIndex = 0;
@@ -122,7 +123,7 @@ class FilterParser {
 
 export function parsePrimitiveFilter(filterString: string): ParsedFilter | null {
 
-    const propertiesPattern = /^properties\(\s*([a-zA-Z0-9_-]+)\s*(==|!=|>=|<=|>|<)\s*(?:["'](.*?)["']|([^"\s)]+))\s*\)$/;
+    const propertiesPattern = /^properties\(\s*([a-zA-Z0-9_.-]+)\s*(==|!=|>=|<=|>|<)\s*(?:["'](.*?)["']|([^"\s)]+))\s*\)$/;
     const propMatch = filterString.match(propertiesPattern);
     if (propMatch) {
         return {
@@ -204,33 +205,65 @@ export function evaluatePrimitiveFilter(text: string, filter: ParsedFilter, isCo
 }
 
 
-export function evaluateFrontmatter(frontmatter: Record<string, unknown> | null | undefined, node: ASTNode): boolean | null {
+/** File metadata that filters can read as `file.ctime`, `file.mtime` and `file.day`. */
+export interface FileDateInfo {
+    ctime: number;
+    mtime: number;
+    basename: string;
+}
+
+export interface FrontmatterContext {
+    file?: FileDateInfo;
+}
+
+export function evaluateFrontmatter(frontmatter: Record<string, unknown> | null | undefined, node: ASTNode, context?: FrontmatterContext): boolean | null {
     if (node.type === 'AND') {
-        const left = evaluateFrontmatter(frontmatter, node.left!);
-        const right = evaluateFrontmatter(frontmatter, node.right!);
+        const left = evaluateFrontmatter(frontmatter, node.left!, context);
+        const right = evaluateFrontmatter(frontmatter, node.right!, context);
         if (left === false || right === false) return false;
         if (left === true && right === true) return true;
         return null; // Could not fully determine at file level
     } else if (node.type === 'OR') {
-        const left = evaluateFrontmatter(frontmatter, node.left!);
-        const right = evaluateFrontmatter(frontmatter, node.right!);
+        const left = evaluateFrontmatter(frontmatter, node.left!, context);
+        const right = evaluateFrontmatter(frontmatter, node.right!, context);
         if (left === true || right === true) return true;
         if (left === false && right === false) return false;
         return null;
     } else if (node.type === 'NOT') {
-        const expr = evaluateFrontmatter(frontmatter, node.expr!);
+        const expr = evaluateFrontmatter(frontmatter, node.expr!, context);
         if (expr === true) return false;
         if (expr === false) return true;
         return null;
     } else if (node.type === 'CONDITION') {
         const condition = node.condition!;
         if (condition.type === 'properties') {
+            const op = condition.propOperator || '==';
+            const expectedTime = parseDateValue(condition.propValue);
+
+            // File dates are points in time: `file.day` is local midnight of
+            // the date in the filename, the others exact timestamps.
+            if (FILE_DATE_KEYS.includes(condition.propKey as string)) {
+                const file = context?.file;
+                if (!file || expectedTime === null) return false;
+                const fileTime = condition.propKey === 'file.day'
+                    ? filenameToTime(file.basename)
+                    : condition.propKey === 'file.ctime' ? file.ctime : file.mtime;
+                return fileTime !== null && compareTimes(fileTime, op, expectedTime);
+            }
+
             if (!frontmatter) return false;
             if (!(condition.propKey as string in frontmatter)) return false;
 
-            const op = condition.propOperator || '==';
             const frontmatterValue = frontmatter[condition.propKey as string];
             const expectedValue = condition.propValue;
+
+            // Two dates compare as points in time, a date without a time
+            // being local midnight. That keeps a date-only value and a
+            // datetime comparing the same way in every time zone.
+            const frontmatterTime = parseDateValue(frontmatterValue);
+            if (frontmatterTime !== null && expectedTime !== null) {
+                return compareTimes(frontmatterTime, op, expectedTime);
+            }
 
             const valuesEqual = areFrontmatterValuesEqual(frontmatterValue, expectedValue);
             if (op === '==') return valuesEqual;
@@ -562,12 +595,16 @@ export function applyFindReplace(text: string, find?: string, replace?: string):
     return text.split(find).join(replacement);
 }
 
-/** Replaces `{{this.filename}}`, `{{this.folder}}` and `{{this.path}}` with values from the note hosting the block. */
-export function expandDynamicParams(text: string, sourceFile: TFile | null): string {
-    if (!sourceFile) return text;
+/**
+ * Replaces date parameters such as `{{now:YYYY/MM}}`, then `{{this.filename}}`,
+ * `{{this.folder}}` and `{{this.path}}` with values from the note hosting the block.
+ */
+export function expandDynamicParams(text: string, sourceFile: TFile | null, now?: Moment): string {
+    const withDates = expandDateParams(text, now);
+    if (!sourceFile) return withDates;
     const folderName = sourceFile.parent ? sourceFile.parent.name : '';
     const pathNoExt = sourceFile.path.replace(/\.md$/, '');
-    return text
+    return withDates
         .replace(/\{\{this\.filename\}\}/g, sourceFile.basename)
         .replace(/\{\{this\.folder\}\}/g, folderName)
         .replace(/\{\{this\.path\}\}/g, pathNoExt);
@@ -585,14 +622,14 @@ export interface MocScope {
     excludeFiles: string[];
 }
 
-export function resolveScope(config: MocConfig, sourceFile: TFile | null): MocScope {
+export function resolveScope(config: MocConfig, sourceFile: TFile | null, now?: Moment): MocScope {
     const toList = (value: unknown): string[] => {
         const items = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
         return items.filter((item): item is string => typeof item === 'string').map(normalizeFolderPath);
     };
 
     return {
-        folderPath: typeof config.folder === 'string' ? normalizeFolderPath(expandDynamicParams(config.folder, sourceFile)) : '',
+        folderPath: typeof config.folder === 'string' ? normalizeFolderPath(expandDynamicParams(config.folder, sourceFile, now)) : '',
         isRecursive: config.recursive === true,
         excludeFolders: toList(config.excludeFolder),
         excludeFiles: toList(config.excludeFile)
@@ -674,6 +711,14 @@ export interface MocConfig {
     excludeFile?: string | string[];
 }
 
+/**
+ * True when `folder` or `filter` holds a date parameter, so what the block
+ * shows can change with the date even when no file does.
+ */
+export function configUsesDateParams(config: MocConfig): boolean {
+    return [config.folder, config.filter].some(text => typeof text === 'string' && hasDateParams(text));
+}
+
 export interface MocRenderResult {
     markdownText?: string;
     error?: string;
@@ -706,6 +751,9 @@ class MocRenderChild extends MarkdownRenderChild {
     ctx: MarkdownPostProcessorContext;
     wrapper: HTMLDivElement | null = null;
     container: HTMLDivElement | null = null;
+    /** The local day the last render resolved its dates against. */
+    renderedDay: string | null = null;
+    midnightTimer: number | null = null;
 
     constructor(
         containerEl: HTMLElement,
@@ -742,7 +790,48 @@ class MocRenderChild extends MarkdownRenderChild {
         this.registerEvent(this.app.vault.on('delete', this.onFileChange.bind(this)));
         this.registerEvent(this.app.vault.on('rename', this.onFileRename.bind(this)));
 
+        if (configUsesDateParams(this.config)) {
+            this.watchForNewDay();
+        }
+
         // Initial render is handled by processMocBlock
+    }
+
+    /**
+     * Re-renders once the date changes, for blocks whose output depends on it.
+     * A single timer covers the usual case of the app staying open past
+     * midnight. A device asleep at midnight can skip or delay that timer, so
+     * the date is also checked whenever the window regains focus or becomes
+     * visible again. Nothing polls between those moments.
+     */
+    private watchForNewDay() {
+        this.scheduleMidnightCheck();
+        this.register(() => {
+            if (this.midnightTimer !== null) window.clearTimeout(this.midnightTimer);
+        });
+
+        const win = this.containerEl.win;
+        const doc = this.containerEl.doc;
+        this.registerDomEvent(win, 'focus', () => this.refreshIfNewDay());
+        this.registerDomEvent(doc, 'visibilitychange', () => {
+            if (doc.visibilityState === 'visible') this.refreshIfNewDay();
+        });
+    }
+
+    private scheduleMidnightCheck() {
+        // A second past midnight, so slight clock drift never lands the check
+        // just before the date flips.
+        this.midnightTimer = window.setTimeout(() => {
+            this.refreshIfNewDay();
+            this.scheduleMidnightCheck();
+        }, msUntilNextDay() + 1000);
+    }
+
+    private refreshIfNewDay() {
+        if (this.renderedDay === null || this.renderedDay === currentDay()) return;
+        // A date parameter in `folder` may now point at a different folder.
+        this.scope = this.resolveScope();
+        this.updateDebounced();
     }
 
     onFileChange(file: TAbstractFile) {
@@ -785,7 +874,9 @@ class MocRenderChild extends MarkdownRenderChild {
     }
 
     async renderMoc() {
-        const result = await generateMocMarkdown(this.config, this.app, this.sourcePath, this.settings);
+        const now = moment();
+        this.renderedDay = currentDay(now);
+        const result = await generateMocMarkdown(this.config, this.app, this.sourcePath, this.settings, now);
 
         if (this.container) {
             this.container.empty();
@@ -954,11 +1045,14 @@ export async function generateMocMarkdown(
     config: MocConfig,
     app: App,
     sourcePath: string,
-    settings: MOCPluginSettings
+    settings: MOCPluginSettings,
+    /** Captured once so every date parameter in a render resolves against the same moment. */
+    now: Moment = moment()
 ): Promise<MocRenderResult> {
     const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
 
-    if (!config.folder || typeof config.folder !== 'string') {
+    // An empty string is valid and means the whole vault.
+    if (typeof config.folder !== 'string') {
         return { error: "Error: invalid or missing 'folder' in moc block.", cls: 'moc-error' };
     }
 
@@ -973,16 +1067,26 @@ export async function generateMocMarkdown(
         return { error: "Error: invalid or missing 'filter' in moc block.", cls: 'moc-error' };
     }
 
-    const parsedFilter = parseFilter(expandDynamicParams(config.filter, hostFile));
+    const dateParamError = findDateParamError(config.folder) ?? findDateParamError(config.filter);
+    if (dateParamError) {
+        return { error: dateParamError, cls: 'moc-error' };
+    }
+
+    const parsedFilter = parseFilter(expandDynamicParams(config.filter, hostFile, now));
     if (!parsedFilter) {
         return { error: `Error: unsupported or invalid filter format '${config.filter}'.`, cls: 'moc-error' };
     }
 
-    const scope = resolveScope(config, hostFile);
+    const scope = resolveScope(config, hostFile, now);
 
     // Most often the folder was renamed or moved after the block was written,
     // which would otherwise read as an empty folder.
     if (scope.folderPath !== '' && !(app.vault.getAbstractFileByPath(scope.folderPath) instanceof TFolder)) {
+        // A dated folder, such as this month's, is often only created along
+        // with its first note, so its absence is expected rather than an error.
+        if (hasDateParams(config.folder)) {
+            return { error: `Folder '${scope.folderPath}' does not exist yet.`, cls: 'moc-empty' };
+        }
         return { error: `Error: folder '${scope.folderPath}' does not exist. It may have been renamed or moved.`, cls: 'moc-error' };
     }
 
@@ -1071,7 +1175,9 @@ export async function generateMocMarkdown(
         const fileCache = app.metadataCache.getFileCache(file);
         if (!fileCache) continue;
 
-        const frontmatterResult = evaluateFrontmatter(fileCache.frontmatter, parsedFilter);
+        const frontmatterResult = evaluateFrontmatter(fileCache.frontmatter, parsedFilter, {
+            file: { ctime: file.stat.ctime, mtime: file.stat.mtime, basename: file.basename }
+        });
         if (frontmatterResult === false) {
             continue; // Skip file entirely if properties condition fails
         }

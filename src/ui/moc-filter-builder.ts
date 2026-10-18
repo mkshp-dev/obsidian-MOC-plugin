@@ -12,6 +12,45 @@ export type FilterPropertyOperator = '==' | '!=' | '>' | '>=' | '<' | '<=';
 
 export type FilterPropertyValueType = 'text' | 'number' | 'date' | 'datetime' | 'checkbox';
 
+/**
+ * How a date property is compared: with a fixed date, with a point in time
+ * relative to now, or through a preset that expands to a range.
+ */
+export type FilterDateMode = 'fixed' | 'relative' | 'preset';
+
+export type FilterRelativeUnit = 'h' | 'd' | 'w' | 'm' | 'y';
+
+/**
+ * Wizard shortcuts for common ranges. They exist only here: each compiles to
+ * explicit comparisons against date parameters, so blocks stay readable
+ * without knowing about presets.
+ */
+export type FilterDatePreset =
+    | 'today'
+    | 'thisWeek'
+    | 'thisMonth'
+    | 'thisYear'
+    | 'beforeToday'
+    | 'afterToday'
+    | 'past7Days'
+    | 'next7Days';
+
+/** Each preset as `[operator, date expression]` pairs that must all hold. */
+const DATE_PRESETS: Record<FilterDatePreset, [FilterPropertyOperator, string][]> = {
+    today: [['>=', 'startOfDay'], ['<=', 'endOfDay']],
+    thisWeek: [['>=', 'startOfWeek'], ['<=', 'endOfWeek']],
+    thisMonth: [['>=', 'startOfMonth'], ['<=', 'endOfMonth']],
+    thisYear: [['>=', 'startOfYear'], ['<=', 'endOfYear']],
+    beforeToday: [['<', 'startOfDay']],
+    afterToday: [['>', 'endOfDay']],
+    past7Days: [['>=', 'startOfDay-7d'], ['<=', 'endOfDay']],
+    next7Days: [['>=', 'startOfDay'], ['<=', 'endOfDay+7d']],
+};
+
+export function isDatePreset(value: string): value is FilterDatePreset {
+    return value in DATE_PRESETS;
+}
+
 export interface FilterRuleNode {
     nodeType: 'rule';
     id: string;
@@ -20,6 +59,13 @@ export interface FilterRuleNode {
     propertyType: FilterPropertyValueType;
     operator: FilterPropertyOperator;
     value: string;
+    dateMode: FilterDateMode;
+    /** A date anchor as written in blocks, such as `now` or `startOfWeek`. */
+    relativeAnchor: string;
+    /** Signed whole number; empty or zero means no offset. */
+    relativeOffset: string;
+    relativeUnit: FilterRelativeUnit;
+    datePreset: FilterDatePreset;
 }
 
 export interface FilterGroupNode {
@@ -47,7 +93,39 @@ export function createDefaultFilterRule(): FilterRuleNode {
         propertyType: 'text',
         operator: '==',
         value: '',
+        dateMode: 'fixed',
+        relativeAnchor: 'startOfDay',
+        relativeOffset: '',
+        relativeUnit: 'd',
+        datePreset: 'today',
     };
+}
+
+export function isDatePropertyType(type: FilterPropertyValueType): boolean {
+    return type === 'date' || type === 'datetime';
+}
+
+function dateModeOf(rule: FilterRuleNode): FilterDateMode {
+    return rule.kind === 'properties' && isDatePropertyType(rule.propertyType) ? rule.dateMode : 'fixed';
+}
+
+function parseRelativeOffset(raw: string): number | null {
+    if (raw.trim() === '') return 0;
+    const amount = Number(raw);
+    return Number.isInteger(amount) ? amount : null;
+}
+
+/** Builds a date parameter such as `{{startOfDay-7d}}`, leaving out a zero or empty offset. */
+export function compileDateParameter(anchor: string, offset: string, unit: FilterRelativeUnit): string {
+    const amount = parseRelativeOffset(offset);
+    const shift = amount ? `${amount > 0 ? '+' : ''}${amount}${unit}` : '';
+    return `{{${anchor}${shift}}}`;
+}
+
+/** Expands a preset into its comparisons, parenthesised when it is a range. */
+export function compileDatePreset(propertyKey: string, preset: FilterDatePreset): string {
+    const comparisons = DATE_PRESETS[preset].map(([operator, expression]) => `properties(${propertyKey} ${operator} {{${expression}}})`);
+    return comparisons.length === 1 ? comparisons[0]! : `(${comparisons.join(' AND ')})`;
 }
 
 export function createDefaultFilterGroup(): FilterGroupNode {
@@ -110,6 +188,17 @@ function compileFilterRule(rule: FilterRuleNode): string | null {
 
     if (rule.kind === 'properties') {
         const propertyKey = rule.propertyKey.trim();
+        const dateMode = dateModeOf(rule);
+        if (dateMode === 'preset') {
+            return propertyKey ? compileDatePreset(propertyKey, rule.datePreset) : null;
+        }
+        if (dateMode === 'relative') {
+            if (!propertyKey || parseRelativeOffset(rule.relativeOffset) === null) {
+                return null;
+            }
+            const parameter = compileDateParameter(rule.relativeAnchor, rule.relativeOffset, rule.relativeUnit);
+            return `properties(${propertyKey} ${rule.operator} ${parameter})`;
+        }
         if (!propertyKey || !rule.value) {
             return null;
         }
@@ -150,6 +239,15 @@ function findInvalidFilterNode(node: FilterBuilderNode): string | null {
     if (node.kind === 'properties') {
         if (!node.propertyKey.trim()) {
             return 'Property filters need a property key.';
+        }
+        const dateMode = dateModeOf(node);
+        if (dateMode === 'preset') {
+            return null;
+        }
+        if (dateMode === 'relative') {
+            return parseRelativeOffset(node.relativeOffset) === null
+                ? 'Relative date offsets must be whole numbers.'
+                : null;
         }
         if (!node.value) {
             return 'Property filters need a value.';

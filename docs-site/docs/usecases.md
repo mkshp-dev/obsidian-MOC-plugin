@@ -188,3 +188,51 @@ recursive: false
 ````
 
 ![Dynamic parameters usage](/img/Showcase_5.png)
+### Overdue tasks
+Incomplete tasks from project notes whose `due` date has passed. The block moves on to the new day by itself:
+
+````yaml
+```moc
+folder: Projects
+element: Task
+filter: is_incomplete() AND properties(due < {{startOfDay}})
+recursive: true
+groupBy: property(due)
+```
+````
+
+### Due this week
+
+````yaml
+```moc
+folder: Projects
+element: Task
+filter: is_incomplete() AND properties(due >= {{startOfWeek}}) AND properties(due <= {{endOfWeek}})
+recursive: true
+showCount: true
+```
+````
+
+### The last 7 days of a journal
+Daily notes are named by date, so `file.day` reads the date from the filename:
+
+````yaml
+```moc
+folder: Journal
+element: List
+filter: has_tag("#idea") AND properties(file.day >= {{startOfDay-7d}})
+recursive: true
+sort: name desc
+```
+````
+
+### This month's folder
+For journals filed in folders such as `Journal/2026/10`:
+
+````yaml
+```moc
+folder: Journal/{{now:YYYY/MM}}
+element: Task
+filter: is_incomplete()
+```
+````

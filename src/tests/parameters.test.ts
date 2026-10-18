@@ -1,6 +1,7 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { moment, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
+import { moment } from '../utils/moment';
 import { describeFilterError, findParameterError } from '../parameters';
 import { configUsesDateParams, evaluateFilter, findConfigParameterError, isPathInScope, MocConfig, parseFilter, resolveScope } from '../moc';
 

@@ -1,4 +1,5 @@
-import { App, moment, Notice, TFolder, TFile } from 'obsidian';
+import { App, Notice, TFolder, TFile } from 'obsidian';
+import { moment } from '../utils/moment';
 
 const SHOWCASE_FOLDER = 'MOC Showcase';
 

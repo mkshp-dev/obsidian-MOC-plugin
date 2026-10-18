@@ -1313,8 +1313,9 @@ The property list also offers \`file.day\`, \`file.ctime\` and \`file.mtime\`.
 
 **What to notice:**
 - When both sides are dates, they compare as moments. A date without a time is
-  midnight at the start of that day in your time zone, and \`==\` only matches
-  the exact same moment, so use a range to match a whole day.
+  midnight at the start of that day in your time zone. An equality check such as
+  \`due == {{startOfDay}}\` only matches that exact moment, so use a range to
+  match a whole day.
 - Leave this note open past midnight and the blocks move on to the new day by
   themselves, also after your device wakes from sleep.
 - **Bake** writes a snapshot: the baked text keeps the results of the moment you

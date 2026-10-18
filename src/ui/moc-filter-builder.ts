@@ -12,11 +12,8 @@ export type FilterPropertyOperator = '==' | '!=' | '>' | '>=' | '<' | '<=';
 
 export type FilterPropertyValueType = 'text' | 'number' | 'date' | 'datetime' | 'checkbox';
 
-/**
- * How a date property is compared: with a fixed date, with a point in time
- * relative to now, or through a preset that expands to a range.
- */
-export type FilterDateMode = 'fixed' | 'relative' | 'preset';
+/** How the value of a date comparison is given: a picked date, or a moment relative to now. */
+export type FilterDateMode = 'fixed' | 'relative';
 
 export type FilterRelativeUnit = 'h' | 'd' | 'w' | 'm' | 'y';
 
@@ -65,7 +62,12 @@ export interface FilterRuleNode {
     /** Signed whole number; empty or zero means no offset. */
     relativeOffset: string;
     relativeUnit: FilterRelativeUnit;
-    datePreset: FilterDatePreset;
+    /**
+     * Chosen from the operator menu in place of a comparison. While set, it
+     * stands for the operator and the value together, which keep their
+     * previous settings for when the preset is cleared again.
+     */
+    datePreset: FilterDatePreset | null;
 }
 
 export interface FilterGroupNode {
@@ -97,7 +99,7 @@ export function createDefaultFilterRule(): FilterRuleNode {
         relativeAnchor: 'startOfDay',
         relativeOffset: '',
         relativeUnit: 'd',
-        datePreset: 'today',
+        datePreset: null,
     };
 }
 
@@ -105,8 +107,17 @@ export function isDatePropertyType(type: FilterPropertyValueType): boolean {
     return type === 'date' || type === 'datetime';
 }
 
+function isDateRule(rule: FilterRuleNode): boolean {
+    return rule.kind === 'properties' && isDatePropertyType(rule.propertyType);
+}
+
+/** The preset a rule uses, ignoring a leftover one on a rule that is no longer about a date. */
+function presetOf(rule: FilterRuleNode): FilterDatePreset | null {
+    return isDateRule(rule) ? rule.datePreset : null;
+}
+
 function dateModeOf(rule: FilterRuleNode): FilterDateMode {
-    return rule.kind === 'properties' && isDatePropertyType(rule.propertyType) ? rule.dateMode : 'fixed';
+    return isDateRule(rule) ? rule.dateMode : 'fixed';
 }
 
 function parseRelativeOffset(raw: string): number | null {
@@ -188,11 +199,11 @@ function compileFilterRule(rule: FilterRuleNode): string | null {
 
     if (rule.kind === 'properties') {
         const propertyKey = rule.propertyKey.trim();
-        const dateMode = dateModeOf(rule);
-        if (dateMode === 'preset') {
-            return propertyKey ? compileDatePreset(propertyKey, rule.datePreset) : null;
+        const preset = presetOf(rule);
+        if (preset) {
+            return propertyKey ? compileDatePreset(propertyKey, preset) : null;
         }
-        if (dateMode === 'relative') {
+        if (dateModeOf(rule) === 'relative') {
             if (!propertyKey || parseRelativeOffset(rule.relativeOffset) === null) {
                 return null;
             }
@@ -240,11 +251,10 @@ function findInvalidFilterNode(node: FilterBuilderNode): string | null {
         if (!node.propertyKey.trim()) {
             return 'Property filters need a property key.';
         }
-        const dateMode = dateModeOf(node);
-        if (dateMode === 'preset') {
+        if (presetOf(node)) {
             return null;
         }
-        if (dateMode === 'relative') {
+        if (dateModeOf(node) === 'relative') {
             return parseRelativeOffset(node.relativeOffset) === null
                 ? 'Relative date offsets must be whole numbers.'
                 : null;

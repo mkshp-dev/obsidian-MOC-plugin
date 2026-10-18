@@ -639,34 +639,18 @@ export class MocWizardModal extends Modal {
                 rule.propertyType = option.type;
                 rule.value = '';
                 rule.operator = this.getPropertyOperators(option.type)[0] ?? '==';
+                rule.datePreset = null;
                 this.renderFilterBuilder(rootContainerEl);
             });
 
             const isDate = isDatePropertyType(rule.propertyType);
-            if (isDate) {
-                this.renderDateModeSelect(rowEl, rule, rootContainerEl);
-            }
+            this.renderOperatorSelect(rowEl, rule, rootContainerEl);
 
-            // A preset carries its own comparisons, so it has no operator or value.
-            if (!(isDate && rule.dateMode === 'preset')) {
-                const operatorSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-operator' });
-                for (const operator of this.getPropertyOperators(rule.propertyType)) {
-                    this.addSelectOption(operatorSelectEl, operator, operator);
-                }
-                if (!this.getPropertyOperators(rule.propertyType).includes(rule.operator)) {
-                    rule.operator = this.getPropertyOperators(rule.propertyType)[0] ?? '==';
-                }
-                operatorSelectEl.value = rule.operator;
-                operatorSelectEl.onchange = () => {
-                    rule.operator = this.parseFilterPropertyOperator(operatorSelectEl.value);
-                    this.updateFilterPreview(rootContainerEl);
-                };
-
-                if (isDate && rule.dateMode === 'relative') {
-                    this.renderRelativeDateInput(rowEl, rule, rootContainerEl);
-                } else {
-                    this.renderRuleValueInput(rowEl, rule, rootContainerEl, this.getPropertyValuePlaceholder(rule.propertyType));
-                }
+            // A preset stands for the comparison and its value together.
+            if (isDate && !rule.datePreset) {
+                this.renderDateValueInput(rowEl, rule, rootContainerEl);
+            } else if (!isDate) {
+                this.renderRuleValueInput(rowEl, rule, rootContainerEl, this.getPropertyValuePlaceholder(rule.propertyType));
             }
         } else if (rule.kind !== 'is_completed' && rule.kind !== 'is_incomplete') {
             const placeholder = rule.kind === 'matches'
@@ -730,42 +714,72 @@ export class MocWizardModal extends Modal {
         }
     }
 
-    /** Fixed date, relative date, or one of the range presets. */
-    renderDateModeSelect(rowEl: HTMLElement, rule: FilterRuleNode, rootContainerEl: HTMLElement) {
-        const selectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-date-mode' });
-        const compareGroup = selectEl.createEl('optgroup', { attr: { label: 'Compare with' } });
-        this.addSelectOption(compareGroup, 'fixed', 'a fixed date');
-        this.addSelectOption(compareGroup, 'relative', 'a relative date');
-        const presetGroup = selectEl.createEl('optgroup', { attr: { label: 'Presets' } });
-        for (const [value, label] of DATE_PRESET_OPTIONS) {
-            this.addSelectOption(presetGroup, `preset:${value}`, label);
+    /**
+     * Comparison operators, and for date properties the range presets too,
+     * since a preset such as "is this week" reads as a comparison.
+     */
+    renderOperatorSelect(rowEl: HTMLElement, rule: FilterRuleNode, rootContainerEl: HTMLElement) {
+        const selectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-operator' });
+        const operators = this.getPropertyOperators(rule.propertyType);
+        if (!operators.includes(rule.operator)) {
+            rule.operator = operators[0] ?? '==';
         }
 
-        selectEl.value = rule.dateMode === 'preset' ? `preset:${rule.datePreset}` : rule.dateMode;
+        const isDate = isDatePropertyType(rule.propertyType);
+        const operatorParent = isDate ? selectEl.createEl('optgroup', { attr: { label: 'Compare' } }) : selectEl;
+        for (const operator of operators) {
+            this.addSelectOption(operatorParent, operator, operator);
+        }
+        if (isDate) {
+            const presetGroup = selectEl.createEl('optgroup', { attr: { label: 'Presets' } });
+            for (const [value, label] of DATE_PRESET_OPTIONS) {
+                this.addSelectOption(presetGroup, `preset:${value}`, label);
+            }
+        }
+
+        selectEl.value = isDate && rule.datePreset ? `preset:${rule.datePreset}` : rule.operator;
         selectEl.onchange = () => {
             const value = selectEl.value;
             const preset = value.startsWith('preset:') ? value.slice('preset:'.length) : '';
-            if (isDatePreset(preset)) {
-                rule.dateMode = 'preset';
+            if (isDate && isDatePreset(preset)) {
                 rule.datePreset = preset;
             } else {
-                rule.dateMode = value === 'relative' ? 'relative' : 'fixed';
+                rule.datePreset = null;
+                rule.operator = this.parseFilterPropertyOperator(value);
             }
             this.renderFilterBuilder(rootContainerEl);
         };
     }
 
-    /** Anchor, signed offset and unit, compiled to a parameter such as `{{startOfDay-7d}}`. */
-    renderRelativeDateInput(rowEl: HTMLElement, rule: FilterRuleNode, rootContainerEl: HTMLElement) {
-        const anchorSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-input' });
+    /**
+     * The value of a date comparison: either a picked date, or a moment
+     * relative to now with an optional offset, compiled to a parameter such
+     * as `{{startOfDay-7d}}`.
+     */
+    renderDateValueInput(rowEl: HTMLElement, rule: FilterRuleNode, rootContainerEl: HTMLElement) {
+        const sourceSelectEl = rowEl.createEl('select', { cls: 'dropdown moc-filter-rule-date-source' });
+        const fixedGroup = sourceSelectEl.createEl('optgroup', { attr: { label: 'Fixed' } });
+        this.addSelectOption(fixedGroup, 'fixed', rule.propertyType === 'datetime' ? 'Pick a date and time…' : 'Pick a date…');
+        const relativeGroup = sourceSelectEl.createEl('optgroup', { attr: { label: 'Relative to now' } });
         for (const [value, label] of RELATIVE_ANCHOR_OPTIONS) {
-            this.addSelectOption(anchorSelectEl, value, label);
+            this.addSelectOption(relativeGroup, value, label);
         }
-        anchorSelectEl.value = rule.relativeAnchor;
-        anchorSelectEl.onchange = () => {
-            rule.relativeAnchor = anchorSelectEl.value;
-            this.updateFilterPreview(rootContainerEl);
+
+        sourceSelectEl.value = rule.dateMode === 'fixed' ? 'fixed' : rule.relativeAnchor;
+        sourceSelectEl.onchange = () => {
+            if (sourceSelectEl.value === 'fixed') {
+                rule.dateMode = 'fixed';
+            } else {
+                rule.dateMode = 'relative';
+                rule.relativeAnchor = sourceSelectEl.value;
+            }
+            this.renderFilterBuilder(rootContainerEl);
         };
+
+        if (rule.dateMode === 'fixed') {
+            this.renderRuleValueInput(rowEl, rule, rootContainerEl, this.getPropertyValuePlaceholder(rule.propertyType));
+            return;
+        }
 
         const offsetInputEl = rowEl.createEl('input', {
             type: 'number',

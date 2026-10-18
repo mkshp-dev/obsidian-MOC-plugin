@@ -66,7 +66,7 @@ void describe('Wizard - Relative dates', () => {
         assert.strictEqual(compileRule(dateRule({ dateMode: 'fixed', value: '2026-10-21' })), 'properties(due <= "2026-10-21")');
         assert.strictEqual(compileRule(dateRule({ propertyType: 'text', operator: '==', value: 'x' })), 'properties(due == "x")');
         // A text property ignores a leftover date mode.
-        assert.strictEqual(compileRule(dateRule({ propertyType: 'text', dateMode: 'preset', operator: '==', value: 'x' })), 'properties(due == "x")');
+        assert.strictEqual(compileRule(dateRule({ propertyType: 'text', datePreset: 'today', operator: '==', value: 'x' })), 'properties(due == "x")');
     });
 });
 
@@ -83,7 +83,7 @@ void describe('Wizard - Date presets', () => {
 
     void test('every preset compiles to a valid filter', () => {
         for (const preset of ['today', 'thisWeek', 'thisMonth', 'thisYear', 'beforeToday', 'afterToday', 'past7Days', 'next7Days'] as const) {
-            assertValidFilter(compileRule(dateRule({ dateMode: 'preset', datePreset: preset }))!);
+            assertValidFilter(compileRule(dateRule({ datePreset: preset }))!);
         }
     });
 
@@ -92,7 +92,7 @@ void describe('Wizard - Date presets', () => {
         group.mode = 'any';
         group.children = [
             { ...createDefaultFilterRule(), kind: 'contains', value: 'urgent' },
-            dateRule({ dateMode: 'preset', datePreset: 'today' }),
+            dateRule({ datePreset: 'today' }),
         ];
         const compiled = compileFilterTree(group);
         assert.strictEqual(compiled, 'contains("urgent") OR (properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay}}))');
@@ -101,10 +101,28 @@ void describe('Wizard - Date presets', () => {
 
     void test('presets need only a property', () => {
         const group = createDefaultFilterGroup();
-        group.children = [dateRule({ dateMode: 'preset', datePreset: 'thisWeek', value: '' })];
+        group.children = [dateRule({ datePreset: 'thisWeek', value: '' })];
         assert.strictEqual(getFilterValidationMessage(group), null);
-        group.children = [dateRule({ dateMode: 'preset', propertyKey: ' ' })];
+        group.children = [dateRule({ datePreset: 'today', propertyKey: ' ' })];
         assert.strictEqual(compileFilterTree(group), null);
+    });
+});
+
+void describe('Wizard - Presets in the operator menu', () => {
+    void test('choosing a preset replaces the comparison, clearing it brings the comparison back', () => {
+        const rule = dateRule({ operator: '<=', relativeAnchor: 'endOfDay', relativeOffset: '7', relativeUnit: 'd' });
+        assert.strictEqual(compileRule(rule), 'properties(due <= {{endOfDay+7d}})');
+
+        rule.datePreset = 'thisWeek';
+        assert.strictEqual(compileRule(rule), 'properties(due >= {{startOfWeek}}) AND properties(due <= {{endOfWeek}})');
+
+        rule.datePreset = null;
+        assert.strictEqual(compileRule(rule), 'properties(due <= {{endOfDay+7d}})');
+    });
+
+    void test('a picked date and time compiles as a fixed value', () => {
+        const rule = dateRule({ propertyKey: 'file.mtime', propertyType: 'datetime', operator: '>=', dateMode: 'fixed', value: '2026-10-21T09:30' });
+        assert.strictEqual(compileRule(rule), 'properties(file.mtime >= "2026-10-21T09:30")');
     });
 });
 

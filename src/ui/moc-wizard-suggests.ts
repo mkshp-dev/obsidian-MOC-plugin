@@ -103,8 +103,14 @@ export function getKnownTags(app: App): string[] {
     return Array.from(tags).sort();
 }
 
-/** `file.*` keys, offered after real frontmatter keys. They all compare as dates. */
-const FILE_PROPERTY_OPTIONS: FrontmatterPropertyOption[] = FILE_DATE_KEYS.map(key => ({ key, type: 'date' }));
+/**
+ * `file.*` keys, offered after real frontmatter keys. `file.day` is a whole
+ * date taken from the filename; creation and modification are exact moments.
+ */
+const FILE_PROPERTY_OPTIONS: FrontmatterPropertyOption[] = FILE_DATE_KEYS.map(key => ({
+    key,
+    type: key === 'file.day' ? 'date' : 'datetime',
+}));
 
 const DYNAMIC_FOLDER_PARAMETERS = [
     '{{this.folder}}',

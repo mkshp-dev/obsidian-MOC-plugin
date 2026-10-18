@@ -1303,10 +1303,11 @@ filter: matches("\\{\\{content\\}\\}")
 1. Run **Create map of content block** from the command palette.
 2. Set **Folder** to \`${lab}/projects\` and **Element** to \`Task\`.
 3. Add a filter, choose **file property**, and pick \`due\`.
-4. In the menu after the property, choose a preset such as **is this week**. The
-   wizard writes the range with \`{{startOfWeek}}\` and \`{{endOfWeek}}\` for you.
-5. Or choose **a relative date**, then a starting point, an offset and a unit,
-   such as **Start of day**, \`-7\`, **days**.
+4. In the operator menu, choose a preset such as **is this week**. The wizard
+   writes the range with \`{{startOfWeek}}\` and \`{{endOfWeek}}\` for you.
+5. Or keep an operator such as \`<=\`, and in the value menu choose a moment under
+   **Relative to now**, then an offset and a unit, such as **Start of day**,
+   \`-7\`, **days**. **Pick a date…** at the top of the same menu gives a fixed date.
 
 The property list also offers \`file.day\`, \`file.ctime\` and \`file.mtime\`.
 

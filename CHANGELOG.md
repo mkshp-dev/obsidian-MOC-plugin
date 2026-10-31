@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Showcase: Realistic sample notes** — **Create showcase** now fills its examples with a small studio's project notes, a trip and a tax return instead of placeholder "Alpha/Beta/Gamma" data. Eight example blocks that showed "No elements matching filter" (in notes 06, 07, 08, 09 and 12) now show results.
+
 ## 1.6.1 - 2026-10-18
 
 - **Fix: Obsidian plugin review** — The date features from 1.6.0 now pass the review's type checks, which use TypeScript 6. The plugin works exactly as before.

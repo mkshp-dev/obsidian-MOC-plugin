@@ -1032,14 +1032,21 @@ select.dropdown.moc-shaping-pill-select {
 
 /* Each block renders into its own container, so strip the outer margins that
    would otherwise stack up and make adjacent blocks drift apart. Spacing between
-   blocks is driven purely by blockSeparator, via .moc-spacer. */
-.moc-block > :first-child,
-.moc-segment > :first-child {
+   blocks is driven purely by blockSeparator, via .moc-spacer.
+   Obsidian can wrap rendered elements (e.g. a list in a div), so the rule also
+   reaches one level down, and is scoped to the container to outrank theme rules
+   such as `.markdown-rendered ul`. */
+.moc-container .moc-block > :first-child,
+.moc-container .moc-block > :first-child > :first-child,
+.moc-container .moc-segment > :first-child,
+.moc-container .moc-segment > :first-child > :first-child {
     margin-top: 0;
 }
 
-.moc-block > :last-child,
-.moc-segment > :last-child {
+.moc-container .moc-block > :last-child,
+.moc-container .moc-block > :last-child > :last-child,
+.moc-container .moc-segment > :last-child,
+.moc-container .moc-segment > :last-child > :last-child {
     margin-bottom: 0;
 }
 

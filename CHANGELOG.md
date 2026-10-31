@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+## 1.6.2 - 2026-10-31
+
 - **Docs: Real screenshots** — The README, docs and community store images now show the plugin itself (the Use cases dashboards, ticking a task in split view, the wizard) instead of drawn mockups. The README links to docs.mkshp.dev, the manual install path in the docs uses the plugin's folder name `maps-of-content`, and the plugin description says what it does in plain words.
 
 - **UI: Wizard layout** — The folder field is wide enough to show a full path, date presets such as 'is in the next 7 days' are no longer cut off, and the Insert block button stays in view when the wizard is taller than the window.
@@ -16,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Showcase: Use cases** — **Create showcase** also adds a `Use cases` folder: a small working vault of projects, meetings, book notes and a journal, with five dashboards (This week, Overdue, Decisions log, Reading highlights, Ideas inbox). Its dates are set when you run the command, so the overdue and due-soon lists always have results.
 
 - **Showcase: Realistic sample notes** — **Create showcase** now fills its examples with a small studio's project notes, a trip and a tax return instead of placeholder "Alpha/Beta/Gamma" data. Eight example blocks that showed "No elements matching filter" (in notes 06, 07, 08, 09 and 12) now show results.
+
 
 ## 1.6.1 - 2026-10-18
 

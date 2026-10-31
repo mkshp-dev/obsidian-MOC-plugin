@@ -1055,6 +1055,14 @@ select.dropdown.moc-shaping-pill-select {
     margin-bottom: 0;
 }
 
+/* With the margins stripped, a group heading would sit right under the previous
+   group's last result. Give back some room, but only after a result, so the
+   first heading and a heading nested under another stay tight. */
+.moc-container .moc-block + .moc-segment > :is(h1, h2, h3, h4, h5, h6):first-child,
+.moc-container .moc-block + .moc-segment > :first-child > :is(h1, h2, h3, h4, h5, h6):first-child {
+    margin-top: var(--size-4-4);
+}
+
 /* Stands in for the blank line emitted by blockSeparator: newline. */
 .moc-spacer {
     height: var(--size-4-2);

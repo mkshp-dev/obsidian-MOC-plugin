@@ -366,7 +366,7 @@ input[type="text"].moc-shaping-input {
 /* Let path fields (folder, exclusions, template) use the free space in their
    row so a full path is readable. The 200px basis leaves room for the
    Recursive toggle beside the folder field. */
-.moc-wizard-modal .moc-shaping-input-group:has(> input.moc-shaping-input) {
+.moc-wizard-modal .moc-path-input-group {
     flex: 1 1 200px;
     min-width: 0;
 }
@@ -1066,10 +1066,10 @@ select.dropdown.moc-shaping-pill-select {
 }
 
 /* The jump-to-source button is appended after the rendered content, so in a
-   block the content's last element sits just before the button rather than
-   being the last child. */
-.moc-container .moc-block > :has(+ .moc-jump-button:last-child),
-.moc-container .moc-block > :has(+ .moc-jump-button:last-child) > :last-child,
+   block the content's last element is not the last child. The renderer marks
+   it with .moc-block-last instead. */
+.moc-container .moc-block > .moc-block-last,
+.moc-container .moc-block > .moc-block-last > :last-child,
 .moc-container .moc-block > :last-child,
 .moc-container .moc-block > :last-child > :last-child,
 .moc-container .moc-segment > :last-child,

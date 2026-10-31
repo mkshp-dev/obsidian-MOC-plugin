@@ -958,6 +958,11 @@ class MocRenderChild extends MarkdownRenderChild {
     private addJumpButton(blockEl: HTMLElement, ref: BlockRef) {
         if (!this.settings.showJumpToSource) return;
 
+        // The button is appended after the rendered content, so mark the
+        // content's last element: CSS strips its bottom margin (a `:has()`
+        // selector would do it too, but is slow to invalidate).
+        blockEl.lastElementChild?.addClass('moc-block-last');
+
         // aria-label only: Obsidian renders its own tooltip from it, and adding
         // a `title` would stack a second, native tooltip behind it.
         const button = blockEl.createEl('button', {

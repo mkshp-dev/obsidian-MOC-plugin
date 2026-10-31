@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Fix: Obsidian plugin review** — Removed the three `:has()` CSS selectors the review flags as slow. The wizard's path fields and the spacing under results now use plain classes, and look the same as before.
+
 ## 1.6.2 - 2026-10-31
 
 - **Docs: Real screenshots** — The README, docs and community store images now show the plugin itself (the Use cases dashboards, ticking a task in split view, the wizard) instead of drawn mockups. The README links to docs.mkshp.dev, the manual install path in the docs uses the plugin's folder name `maps-of-content`, and the plugin description says what it does in plain words.

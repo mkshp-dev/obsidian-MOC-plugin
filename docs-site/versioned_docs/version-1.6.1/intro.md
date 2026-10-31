@@ -11,7 +11,7 @@ Welcome to the official **Obsidian MOC Plugin** documentation.
 
 The Obsidian MOC Plugin is a smart **Map of Content** generator for [Obsidian](https://obsidian.md). It automatically organizes your notes into structured, navigable maps so you can explore your knowledge graph with ease.
 
-![Obsidian MOC Plugin Showcase](/img/Showcase_1.png)
+![A "This week" dashboard listing open tasks from four project notes. A task is ticked and leaves the list, then the jump button opens its source note.](/img/screens/this-week.gif)
 
 ## Features
 
@@ -47,7 +47,7 @@ The Obsidian MOC Plugin is a smart **Map of Content** generator for [Obsidian](h
 ### Manual installation
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/mkshp-dev/obsidian-MOC-plugin/releases).
-2. Copy the files to your vault's plugin directory: `<Vault>/.obsidian/plugins/obsidian-MOC-plugin/`.
+2. Copy the files to your vault's plugin directory: `<Vault>/.obsidian/plugins/maps-of-content/`.
 3. Reload Obsidian and enable the plugin under **Settings → Community plugins**.
 
 ## Getting Started

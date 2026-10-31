@@ -189,7 +189,13 @@
     justify-content: flex-end;
     margin-top: 4px;
     padding-top: 16px;
+    padding-bottom: 8px;
     border-top: 1px solid var(--background-modifier-border);
+    /* The wizard can be taller than the window; keep Insert block in view. */
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: var(--modal-background, var(--background-primary));
 }
 
 .moc-wizard-footer .setting-item {
@@ -355,6 +361,18 @@ input[type="text"].moc-shaping-input {
     padding: 6px 10px;
     font-size: var(--font-ui-small);
     min-width: 140px;
+}
+
+/* Let path fields (folder, exclusions, template) use the free space in their
+   row so a full path is readable. The 200px basis leaves room for the
+   Recursive toggle beside the folder field. */
+.moc-wizard-modal .moc-shaping-input-group:has(> input.moc-shaping-input) {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.moc-wizard-modal .moc-shaping-input-group > input.moc-shaping-input {
+    width: 100%;
 }
 
 .moc-shaping-trash-btn {
@@ -538,7 +556,11 @@ select.dropdown.moc-shaping-pill-select {
 }
 
 .moc-filter-rule-operator {
-    width: 72px;
+    /* Size to the chosen operator so date presets such as
+       'is in the next 7 days' are not cut off. */
+    width: auto;
+    min-width: 72px;
+    max-width: 220px;
 }
 
 .moc-filter-rule-input.moc-filter-rule-offset {
@@ -1032,15 +1054,35 @@ select.dropdown.moc-shaping-pill-select {
 
 /* Each block renders into its own container, so strip the outer margins that
    would otherwise stack up and make adjacent blocks drift apart. Spacing between
-   blocks is driven purely by blockSeparator, via .moc-spacer. */
-.moc-block > :first-child,
-.moc-segment > :first-child {
+   blocks is driven purely by blockSeparator, via .moc-spacer.
+   Obsidian can wrap rendered elements (e.g. a list in a div), so the rule also
+   reaches one level down, and is scoped to the container to outrank theme rules
+   such as `.markdown-rendered ul`. */
+.moc-container .moc-block > :first-child,
+.moc-container .moc-block > :first-child > :first-child,
+.moc-container .moc-segment > :first-child,
+.moc-container .moc-segment > :first-child > :first-child {
     margin-top: 0;
 }
 
-.moc-block > :last-child,
-.moc-segment > :last-child {
+/* The jump-to-source button is appended after the rendered content, so in a
+   block the content's last element sits just before the button rather than
+   being the last child. */
+.moc-container .moc-block > :has(+ .moc-jump-button:last-child),
+.moc-container .moc-block > :has(+ .moc-jump-button:last-child) > :last-child,
+.moc-container .moc-block > :last-child,
+.moc-container .moc-block > :last-child > :last-child,
+.moc-container .moc-segment > :last-child,
+.moc-container .moc-segment > :last-child > :last-child {
     margin-bottom: 0;
+}
+
+/* With the margins stripped, a group heading would sit right under the previous
+   group's last result. Give back some room, but only after a result, so the
+   first heading and a heading nested under another stay tight. */
+.moc-container .moc-block + .moc-segment > :is(h1, h2, h3, h4, h5, h6):first-child,
+.moc-container .moc-block + .moc-segment > :first-child > :is(h1, h2, h3, h4, h5, h6):first-child {
+    margin-top: var(--size-4-4);
 }
 
 /* Stands in for the blank line emitted by blockSeparator: newline. */

@@ -6,6 +6,8 @@ sidebar_position: 5
 
 Every rendered MOC block has an interactive toolbar that appears when you hover over it. The toolbar sits in the top-right corner of the block and provides two actions: **Copy** and **Bake**.
 
+![The Copy and Bake buttons on a hovered block, and the jump button next to a result](/img/screens/toolbar.png)
+
 ---
 
 ## Copy as Markdown

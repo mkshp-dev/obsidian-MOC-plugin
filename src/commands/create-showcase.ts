@@ -38,6 +38,23 @@ without writing a single line of YAML manually.
 | [[14 - Jump to source]] | Per-block jump-to-source buttons |
 | [[15 - Renames and moves]] | Refresh on rename and move, template edits, missing folders |
 | [[16 - Relative dates]] | Date parameters, ranges, \`file.*\` dates, dated folders, wizard presets |
+
+## Use cases
+
+The \`Use cases\` folder is a small working vault: projects with due dates,
+meeting notes, book highlights and a journal. Its dashboards show what \`moc\`
+blocks are for day to day:
+
+| Dashboard | What it gathers |
+|-----------|-----------------|
+| [[This week]] | Every open task from active projects. Tick one here and it is ticked in its note |
+| [[Overdue]] | Tasks from projects past their due date, and those due in the next 7 days |
+| [[Decisions log]] | Every \`#decision\` from every meeting, newest first |
+| [[Reading highlights]] | Quotes from books rated 4 or 5, grouped by author |
+| [[Ideas inbox]] | Ideas tagged \`#idea\` in the journal and project notes |
+
+The project notes [[Website redesign]] and [[Podcast launch]] each pull in their
+own meeting decisions with \`{{this.filename}}\`.
 `,
     },
 
@@ -45,101 +62,107 @@ without writing a single line of YAML manually.
     // Sample data notes
     // -----------------------------------------------------------------------
     {
-        path: `${SHOWCASE_FOLDER}/data/Meeting Notes Alpha.md`,
+        path: `${SHOWCASE_FOLDER}/data/Website redesign kickoff.md`,
         content: `---
-project: Alpha
+project: Website redesign
 status: active
 priority: 1
-date: 2024-01-15
+date: 2026-09-14
 ---
 
-# Meeting Notes Alpha
+# Website redesign kickoff
 
 ## Action items
 
-- Follow up with the design team #project
-- Schedule a review session #meeting
-- Update the roadmap document
+- Send the moodboard to Priya for review #project
+- Compare quotes from two hosting vendors #project
+- Book a review session for the homepage drafts #meeting
+- Update the sitemap with the new case study pages
 
 ## Decisions
 
-> We agreed to use a modular approach for the next sprint. #decision
+> Go with the calmer homepage direction and move the blog link to the footer. #decision
 
-The team is aligned on the new direction.
+Everyone aligned on launching before the end of the quarter.
 
-- [x] Sent follow-up email
-- [ ] Update documentation
-- [ ] Notify stakeholders
+- [x] Share the analytics export
+- [ ] Update documentation for the content team
+- [ ] Ask Sam for the final illustration files
+- [ ] Write copy for the pricing page
 
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/data/Meeting Notes Beta.md`,
+        path: `${SHOWCASE_FOLDER}/data/Podcast planning.md`,
         content: `---
-project: Beta
+project: Podcast
 status: active
 priority: 2
-date: 2024-02-10
+date: 2026-10-02
 ---
 
-# Meeting Notes Beta
+# Podcast planning
 
 ## Action items
 
-- Review the budget proposal #project
-- Confirm vendor contracts #meeting
-- Prepare Q2 report
+- Review the budget for microphones and editing software #project
+- Confirm the guest contract with Lena #meeting
+- Prepare the season one report for sponsors
 
 ## Decisions
 
-> Approved the new vendor. Budget increase of 10%. #decision
+> Approved a 600 equipment budget. Episodes go out every other Tuesday. #decision
 
-All approvals are in place.
+The budget was approved, so recording can start next week.
 
-- [x] Sent contract for review
-- [x] Budget approved
-- [ ] Finalize Q2 report
+- [x] Send the guest contract to Lena
+- [x] Get the equipment budget signed off
+- [ ] Track the equipment budget in the spreadsheet
+- [ ] Finalise the sponsor report
+- [ ] Edit episode 1 and add the intro music
 
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/data/Meeting Notes Gamma.md`,
+        path: `${SHOWCASE_FOLDER}/data/Old portfolio retirement.md`,
         content: `---
-project: Gamma
+project: Portfolio
 status: archived
 priority: 3
-date: 2023-12-01
+date: 2025-12-01
 ---
 
-# Meeting Notes Gamma
+# Old portfolio retirement
 
 ## Action items
 
-- Archive old datasets #project
-- Document deprecation process #meeting
+- Archive the old project photos #project
+- Document how the redirects work #meeting
 
 ## Decisions
 
-> Gamma project archived after successful handover. #decision
+> Retire the old portfolio now that every project has moved to the studio site. #decision
 
-No further action required.
+The old site is archived and no further action is required.
 
-- [x] Datasets archived
-- [x] Handover docs updated
+- [x] Archive the project photos
+- [x] Document the redirects
 
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/data/exclude-me/Excluded Note.md`,
+        path: `${SHOWCASE_FOLDER}/data/Archive/Old client brief.md`,
         content: `---
-project: Excluded
+project: Archive
 ---
 
-# Excluded Note
+# Old client brief
 
-This note lives in a subfolder that is excluded in the showcase examples.
+This note lives in the \`Archive\` subfolder, which note 08 excludes.
 
-- This item should not appear in the MOC output
+## Action items
+
+- This item from the archive should not appear when the archive is excluded
 - Neither should this one
 
 `,
@@ -174,35 +197,35 @@ the blocks in [[15 - Renames and moves]] react.
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/rename-lab/hosts/Alpha.md`,
-        content: `# Alpha
+        path: `${SHOWCASE_FOLDER}/rename-lab/trips/Tokyo.md`,
+        content: `# Tokyo
 
 This block reads from the folder named after **this note**, using
-\`{{this.filename}}\`. Right now that is \`hosts/Alpha\`.
+\`{{this.filename}}\`. Right now that is \`trips/Tokyo\`.
 
 \`\`\`moc
-folder: ${SHOWCASE_FOLDER}/rename-lab/hosts/{{this.filename}}
+folder: ${SHOWCASE_FOLDER}/rename-lab/trips/{{this.filename}}
 element: List
-filter: contains("item")
+filter: contains("")
 \`\`\`
 
-**Try it:** rename this note to \`Beta\` while it is open. The block switches to the
-\`hosts/Beta\` folder straight away, and **Copy** and **Bake** keep working.
+**Try it:** rename this note to \`Kyoto\` while it is open. The block switches to the
+\`trips/Kyoto\` folder straight away, and **Copy** and **Bake** keep working.
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/rename-lab/hosts/Alpha/Alpha items.md`,
-        content: `# Alpha items
+        path: `${SHOWCASE_FOLDER}/rename-lab/trips/Tokyo/Tokyo plans.md`,
+        content: `# Tokyo plans
 
-- First item from the Alpha folder
-- Second item from the Alpha folder
+- Book a table at a sushi counter in Ginza
+- Walk around Yanaka on Sunday morning
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/rename-lab/hosts/Beta/Beta items.md`,
-        content: `# Beta items
+        path: `${SHOWCASE_FOLDER}/rename-lab/trips/Kyoto/Kyoto plans.md`,
+        content: `# Kyoto plans
 
-- Only item from the Beta folder
+- See Fushimi Inari at sunrise, before the crowds
 `,
     },
 
@@ -213,7 +236,7 @@ filter: contains("item")
         path: `${SHOWCASE_FOLDER}/vault-lab/Anywhere.md`,
         content: `# Anywhere
 
-- This line can be found from anywhere in the vault #moc-anywhere
+- Renew the passport before the Japan trip #moc-anywhere
 `,
     },
     {
@@ -278,7 +301,7 @@ recursive: true
 Use \`element: Task\` to extract only checkbox items. Combine with
 \`is_completed()\` or \`is_incomplete()\` to filter by state.
 
-### Incomplete tasks across all meeting notes
+### Incomplete tasks across all project notes
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
@@ -394,7 +417,7 @@ recursive: true
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
 element: Heading
-filter: properties(date >= "2024-01-01")
+filter: contains("Decisions") AND properties(date >= "2026-01-01")
 recursive: true
 \`\`\`
 
@@ -421,7 +444,7 @@ recursive: true
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 groupBy: property(project)
 recursive: true
@@ -453,7 +476,7 @@ recursive: true
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 sort: ctime desc
 recursive: true
@@ -566,31 +589,31 @@ when \`recursive: true\` would normally include them.
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 recursive: true
-excludeFolder: ${SHOWCASE_FOLDER}/data/exclude-me
+excludeFolder: ${SHOWCASE_FOLDER}/data/Archive
 \`\`\`
 
 ### Exclude a specific file
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 recursive: true
-excludeFile: ${SHOWCASE_FOLDER}/data/Meeting Notes Gamma
+excludeFile: ${SHOWCASE_FOLDER}/data/Old portfolio retirement
 \`\`\`
 
 ### Exclude multiple (array syntax)
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 recursive: true
-excludeFolder: ["${SHOWCASE_FOLDER}/data/exclude-me"]
-excludeFile: ["${SHOWCASE_FOLDER}/data/Meeting Notes Gamma"]
+excludeFolder: ["${SHOWCASE_FOLDER}/data/Archive"]
+excludeFile: ["${SHOWCASE_FOLDER}/data/Old portfolio retirement"]
 \`\`\`
 
 **What to notice:**
@@ -743,7 +766,7 @@ reopen the note. Renames and moves have their own walkthrough in
 
 **Try it:**
 1. Keep this note open in Obsidian.
-2. Open \`${SHOWCASE_FOLDER}/data/Meeting Notes Alpha.md\`.
+2. Open \`${SHOWCASE_FOLDER}/data/Podcast planning.md\`.
 3. Add a new task: \`- [ ] A brand new task\`.
 4. Save. Watch the block above update within half a second.
 
@@ -783,7 +806,7 @@ noteSeparator: none
 **What to notice:**
 - \`blockSeparator\` values: \`none\` (default), \`divider\` (\`---\`), \`newline\` (blank line).
 - \`noteSeparator\` values: \`newline\` (default), \`divider\` (\`---\`), \`none\`.
-- "Meeting Notes Alpha" has two incomplete tasks, so it's the easiest note to see \`blockSeparator\` on.
+- "Podcast planning" has three incomplete tasks in a row, so it's the easiest note to see \`blockSeparator\` on.
 
 ## Dynamic parameters
 
@@ -801,7 +824,7 @@ expands to \`${SHOWCASE_FOLDER}\` — the block below resolves to the same
 
 \`\`\`moc
 folder: "{{this.folder}}/data"
-element: List
+element: Heading
 filter: contains("Action items")
 recursive: true
 \`\`\`
@@ -824,7 +847,7 @@ Task checkboxes inside a rendered MOC block are **live**. Ticking one writes the
 change straight back to the note the task came from, so you can work through an
 aggregated list without opening each source note.
 
-### Everything still open, across all meeting notes
+### Everything still open, across all project notes
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
@@ -860,8 +883,8 @@ pane, or a sync from another device — the write is skipped, you get a notice, 
 block refreshes to show the current state.
 
 **Try it:**
-1. Open \`${SHOWCASE_FOLDER}/data/Meeting Notes Alpha.md\` in a second pane.
-2. Edit the text of \`- [ ] Update documentation\` (for example, add a word).
+1. Open \`${SHOWCASE_FOLDER}/data/Website redesign kickoff.md\` in a second pane.
+2. Edit the text of \`- [ ] Update documentation for the content team\` (for example, add a word).
 3. Without saving focus back here, tick that task in a block above *before* it refreshes.
 4. You get "the source line has changed" instead of a silent overwrite.
 
@@ -904,7 +927,7 @@ A MOC block gathers content from all over your vault. Jump to source is how you 
 back: every matched block carries its own button that opens the note it came from,
 scrolled to the exact line the block starts at.
 
-### Decisions from every meeting note
+### Decisions from every project note
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
@@ -1004,9 +1027,9 @@ Blocks are not rewritten to follow the folder — update \`folder:\` to the new 
 ## Renaming the note that holds the block
 
 Blocks using \`{{this.filename}}\`, \`{{this.folder}}\` or \`{{this.path}}\` follow
-the note they're in when it's renamed. Open [[Alpha]] and follow the steps there:
-renaming it to \`Beta\` makes its block switch from the \`hosts/Alpha\` folder to
-\`hosts/Beta\`.
+the note they're in when it's renamed. Open [[Tokyo]] and follow the steps there:
+renaming it to \`Kyoto\` makes its block switch from the \`trips/Tokyo\` folder to
+\`trips/Kyoto\`.
 
 **What to notice:**
 - A move is caught from both ends: a note entering the watched folder and a note
@@ -1053,19 +1076,19 @@ ${agenda}
     });
 
     return [
-        project('Quarterly report', day(-2), '- [ ] Collect figures from finance\n- [ ] Draft summary\n- [x] Book review meeting'),
-        project('Client demo', day(0), '- [ ] Rehearse the walkthrough\n- [ ] Send the agenda'),
-        project('Website refresh', day(3), '- [ ] Review new homepage copy\n- [x] Pick hero image'),
-        project('Annual planning', day(35), '- [ ] Gather team goals'),
-        meeting('Retro', hour(-5), '- What went well\n- What to change'),
-        meeting('Design review', hour(3), '- Walk through the new layouts'),
-        meeting('Roadmap planning', hour(50), '- Agree next quarter priorities'),
+        project('Tax return', day(-2), '- [ ] Send laptop receipts to the accountant\n- [ ] Review and sign the draft return\n- [x] Download bank statements'),
+        project('Podcast episode 1', day(0), '- [ ] Export the final mix\n- [ ] Upload with show notes'),
+        project('Website launch', day(3), '- [ ] Set up redirects for the old blog\n- [x] Pick the hero illustration'),
+        project('Japan trip', day(35), '- [ ] Book flights to Tokyo'),
+        meeting('Weekly sync', hour(-5), '- Launch checklist\n- Podcast schedule'),
+        meeting('Design review', hour(3), '- Walk through the pricing page layouts'),
+        meeting('Contractor call', hour(50), '- Worktop choice and tiling dates'),
         {
             path: `${lab}/journal/${day(0)}.md`,
             content: `# ${day(0)}
 
 - Try a weekly review template #idea
-- Lunch with Sam
+- Lunch with Sam to talk about the illustrations
 `,
         },
         {
@@ -1073,22 +1096,22 @@ ${agenda}
             content: `# ${day(-3)}
 
 - Batch all meetings into Tuesdays #idea
-- Follow up on the ${day(0)} demo
+- Prepare for the ${day(0)} podcast release
 `,
         },
         {
             path: `${lab}/journal/${day(-10)}.md`,
             content: `# ${day(-10)}
 
-- Start a reading list #idea
+- Keep a reading list on the studio site #idea
 `,
         },
         {
             path: `${lab}/months/${thisMonth}/Month goals.md`,
             content: `# Goals for ${thisMonth}
 
-- Ship the website refresh
-- Clear the reading list backlog
+- Launch the new studio website
+- Release the first podcast episode
 `,
         },
         {
@@ -1161,7 +1184,7 @@ groupBy: property(due)
 showCount: true
 \`\`\`
 
-"Annual planning", due in 35 days, stays out until it comes within a week.
+"Japan trip", due in 35 days, stays out until it comes within a week.
 
 ## Meetings in the next 12 hours
 
@@ -1174,7 +1197,7 @@ element: Heading
 filter: properties(start >= {{now}}) AND properties(start <= {{now+12h}})
 \`\`\`
 
-The retro started five hours ago and roadmap planning is two days away, so only
+The weekly sync started five hours ago and the contractor call is two days away, so only
 the design review shows. \`{{now}}\` is as of the last time the block rendered.
 
 ## This week's journal ideas
@@ -1327,6 +1350,414 @@ The property list also offers \`file.day\`, \`file.ctime\` and \`file.mtime\`.
     ];
 }
 
+/**
+ * Use-case notes: a small, realistic vault (projects, meetings, reading notes,
+ * a journal) and five dashboards built on it. Dates are set relative to the
+ * moment the showcase is created, so "overdue" and "next 7 days" always have
+ * results.
+ */
+function buildUseCaseNotes(): { path: string; content: string }[] {
+    const now = moment();
+    const day = (offset: number) => now.clone().add(offset, 'days').format('YYYY-MM-DD');
+    const weekday = (offset: number) => now.clone().add(offset, 'days').format('dddd D MMMM');
+    const uc = `${SHOWCASE_FOLDER}/Use cases`;
+
+    return [
+        {
+            path: `${uc}/Dashboards/Decisions log.md`,
+            content: `Every decision from every meeting, newest first.
+
+\`\`\`moc
+folder: ${uc}/Meetings
+element: List
+filter: has_tag("#decision")
+sort: name desc
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Dashboards/Ideas inbox.md`,
+            content: `Ideas tagged #idea anywhere in the vault, from journal entries and project notes.
+
+\`\`\`moc
+folder: ${uc}
+element: List
+filter: has_tag("#idea")
+recursive: true
+excludeFolder: ${uc}/Dashboards
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Dashboards/Overdue.md`,
+            content: `Open tasks from projects whose due date has passed. This list moves on to the new day by itself.
+
+\`\`\`moc
+folder: ${uc}/Projects
+element: Task
+filter: is_incomplete() AND properties(due < {{startOfDay}})
+\`\`\`
+
+## Due in the next 7 days
+
+\`\`\`moc
+folder: ${uc}/Projects
+element: Task
+filter: is_incomplete() AND properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay+7d}})
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Dashboards/Reading highlights.md`,
+            content: `Highlights from the books and essays I rated 4 or 5.
+
+\`\`\`moc
+folder: ${uc}/Reading
+element: Blockquote
+filter: properties(rating >= 4)
+groupBy: property(author)
+blockSeparator: newline
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Dashboards/This week.md`,
+            content: `Everything still open across my projects, collected live from each project note. Tick a task here and it is ticked in its note.
+
+\`\`\`moc
+folder: ${uc}/Projects
+element: Task
+filter: is_incomplete() AND properties(status == "active")
+showCount: true
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Projects/Garden plan.md`,
+            content: `---
+status: someday
+area: Home
+---
+# Garden plan
+
+## Tasks
+- [ ] Sketch raised beds along the south fence
+- [ ] Find a local seed swap
+`,
+        },
+        {
+            path: `${uc}/Projects/Japan trip.md`,
+            content: `---
+status: planning
+area: Personal
+due: ${day(20)}
+---
+# Japan trip
+
+Ten days in April: Tokyo, Kanazawa, Kyoto.
+
+## Tasks
+- [ ] Book flights before the sale ends
+- [ ] Reserve the ryokan in Kanazawa
+- [ ] Get a JR pass or work out regional passes
+
+## Notes
+- Idea: plan one day around the Kenroku-en garden at opening time #idea
+`,
+        },
+        {
+            path: `${uc}/Projects/Kitchen renovation.md`,
+            content: `---
+status: active
+area: Home
+due: ${day(-2)}
+---
+# Kitchen renovation
+
+Cabinets are in. Worktops and tiling are left.
+
+## Tasks
+- [x] Sign off the cabinet layout
+- [ ] Choose the worktop sample
+- [ ] Book the tiler
+- [ ] Order the extractor hood
+
+## Notes
+- The contractor needs the worktop choice before he can template.
+`,
+        },
+        {
+            path: `${uc}/Projects/Podcast launch.md`,
+            content: `---
+status: active
+area: Work
+due: ${day(3)}
+---
+# Podcast launch
+
+Six-episode first season about running a small design studio.
+
+## Tasks
+- [x] Record episodes 1 and 2
+- [ ] Edit episode 1 and add the intro music
+- [ ] Write show notes for episodes 1–2
+- [ ] Submit the feed to Apple Podcasts and Spotify
+
+## Notes
+- Guests confirmed: Lena (ep. 3) and Marco (ep. 4).
+- Idea: turn each episode into a short blog post with the key takeaways #idea
+
+## Decisions from meetings
+
+\`\`\`moc
+folder: ${uc}/Meetings
+element: List
+filter: has_tag("#decision") AND contains("[[{{this.filename}}]]")
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Projects/Tax return.md`,
+            content: `---
+status: active
+area: Admin
+due: ${day(-1)}
+---
+# Tax return
+
+## Tasks
+- [x] Download bank statements
+- [ ] Send receipts for the new laptop to the accountant
+- [ ] Review the draft return and sign it
+`,
+        },
+        {
+            path: `${uc}/Projects/Website redesign.md`,
+            content: `---
+status: active
+area: Work
+due: ${day(7)}
+---
+# Website redesign
+
+New marketing site for the studio. Launch is a week away.
+
+## Tasks
+- [x] Audit the current pages and analytics
+- [x] Pick the type scale and colour palette
+- [ ] Write copy for the pricing page
+- [ ] Export hero illustrations at 2x
+- [ ] Set up redirects for the old blog URLs
+- [ ] Final review with Priya #waiting
+
+## Notes
+- Keep the case studies page, but cut it to the best four projects.
+- Idea: a small changelog page so returning clients see what's new #idea
+
+## Decisions from meetings
+
+\`\`\`moc
+folder: ${uc}/Meetings
+element: List
+filter: has_tag("#decision") AND contains("[[{{this.filename}}]]")
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Meetings/${day(-10)} Design review.md`,
+            content: `---
+type: meeting
+date: ${day(-10)}
+attendees: [Priya, Sam]
+---
+# Design review
+
+About [[Website redesign]].
+
+## Notes
+- Sam showed two homepage directions. Everyone preferred the calmer one.
+- Pricing page needs a comparison table, not three cards.
+
+## Decisions
+- Go with direction B for the [[Website redesign]] homepage #decision
+- [[Website redesign]]: drop the blog from the main navigation and link it from the footer #decision
+
+## Action items
+- [ ] Sam to send the final illustration files
+- [x] Priya to share the analytics export
+`,
+        },
+        {
+            path: `${uc}/Meetings/${day(-1)} Weekly sync.md`,
+            content: `---
+type: meeting
+date: ${day(-1)}
+attendees: [Priya, Sam, Lena]
+---
+# Weekly sync
+
+## Notes
+- [[Website redesign]] is on track for next week.
+- [[Podcast launch]]: episode 1 edit is the only blocker.
+
+## Decisions
+- Announce the [[Website redesign]] in the first episode of the [[Podcast launch]] #decision
+
+## Action items
+- [ ] Priya to draft the launch email
+`,
+        },
+        {
+            path: `${uc}/Meetings/${day(-3)} Contractor call.md`,
+            content: `---
+type: meeting
+date: ${day(-3)}
+attendees: [Tom]
+---
+# Contractor call
+
+About [[Kitchen renovation]].
+
+## Notes
+- Tom can template the worktop as soon as we choose.
+
+## Decisions
+- [[Kitchen renovation]]: quartz worktop, not oak, because it sits next to the sink #decision
+
+## Action items
+- [ ] Send Tom the tile measurements
+`,
+        },
+        {
+            path: `${uc}/Meetings/${day(-7)} Podcast kickoff.md`,
+            content: `---
+type: meeting
+date: ${day(-7)}
+attendees: [Lena]
+---
+# Podcast kickoff
+
+About [[Podcast launch]].
+
+## Notes
+- Episodes should stay under 35 minutes.
+- Lena suggested asking listeners for questions at the end of each episode.
+
+## Decisions
+- [[Podcast launch]]: release every other Tuesday #decision
+- [[Podcast launch]]: record remotely with a separate track per person #decision
+
+## Action items
+- [ ] Lena to send her mic setup for the guest guide
+`,
+        },
+        {
+            path: `${uc}/Reading/Meditations.md`,
+            content: `---
+type: book
+author: Marcus Aurelius
+rating: 5
+---
+# Meditations
+
+George Long's translation.
+
+> Begin the morning by saying to thyself, I shall meet with the busy-body, the ungrateful, arrogant, deceitful, envious, unsocial.
+
+A strange way to start a day, but it works: nothing that happens is a surprise.
+
+> No longer talk at all about the kind of man that a good man ought to be, but be such.
+`,
+        },
+        {
+            path: `${uc}/Reading/Self-Reliance.md`,
+            content: `---
+type: essay
+author: Ralph Waldo Emerson
+rating: 4
+---
+# Self-Reliance
+
+> Trust thyself: every heart vibrates to that iron string.
+
+> A foolish consistency is the hobgoblin of little minds.
+`,
+        },
+        {
+            path: `${uc}/Reading/The Art of War.md`,
+            content: `---
+type: book
+author: Sun Tzu
+rating: 3
+---
+# The Art of War
+
+Lionel Giles' translation. Interesting, but less useful day to day than I hoped.
+
+> All warfare is based on deception.
+`,
+        },
+        {
+            path: `${uc}/Reading/Walden.md`,
+            content: `---
+type: book
+author: Henry David Thoreau
+rating: 5
+---
+# Walden
+
+> I went to the woods because I wished to live deliberately, to front only the essential facts of life, and see if I could not learn what it had to teach.
+
+Still the best case for doing fewer things on purpose.
+
+> Our life is frittered away by detail. Simplify, simplify.
+
+> The mass of men lead lives of quiet desperation.
+`,
+        },
+        {
+            path: `${uc}/Journal/${day(0)}.md`,
+            content: `# ${weekday(0)}
+
+## Log
+- Slow morning. Read more of Walden.
+
+## Today
+- [ ] Buy groceries for dinner with Lena
+- [ ] Clean up the desktop and downloads folder
+`,
+        },
+        {
+            path: `${uc}/Journal/${day(-1)}.md`,
+            content: `# ${weekday(-1)}
+
+## Log
+- Weekly sync went well. Launch is on track.
+- Recorded the intro for episode 1.
+
+## Today
+- [x] Call Tom about the worktop
+- [ ] Back up the podcast raw files to the NAS
+
+## Ideas
+- Offer a one-day "site audit" package for small clients #idea
+`,
+        },
+        {
+            path: `${uc}/Journal/${day(-2)}.md`,
+            content: `# ${weekday(-2)}
+
+## Log
+- Long session on the pricing page copy. Two drafts, neither right yet.
+- Walked to the hardware store for tile samples.
+
+## Ideas
+- A "what I'm reading" section on the studio site, pulled from my book notes #idea
+`,
+        },
+    ];
+}
+
 // ---------------------------------------------------------------------------
 // Command implementation
 // ---------------------------------------------------------------------------
@@ -1341,7 +1772,7 @@ export async function createShowcase(app: App): Promise<void> {
     const notice = new Notice('Creating showcase…', 0);
 
     try {
-        const notes = [...NOTES, ...buildRelativeDateNotes()];
+        const notes = [...NOTES, ...buildRelativeDateNotes(), ...buildUseCaseNotes()];
 
         // Collect all unique folder paths needed
         const folderPaths = new Set<string>();

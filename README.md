@@ -4,7 +4,7 @@ Your tasks, decisions and highlights from every note, gathered on one live page.
 
 📖 **[Full documentation →](https://docs.mkshp.dev/obsidian-MOC-plugin/)**
 
-![A "This week" dashboard listing open tasks from four project notes. A task is ticked and leaves the list, then the jump button opens its source note.](https://raw.githubusercontent.com/mkshp-dev/obsidian-moc-plugin/main/docs-site/static/img/screens/this-week.gif)
+![A "This week" dashboard listing open tasks from four project notes. A task is ticked and leaves the list, then the jump button opens its source note.](https://raw.githubusercontent.com/mkshp-dev/obsidian-MOC-plugin/main/docs-site/static/img/screens/this-week.gif)
 
 ---
 
@@ -14,7 +14,7 @@ Your tasks, decisions and highlights from every note, gathered on one live page.
 
 **Interactive tasks** — Tick a task checkbox in a rendered `moc` block and it updates in its source note, guarded against writing over newer edits.
 
-![Split view: ticking a task on the dashboard checks it in the project note, and a task typed in the note appears on the dashboard](https://raw.githubusercontent.com/mkshp-dev/obsidian-moc-plugin/main/docs-site/static/img/screens/tick-it-here.gif)
+![Split view: ticking a task on the dashboard checks it in the project note, and a task typed in the note appears on the dashboard](https://raw.githubusercontent.com/mkshp-dev/obsidian-MOC-plugin/main/docs-site/static/img/screens/tick-it-here.gif)
 
 **Jump to source** — Every matched block has a button that opens its source note at the exact line it came from.
 
@@ -22,11 +22,11 @@ Your tasks, decisions and highlights from every note, gathered on one live page.
 
 **Dates relative to now** — Filter with `{{startOfDay}}`, `{{now-24h}}`, `{{endOfWeek}}` and friends, as in `properties(due < {{startOfDay}})` for overdue items. Read dates from daily-note filenames with `file.day`, point at dated folders with `{{now:YYYY/MM}}`, and blocks move on to the new day by themselves.
 
-![An Overdue dashboard with a second block for tasks due in the next 7 days](https://raw.githubusercontent.com/mkshp-dev/obsidian-moc-plugin/main/docs-site/static/img/screens/overdue.png)
+![An Overdue dashboard with a second block for tasks due in the next 7 days](https://raw.githubusercontent.com/mkshp-dev/obsidian-MOC-plugin/main/docs-site/static/img/screens/overdue.png)
 
 **MOC Creation Wizard** — Generate `moc` blocks visually from the Command Palette. No YAML required. Date filters have presets such as **is today** and **is this week**, and the wizard checks the block before inserting it.
 
-![The wizard building a block of tasks due in the next 7 days, then the rendered result](https://raw.githubusercontent.com/mkshp-dev/obsidian-moc-plugin/main/docs-site/static/img/screens/wizard.gif)
+![The wizard building a block of tasks due in the next 7 days, then the rendered result](https://raw.githubusercontent.com/mkshp-dev/obsidian-MOC-plugin/main/docs-site/static/img/screens/wizard.gif)
 
 **Flexible output shaping** — Group by folder, tag, date, or any frontmatter property. Sort, and limit by notes scanned (`fileLimit`), total results (`blockLimit`) or results per note (`blocksPerFile`), with matching offsets for pagination.
 

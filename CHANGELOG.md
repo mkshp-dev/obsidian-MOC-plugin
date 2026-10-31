@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+## 1.6.3 - 2026-10-31
+
 - **Fix: Obsidian plugin review** — Removed the three `:has()` CSS selectors the review flags as slow. The wizard's path fields and the spacing under results now use plain classes, and look the same as before.
+
 
 ## 1.6.2 - 2026-10-31
 

@@ -244,7 +244,7 @@ recursive: true
 ```
 ````
 
-![On the Podcast launch note, a block lists only the meeting decisions that link to it](/img/screens/decisions-from-meetings.png)
+![The Website redesign note lists only the meeting decisions that link to it, with filter: has_tag("#decision") AND contains("[[this note]]")](/img/screens/project-decisions.png)
 
 ---
 

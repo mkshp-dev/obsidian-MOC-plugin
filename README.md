@@ -2,6 +2,10 @@
 
 Your tasks, decisions and highlights from every note, gathered on one live page. Add a `moc` code block, pick a folder, an element (tasks, lists, headings, paragraphs or quotes) and a filter, and the index keeps itself up to date.
 
+[![Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=downloads&query=%24%5B%22maps-of-content%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json)](https://obsidian.md/plugins?id=maps-of-content)
+
+[![Install in Obsidian](https://img.shields.io/badge/Install-Obsidian%20Community%20Plugins-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md/plugins?id=maps-of-content)
+
 📖 **[Full documentation →](https://docs.mkshp.dev/obsidian-MOC-plugin/)**
 
 ![A "This week" dashboard listing open tasks from four project notes. A task is ticked and leaves the list, then the jump button opens its source note.](https://raw.githubusercontent.com/mkshp-dev/obsidian-MOC-plugin/main/docs-site/static/img/screens/this-week.gif)

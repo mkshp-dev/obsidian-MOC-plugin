@@ -45,101 +45,107 @@ without writing a single line of YAML manually.
     // Sample data notes
     // -----------------------------------------------------------------------
     {
-        path: `${SHOWCASE_FOLDER}/data/Meeting Notes Alpha.md`,
+        path: `${SHOWCASE_FOLDER}/data/Website redesign kickoff.md`,
         content: `---
-project: Alpha
+project: Website redesign
 status: active
 priority: 1
-date: 2024-01-15
+date: 2026-09-14
 ---
 
-# Meeting Notes Alpha
+# Website redesign kickoff
 
 ## Action items
 
-- Follow up with the design team #project
-- Schedule a review session #meeting
-- Update the roadmap document
+- Send the moodboard to Priya for review #project
+- Compare quotes from two hosting vendors #project
+- Book a review session for the homepage drafts #meeting
+- Update the sitemap with the new case study pages
 
 ## Decisions
 
-> We agreed to use a modular approach for the next sprint. #decision
+> Go with the calmer homepage direction and move the blog link to the footer. #decision
 
-The team is aligned on the new direction.
+Everyone aligned on launching before the end of the quarter.
 
-- [x] Sent follow-up email
-- [ ] Update documentation
-- [ ] Notify stakeholders
+- [x] Share the analytics export
+- [ ] Update documentation for the content team
+- [ ] Ask Sam for the final illustration files
+- [ ] Write copy for the pricing page
 
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/data/Meeting Notes Beta.md`,
+        path: `${SHOWCASE_FOLDER}/data/Podcast planning.md`,
         content: `---
-project: Beta
+project: Podcast
 status: active
 priority: 2
-date: 2024-02-10
+date: 2026-10-02
 ---
 
-# Meeting Notes Beta
+# Podcast planning
 
 ## Action items
 
-- Review the budget proposal #project
-- Confirm vendor contracts #meeting
-- Prepare Q2 report
+- Review the budget for microphones and editing software #project
+- Confirm the guest contract with Lena #meeting
+- Prepare the season one report for sponsors
 
 ## Decisions
 
-> Approved the new vendor. Budget increase of 10%. #decision
+> Approved a 600 equipment budget. Episodes go out every other Tuesday. #decision
 
-All approvals are in place.
+The budget was approved, so recording can start next week.
 
-- [x] Sent contract for review
-- [x] Budget approved
-- [ ] Finalize Q2 report
+- [x] Send the guest contract to Lena
+- [x] Get the equipment budget signed off
+- [ ] Track the equipment budget in the spreadsheet
+- [ ] Finalise the sponsor report
+- [ ] Edit episode 1 and add the intro music
 
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/data/Meeting Notes Gamma.md`,
+        path: `${SHOWCASE_FOLDER}/data/Old portfolio retirement.md`,
         content: `---
-project: Gamma
+project: Portfolio
 status: archived
 priority: 3
-date: 2023-12-01
+date: 2025-12-01
 ---
 
-# Meeting Notes Gamma
+# Old portfolio retirement
 
 ## Action items
 
-- Archive old datasets #project
-- Document deprecation process #meeting
+- Archive the old project photos #project
+- Document how the redirects work #meeting
 
 ## Decisions
 
-> Gamma project archived after successful handover. #decision
+> Retire the old portfolio now that every project has moved to the studio site. #decision
 
-No further action required.
+The old site is archived and no further action is required.
 
-- [x] Datasets archived
-- [x] Handover docs updated
+- [x] Archive the project photos
+- [x] Document the redirects
 
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/data/exclude-me/Excluded Note.md`,
+        path: `${SHOWCASE_FOLDER}/data/Archive/Old client brief.md`,
         content: `---
-project: Excluded
+project: Archive
 ---
 
-# Excluded Note
+# Old client brief
 
-This note lives in a subfolder that is excluded in the showcase examples.
+This note lives in the \`Archive\` subfolder, which note 08 excludes.
 
-- This item should not appear in the MOC output
+## Action items
+
+- This item from the archive should not appear when the archive is excluded
 - Neither should this one
 
 `,
@@ -174,35 +180,35 @@ the blocks in [[15 - Renames and moves]] react.
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/rename-lab/hosts/Alpha.md`,
-        content: `# Alpha
+        path: `${SHOWCASE_FOLDER}/rename-lab/trips/Tokyo.md`,
+        content: `# Tokyo
 
 This block reads from the folder named after **this note**, using
-\`{{this.filename}}\`. Right now that is \`hosts/Alpha\`.
+\`{{this.filename}}\`. Right now that is \`trips/Tokyo\`.
 
 \`\`\`moc
-folder: ${SHOWCASE_FOLDER}/rename-lab/hosts/{{this.filename}}
+folder: ${SHOWCASE_FOLDER}/rename-lab/trips/{{this.filename}}
 element: List
-filter: contains("item")
+filter: contains("")
 \`\`\`
 
-**Try it:** rename this note to \`Beta\` while it is open. The block switches to the
-\`hosts/Beta\` folder straight away, and **Copy** and **Bake** keep working.
+**Try it:** rename this note to \`Kyoto\` while it is open. The block switches to the
+\`trips/Kyoto\` folder straight away, and **Copy** and **Bake** keep working.
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/rename-lab/hosts/Alpha/Alpha items.md`,
-        content: `# Alpha items
+        path: `${SHOWCASE_FOLDER}/rename-lab/trips/Tokyo/Tokyo plans.md`,
+        content: `# Tokyo plans
 
-- First item from the Alpha folder
-- Second item from the Alpha folder
+- Book a table at a sushi counter in Ginza
+- Walk around Yanaka on Sunday morning
 `,
     },
     {
-        path: `${SHOWCASE_FOLDER}/rename-lab/hosts/Beta/Beta items.md`,
-        content: `# Beta items
+        path: `${SHOWCASE_FOLDER}/rename-lab/trips/Kyoto/Kyoto plans.md`,
+        content: `# Kyoto plans
 
-- Only item from the Beta folder
+- See Fushimi Inari at sunrise, before the crowds
 `,
     },
 
@@ -213,7 +219,7 @@ filter: contains("item")
         path: `${SHOWCASE_FOLDER}/vault-lab/Anywhere.md`,
         content: `# Anywhere
 
-- This line can be found from anywhere in the vault #moc-anywhere
+- Renew the passport before the Japan trip #moc-anywhere
 `,
     },
     {
@@ -278,7 +284,7 @@ recursive: true
 Use \`element: Task\` to extract only checkbox items. Combine with
 \`is_completed()\` or \`is_incomplete()\` to filter by state.
 
-### Incomplete tasks across all meeting notes
+### Incomplete tasks across all project notes
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
@@ -394,7 +400,7 @@ recursive: true
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
 element: Heading
-filter: properties(date >= "2024-01-01")
+filter: contains("Decisions") AND properties(date >= "2026-01-01")
 recursive: true
 \`\`\`
 
@@ -421,7 +427,7 @@ recursive: true
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 groupBy: property(project)
 recursive: true
@@ -453,7 +459,7 @@ recursive: true
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 sort: ctime desc
 recursive: true
@@ -566,31 +572,31 @@ when \`recursive: true\` would normally include them.
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 recursive: true
-excludeFolder: ${SHOWCASE_FOLDER}/data/exclude-me
+excludeFolder: ${SHOWCASE_FOLDER}/data/Archive
 \`\`\`
 
 ### Exclude a specific file
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 recursive: true
-excludeFile: ${SHOWCASE_FOLDER}/data/Meeting Notes Gamma
+excludeFile: ${SHOWCASE_FOLDER}/data/Old portfolio retirement
 \`\`\`
 
 ### Exclude multiple (array syntax)
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
-element: List
+element: Heading
 filter: contains("Action items")
 recursive: true
-excludeFolder: ["${SHOWCASE_FOLDER}/data/exclude-me"]
-excludeFile: ["${SHOWCASE_FOLDER}/data/Meeting Notes Gamma"]
+excludeFolder: ["${SHOWCASE_FOLDER}/data/Archive"]
+excludeFile: ["${SHOWCASE_FOLDER}/data/Old portfolio retirement"]
 \`\`\`
 
 **What to notice:**
@@ -743,7 +749,7 @@ reopen the note. Renames and moves have their own walkthrough in
 
 **Try it:**
 1. Keep this note open in Obsidian.
-2. Open \`${SHOWCASE_FOLDER}/data/Meeting Notes Alpha.md\`.
+2. Open \`${SHOWCASE_FOLDER}/data/Podcast planning.md\`.
 3. Add a new task: \`- [ ] A brand new task\`.
 4. Save. Watch the block above update within half a second.
 
@@ -783,7 +789,7 @@ noteSeparator: none
 **What to notice:**
 - \`blockSeparator\` values: \`none\` (default), \`divider\` (\`---\`), \`newline\` (blank line).
 - \`noteSeparator\` values: \`newline\` (default), \`divider\` (\`---\`), \`none\`.
-- "Meeting Notes Alpha" has two incomplete tasks, so it's the easiest note to see \`blockSeparator\` on.
+- "Podcast planning" has three incomplete tasks in a row, so it's the easiest note to see \`blockSeparator\` on.
 
 ## Dynamic parameters
 
@@ -801,7 +807,7 @@ expands to \`${SHOWCASE_FOLDER}\` — the block below resolves to the same
 
 \`\`\`moc
 folder: "{{this.folder}}/data"
-element: List
+element: Heading
 filter: contains("Action items")
 recursive: true
 \`\`\`
@@ -824,7 +830,7 @@ Task checkboxes inside a rendered MOC block are **live**. Ticking one writes the
 change straight back to the note the task came from, so you can work through an
 aggregated list without opening each source note.
 
-### Everything still open, across all meeting notes
+### Everything still open, across all project notes
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
@@ -860,8 +866,8 @@ pane, or a sync from another device — the write is skipped, you get a notice, 
 block refreshes to show the current state.
 
 **Try it:**
-1. Open \`${SHOWCASE_FOLDER}/data/Meeting Notes Alpha.md\` in a second pane.
-2. Edit the text of \`- [ ] Update documentation\` (for example, add a word).
+1. Open \`${SHOWCASE_FOLDER}/data/Website redesign kickoff.md\` in a second pane.
+2. Edit the text of \`- [ ] Update documentation for the content team\` (for example, add a word).
 3. Without saving focus back here, tick that task in a block above *before* it refreshes.
 4. You get "the source line has changed" instead of a silent overwrite.
 
@@ -904,7 +910,7 @@ A MOC block gathers content from all over your vault. Jump to source is how you 
 back: every matched block carries its own button that opens the note it came from,
 scrolled to the exact line the block starts at.
 
-### Decisions from every meeting note
+### Decisions from every project note
 
 \`\`\`moc
 folder: ${SHOWCASE_FOLDER}/data
@@ -1004,9 +1010,9 @@ Blocks are not rewritten to follow the folder — update \`folder:\` to the new 
 ## Renaming the note that holds the block
 
 Blocks using \`{{this.filename}}\`, \`{{this.folder}}\` or \`{{this.path}}\` follow
-the note they're in when it's renamed. Open [[Alpha]] and follow the steps there:
-renaming it to \`Beta\` makes its block switch from the \`hosts/Alpha\` folder to
-\`hosts/Beta\`.
+the note they're in when it's renamed. Open [[Tokyo]] and follow the steps there:
+renaming it to \`Kyoto\` makes its block switch from the \`trips/Tokyo\` folder to
+\`trips/Kyoto\`.
 
 **What to notice:**
 - A move is caught from both ends: a note entering the watched folder and a note
@@ -1053,19 +1059,19 @@ ${agenda}
     });
 
     return [
-        project('Quarterly report', day(-2), '- [ ] Collect figures from finance\n- [ ] Draft summary\n- [x] Book review meeting'),
-        project('Client demo', day(0), '- [ ] Rehearse the walkthrough\n- [ ] Send the agenda'),
-        project('Website refresh', day(3), '- [ ] Review new homepage copy\n- [x] Pick hero image'),
-        project('Annual planning', day(35), '- [ ] Gather team goals'),
-        meeting('Retro', hour(-5), '- What went well\n- What to change'),
-        meeting('Design review', hour(3), '- Walk through the new layouts'),
-        meeting('Roadmap planning', hour(50), '- Agree next quarter priorities'),
+        project('Tax return', day(-2), '- [ ] Send laptop receipts to the accountant\n- [ ] Review and sign the draft return\n- [x] Download bank statements'),
+        project('Podcast episode 1', day(0), '- [ ] Export the final mix\n- [ ] Upload with show notes'),
+        project('Website launch', day(3), '- [ ] Set up redirects for the old blog\n- [x] Pick the hero illustration'),
+        project('Japan trip', day(35), '- [ ] Book flights to Tokyo'),
+        meeting('Weekly sync', hour(-5), '- Launch checklist\n- Podcast schedule'),
+        meeting('Design review', hour(3), '- Walk through the pricing page layouts'),
+        meeting('Contractor call', hour(50), '- Worktop choice and tiling dates'),
         {
             path: `${lab}/journal/${day(0)}.md`,
             content: `# ${day(0)}
 
 - Try a weekly review template #idea
-- Lunch with Sam
+- Lunch with Sam to talk about the illustrations
 `,
         },
         {
@@ -1073,22 +1079,22 @@ ${agenda}
             content: `# ${day(-3)}
 
 - Batch all meetings into Tuesdays #idea
-- Follow up on the ${day(0)} demo
+- Prepare for the ${day(0)} podcast release
 `,
         },
         {
             path: `${lab}/journal/${day(-10)}.md`,
             content: `# ${day(-10)}
 
-- Start a reading list #idea
+- Keep a reading list on the studio site #idea
 `,
         },
         {
             path: `${lab}/months/${thisMonth}/Month goals.md`,
             content: `# Goals for ${thisMonth}
 
-- Ship the website refresh
-- Clear the reading list backlog
+- Launch the new studio website
+- Release the first podcast episode
 `,
         },
         {
@@ -1161,7 +1167,7 @@ groupBy: property(due)
 showCount: true
 \`\`\`
 
-"Annual planning", due in 35 days, stays out until it comes within a week.
+"Japan trip", due in 35 days, stays out until it comes within a week.
 
 ## Meetings in the next 12 hours
 
@@ -1174,7 +1180,7 @@ element: Heading
 filter: properties(start >= {{now}}) AND properties(start <= {{now+12h}})
 \`\`\`
 
-The retro started five hours ago and roadmap planning is two days away, so only
+The weekly sync started five hours ago and the contractor call is two days away, so only
 the design review shows. \`{{now}}\` is as of the last time the block rendered.
 
 ## This week's journal ideas

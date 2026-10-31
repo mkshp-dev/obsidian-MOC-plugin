@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Showcase: Use cases** — **Create showcase** also adds a `Use cases` folder: a small working vault of projects, meetings, book notes and a journal, with five dashboards (This week, Overdue, Decisions log, Reading highlights, Ideas inbox). Its dates are set when you run the command, so the overdue and due-soon lists always have results.
+
 - **Showcase: Realistic sample notes** — **Create showcase** now fills its examples with a small studio's project notes, a trip and a tax return instead of placeholder "Alpha/Beta/Gamma" data. Eight example blocks that showed "No elements matching filter" (in notes 06, 07, 08, 09 and 12) now show results.
 
 ## 1.6.1 - 2026-10-18

@@ -38,6 +38,23 @@ without writing a single line of YAML manually.
 | [[14 - Jump to source]] | Per-block jump-to-source buttons |
 | [[15 - Renames and moves]] | Refresh on rename and move, template edits, missing folders |
 | [[16 - Relative dates]] | Date parameters, ranges, \`file.*\` dates, dated folders, wizard presets |
+
+## Use cases
+
+The \`Use cases\` folder is a small working vault: projects with due dates,
+meeting notes, book highlights and a journal. Its dashboards show what \`moc\`
+blocks are for day to day:
+
+| Dashboard | What it gathers |
+|-----------|-----------------|
+| [[This week]] | Every open task from active projects. Tick one here and it is ticked in its note |
+| [[Overdue]] | Tasks from projects past their due date, and those due in the next 7 days |
+| [[Decisions log]] | Every \`#decision\` from every meeting, newest first |
+| [[Reading highlights]] | Quotes from books rated 4 or 5, grouped by author |
+| [[Ideas inbox]] | Ideas tagged \`#idea\` in the journal and project notes |
+
+The project notes [[Website redesign]] and [[Podcast launch]] each pull in their
+own meeting decisions with \`{{this.filename}}\`.
 `,
     },
 
@@ -1333,6 +1350,414 @@ The property list also offers \`file.day\`, \`file.ctime\` and \`file.mtime\`.
     ];
 }
 
+/**
+ * Use-case notes: a small, realistic vault (projects, meetings, reading notes,
+ * a journal) and five dashboards built on it. Dates are set relative to the
+ * moment the showcase is created, so "overdue" and "next 7 days" always have
+ * results.
+ */
+function buildUseCaseNotes(): { path: string; content: string }[] {
+    const now = moment();
+    const day = (offset: number) => now.clone().add(offset, 'days').format('YYYY-MM-DD');
+    const weekday = (offset: number) => now.clone().add(offset, 'days').format('dddd D MMMM');
+    const uc = `${SHOWCASE_FOLDER}/Use cases`;
+
+    return [
+        {
+            path: `${uc}/Dashboards/Decisions log.md`,
+            content: `Every decision from every meeting, newest first.
+
+\`\`\`moc
+folder: ${uc}/Meetings
+element: List
+filter: has_tag("#decision")
+sort: name desc
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Dashboards/Ideas inbox.md`,
+            content: `Ideas tagged #idea anywhere in the vault, from journal entries and project notes.
+
+\`\`\`moc
+folder: ${uc}
+element: List
+filter: has_tag("#idea")
+recursive: true
+excludeFolder: ${uc}/Dashboards
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Dashboards/Overdue.md`,
+            content: `Open tasks from projects whose due date has passed. This list moves on to the new day by itself.
+
+\`\`\`moc
+folder: ${uc}/Projects
+element: Task
+filter: is_incomplete() AND properties(due < {{startOfDay}})
+\`\`\`
+
+## Due in the next 7 days
+
+\`\`\`moc
+folder: ${uc}/Projects
+element: Task
+filter: is_incomplete() AND properties(due >= {{startOfDay}}) AND properties(due <= {{endOfDay+7d}})
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Dashboards/Reading highlights.md`,
+            content: `Highlights from the books and essays I rated 4 or 5.
+
+\`\`\`moc
+folder: ${uc}/Reading
+element: Blockquote
+filter: properties(rating >= 4)
+groupBy: property(author)
+blockSeparator: newline
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Dashboards/This week.md`,
+            content: `Everything still open across my projects, collected live from each project note. Tick a task here and it is ticked in its note.
+
+\`\`\`moc
+folder: ${uc}/Projects
+element: Task
+filter: is_incomplete() AND properties(status == "active")
+showCount: true
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Projects/Garden plan.md`,
+            content: `---
+status: someday
+area: Home
+---
+# Garden plan
+
+## Tasks
+- [ ] Sketch raised beds along the south fence
+- [ ] Find a local seed swap
+`,
+        },
+        {
+            path: `${uc}/Projects/Japan trip.md`,
+            content: `---
+status: planning
+area: Personal
+due: ${day(20)}
+---
+# Japan trip
+
+Ten days in April: Tokyo, Kanazawa, Kyoto.
+
+## Tasks
+- [ ] Book flights before the sale ends
+- [ ] Reserve the ryokan in Kanazawa
+- [ ] Get a JR pass or work out regional passes
+
+## Notes
+- Idea: plan one day around the Kenroku-en garden at opening time #idea
+`,
+        },
+        {
+            path: `${uc}/Projects/Kitchen renovation.md`,
+            content: `---
+status: active
+area: Home
+due: ${day(-2)}
+---
+# Kitchen renovation
+
+Cabinets are in. Worktops and tiling are left.
+
+## Tasks
+- [x] Sign off the cabinet layout
+- [ ] Choose the worktop sample
+- [ ] Book the tiler
+- [ ] Order the extractor hood
+
+## Notes
+- The contractor needs the worktop choice before he can template.
+`,
+        },
+        {
+            path: `${uc}/Projects/Podcast launch.md`,
+            content: `---
+status: active
+area: Work
+due: ${day(3)}
+---
+# Podcast launch
+
+Six-episode first season about running a small design studio.
+
+## Tasks
+- [x] Record episodes 1 and 2
+- [ ] Edit episode 1 and add the intro music
+- [ ] Write show notes for episodes 1–2
+- [ ] Submit the feed to Apple Podcasts and Spotify
+
+## Notes
+- Guests confirmed: Lena (ep. 3) and Marco (ep. 4).
+- Idea: turn each episode into a short blog post with the key takeaways #idea
+
+## Decisions from meetings
+
+\`\`\`moc
+folder: ${uc}/Meetings
+element: List
+filter: has_tag("#decision") AND contains("[[{{this.filename}}]]")
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Projects/Tax return.md`,
+            content: `---
+status: active
+area: Admin
+due: ${day(-1)}
+---
+# Tax return
+
+## Tasks
+- [x] Download bank statements
+- [ ] Send receipts for the new laptop to the accountant
+- [ ] Review the draft return and sign it
+`,
+        },
+        {
+            path: `${uc}/Projects/Website redesign.md`,
+            content: `---
+status: active
+area: Work
+due: ${day(7)}
+---
+# Website redesign
+
+New marketing site for the studio. Launch is a week away.
+
+## Tasks
+- [x] Audit the current pages and analytics
+- [x] Pick the type scale and colour palette
+- [ ] Write copy for the pricing page
+- [ ] Export hero illustrations at 2x
+- [ ] Set up redirects for the old blog URLs
+- [ ] Final review with Priya #waiting
+
+## Notes
+- Keep the case studies page, but cut it to the best four projects.
+- Idea: a small changelog page so returning clients see what's new #idea
+
+## Decisions from meetings
+
+\`\`\`moc
+folder: ${uc}/Meetings
+element: List
+filter: has_tag("#decision") AND contains("[[{{this.filename}}]]")
+\`\`\`
+`,
+        },
+        {
+            path: `${uc}/Meetings/${day(-10)} Design review.md`,
+            content: `---
+type: meeting
+date: ${day(-10)}
+attendees: [Priya, Sam]
+---
+# Design review
+
+About [[Website redesign]].
+
+## Notes
+- Sam showed two homepage directions. Everyone preferred the calmer one.
+- Pricing page needs a comparison table, not three cards.
+
+## Decisions
+- Go with direction B for the [[Website redesign]] homepage #decision
+- [[Website redesign]]: drop the blog from the main navigation and link it from the footer #decision
+
+## Action items
+- [ ] Sam to send the final illustration files
+- [x] Priya to share the analytics export
+`,
+        },
+        {
+            path: `${uc}/Meetings/${day(-1)} Weekly sync.md`,
+            content: `---
+type: meeting
+date: ${day(-1)}
+attendees: [Priya, Sam, Lena]
+---
+# Weekly sync
+
+## Notes
+- [[Website redesign]] is on track for next week.
+- [[Podcast launch]]: episode 1 edit is the only blocker.
+
+## Decisions
+- Announce the [[Website redesign]] in the first episode of the [[Podcast launch]] #decision
+
+## Action items
+- [ ] Priya to draft the launch email
+`,
+        },
+        {
+            path: `${uc}/Meetings/${day(-3)} Contractor call.md`,
+            content: `---
+type: meeting
+date: ${day(-3)}
+attendees: [Tom]
+---
+# Contractor call
+
+About [[Kitchen renovation]].
+
+## Notes
+- Tom can template the worktop as soon as we choose.
+
+## Decisions
+- [[Kitchen renovation]]: quartz worktop, not oak, because it sits next to the sink #decision
+
+## Action items
+- [ ] Send Tom the tile measurements
+`,
+        },
+        {
+            path: `${uc}/Meetings/${day(-7)} Podcast kickoff.md`,
+            content: `---
+type: meeting
+date: ${day(-7)}
+attendees: [Lena]
+---
+# Podcast kickoff
+
+About [[Podcast launch]].
+
+## Notes
+- Episodes should stay under 35 minutes.
+- Lena suggested asking listeners for questions at the end of each episode.
+
+## Decisions
+- [[Podcast launch]]: release every other Tuesday #decision
+- [[Podcast launch]]: record remotely with a separate track per person #decision
+
+## Action items
+- [ ] Lena to send her mic setup for the guest guide
+`,
+        },
+        {
+            path: `${uc}/Reading/Meditations.md`,
+            content: `---
+type: book
+author: Marcus Aurelius
+rating: 5
+---
+# Meditations
+
+George Long's translation.
+
+> Begin the morning by saying to thyself, I shall meet with the busy-body, the ungrateful, arrogant, deceitful, envious, unsocial.
+
+A strange way to start a day, but it works: nothing that happens is a surprise.
+
+> No longer talk at all about the kind of man that a good man ought to be, but be such.
+`,
+        },
+        {
+            path: `${uc}/Reading/Self-Reliance.md`,
+            content: `---
+type: essay
+author: Ralph Waldo Emerson
+rating: 4
+---
+# Self-Reliance
+
+> Trust thyself: every heart vibrates to that iron string.
+
+> A foolish consistency is the hobgoblin of little minds.
+`,
+        },
+        {
+            path: `${uc}/Reading/The Art of War.md`,
+            content: `---
+type: book
+author: Sun Tzu
+rating: 3
+---
+# The Art of War
+
+Lionel Giles' translation. Interesting, but less useful day to day than I hoped.
+
+> All warfare is based on deception.
+`,
+        },
+        {
+            path: `${uc}/Reading/Walden.md`,
+            content: `---
+type: book
+author: Henry David Thoreau
+rating: 5
+---
+# Walden
+
+> I went to the woods because I wished to live deliberately, to front only the essential facts of life, and see if I could not learn what it had to teach.
+
+Still the best case for doing fewer things on purpose.
+
+> Our life is frittered away by detail. Simplify, simplify.
+
+> The mass of men lead lives of quiet desperation.
+`,
+        },
+        {
+            path: `${uc}/Journal/${day(0)}.md`,
+            content: `# ${weekday(0)}
+
+## Log
+- Slow morning. Read more of Walden.
+
+## Today
+- [ ] Buy groceries for dinner with Lena
+- [ ] Clean up the desktop and downloads folder
+`,
+        },
+        {
+            path: `${uc}/Journal/${day(-1)}.md`,
+            content: `# ${weekday(-1)}
+
+## Log
+- Weekly sync went well. Launch is on track.
+- Recorded the intro for episode 1.
+
+## Today
+- [x] Call Tom about the worktop
+- [ ] Back up the podcast raw files to the NAS
+
+## Ideas
+- Offer a one-day "site audit" package for small clients #idea
+`,
+        },
+        {
+            path: `${uc}/Journal/${day(-2)}.md`,
+            content: `# ${weekday(-2)}
+
+## Log
+- Long session on the pricing page copy. Two drafts, neither right yet.
+- Walked to the hardware store for tile samples.
+
+## Ideas
+- A "what I'm reading" section on the studio site, pulled from my book notes #idea
+`,
+        },
+    ];
+}
+
 // ---------------------------------------------------------------------------
 // Command implementation
 // ---------------------------------------------------------------------------
@@ -1347,7 +1772,7 @@ export async function createShowcase(app: App): Promise<void> {
     const notice = new Notice('Creating showcase…', 0);
 
     try {
-        const notes = [...NOTES, ...buildRelativeDateNotes()];
+        const notes = [...NOTES, ...buildRelativeDateNotes(), ...buildUseCaseNotes()];
 
         // Collect all unique folder paths needed
         const folderPaths = new Set<string>();

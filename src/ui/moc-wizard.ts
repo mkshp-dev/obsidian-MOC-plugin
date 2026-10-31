@@ -122,7 +122,7 @@ export class MocWizardModal extends Modal {
         const folderRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
         const folderLabel = folderRow.createSpan({ text: 'Folder', cls: 'moc-shaping-title' });
         folderLabel.title = 'Root folder to scan for elements. Type {{ for parameters such as {{this.folder}} or {{now:YYYY/MM}}';
-        const folderGroup = folderRow.createDiv({ cls: 'moc-shaping-input-group' });
+        const folderGroup = folderRow.createDiv({ cls: 'moc-shaping-input-group moc-path-input-group' });
         const folderInput = folderGroup.createEl('input', {
             type: 'text',
             placeholder: 'Example: diary (leave blank for entire vault)',
@@ -172,7 +172,7 @@ export class MocWizardModal extends Modal {
         const excludeFolderRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
         const excludeFolderLabel = excludeFolderRow.createSpan({ text: 'Exclude folder', cls: 'moc-shaping-title' });
         excludeFolderLabel.title = 'Folders to exclude from scan (comma-separated). Parameters such as {{now:YYYY}} work here too';
-        const excludeFolderGroup = excludeFolderRow.createDiv({ cls: 'moc-shaping-input-group' });
+        const excludeFolderGroup = excludeFolderRow.createDiv({ cls: 'moc-shaping-input-group moc-path-input-group' });
         const excludeFolderInput = excludeFolderGroup.createEl('input', {
             type: 'text',
             placeholder: 'Example: Archive, secret',
@@ -188,7 +188,7 @@ export class MocWizardModal extends Modal {
         const excludeFileRow = sourceContainer.createDiv({ cls: 'moc-shaping-row' });
         const excludeFileLabel = excludeFileRow.createSpan({ text: 'Exclude file', cls: 'moc-shaping-title' });
         excludeFileLabel.title = 'Files to exclude from scan (comma-separated). Parameters such as {{now:YYYY-MM-DD}} work here too';
-        const excludeFileGroup = excludeFileRow.createDiv({ cls: 'moc-shaping-input-group' });
+        const excludeFileGroup = excludeFileRow.createDiv({ cls: 'moc-shaping-input-group moc-path-input-group' });
         const excludeFileInput = excludeFileGroup.createEl('input', {
             type: 'text',
             placeholder: 'Example: Templates/daily',
@@ -215,7 +215,7 @@ export class MocWizardModal extends Modal {
         const templateRow = resultManipContainer.createDiv({ cls: 'moc-shaping-row' });
         const templateLabel = templateRow.createSpan({ text: 'Template', cls: 'moc-shaping-title' });
         templateLabel.title = 'Apply a template file to format the output';
-        const templateGroup = templateRow.createDiv({ cls: 'moc-shaping-input-group' });
+        const templateGroup = templateRow.createDiv({ cls: 'moc-shaping-input-group moc-path-input-group' });
         const templateInput = templateGroup.createEl('input', {
             type: 'text',
             placeholder: 'template-name',
@@ -313,6 +313,7 @@ export class MocWizardModal extends Modal {
         };
 
         if (this.groupBy === 'property') {
+            groupGroup.addClass('moc-path-input-group');
             const propInput = groupGroup.createEl('input', {
                 type: 'text',
                 placeholder: 'Property key...',

@@ -6,6 +6,8 @@ sidebar_position: 4
 
 The **MOC Creation Wizard** is an interactive, visual builder that allows you to generate dynamic Map of Content code blocks without having to write YAML syntax manually.
 
+![The wizard building a block of tasks due in the next 7 days, then the rendered result](/img/screens/wizard.gif)
+
 ## Opening the Wizard
 
 You can open the wizard in two ways:

@@ -187,7 +187,8 @@ recursive: false
 ```
 ````
 
-![Dynamic parameters usage](/img/Showcase_5.png)
+![On the Podcast launch note, a block lists only the meeting decisions that link to it](/img/screens/decisions-from-meetings.png)
+
 ### Overdue tasks
 Incomplete tasks from project notes whose `due` date has passed. The block moves on to the new day by itself:
 

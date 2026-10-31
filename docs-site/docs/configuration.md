@@ -45,17 +45,17 @@ The matching condition applied to each candidate element. Supports both primitiv
 
 - **String & text matches**:
   - `contains("term")`: Evaluates if the element text contains the specified substring (case-sensitive). (`has_word` and `has_text` are backward-compatible aliases.)
-  
-    ![Extracting lists by keyword/phrase](/img/Showcase_3.png)
 - **Regular expressions**:
   - `matches("regex_pattern")`: Evaluates the element using a regular expression match. Supports optional slash-delimited format with flags, e.g. `matches("/pattern/i")`.
 - **Tags**:
   - `has_tag("#tag")`: Evaluates if the element contains the specified hashtag (fully tag-aware, case-insensitive, and matches subtags like `#tag/subtag`).
+  
+    ![Ideas tagged #idea, gathered from journal entries and project notes with has_tag("#idea")](/img/screens/ideas-inbox.png)
 - **Tasks** (only when `element` is `Task` or `List`):
   - `is_completed()`: Matches completed tasks.
   - `is_incomplete()`: Matches incomplete tasks.
   
-    ![Extracting incomplete tasks](/img/Showcase_2.png)
+    ![Open tasks from four project notes, gathered with is_incomplete()](/img/screens/this-week.png)
 - **Frontmatter properties**:
   - `properties(key == value)`: Matches files where the frontmatter property `key` equals `value`.
   - Supported operators: `==`, `!=`, `>`, `<`, `>=`, `<=`.
@@ -68,7 +68,7 @@ The matching condition applied to each candidate element. Supports both primitiv
     - `properties(date >= "2024-01-01")`
     - `properties(due < {{startOfDay}})`
   
-    ![Filtering by frontmatter properties](/img/Showcase_4.png)
+    ![Overdue tasks and tasks due in the next 7 days, filtered on the due property](/img/screens/overdue.png)
 
 **Complex logical expressions:**
 
@@ -244,7 +244,7 @@ recursive: true
 ```
 ````
 
-![Dynamic parameters usage](/img/Showcase_5.png)
+![On the Podcast launch note, a block lists only the meeting decisions that link to it](/img/screens/decisions-from-meetings.png)
 
 ---
 

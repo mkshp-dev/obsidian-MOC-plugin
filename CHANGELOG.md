@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **Docs: Real screenshots** — The README, docs and community store images now show the plugin itself (the Use cases dashboards, ticking a task in split view, the wizard) instead of drawn mockups. The README links to docs.mkshp.dev, the manual install path in the docs uses the plugin's folder name `maps-of-content`, and the plugin description says what it does in plain words.
+
 - **UI: Wizard layout** — The folder field is wide enough to show a full path, date presets such as 'is in the next 7 days' are no longer cut off, and the Insert block button stays in view when the wizard is taller than the window.
 
 - **Fix: Loose spacing between results** — Results sat a full blank line apart, because each one renders in its own container and the list margins inside it were not removed. They now sit as close together as a normal list.

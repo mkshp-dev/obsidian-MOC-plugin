@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## In-progress
 
+- **UI: Wizard layout** — The folder field is wide enough to show a full path, date presets such as 'is in the next 7 days' are no longer cut off, and the Insert block button stays in view when the wizard is taller than the window.
+
 - **Fix: Loose spacing between results** — Results sat a full blank line apart, because each one renders in its own container and the list margins inside it were not removed. They now sit as close together as a normal list.
 
 - **Showcase: Use cases** — **Create showcase** also adds a `Use cases` folder: a small working vault of projects, meetings, book notes and a journal, with five dashboards (This week, Overdue, Decisions log, Reading highlights, Ideas inbox). Its dates are set when you run the command, so the overdue and due-soon lists always have results.

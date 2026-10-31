@@ -189,7 +189,13 @@
     justify-content: flex-end;
     margin-top: 4px;
     padding-top: 16px;
+    padding-bottom: 8px;
     border-top: 1px solid var(--background-modifier-border);
+    /* The wizard can be taller than the window; keep Insert block in view. */
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: var(--modal-background, var(--background-primary));
 }
 
 .moc-wizard-footer .setting-item {
@@ -355,6 +361,18 @@ input[type="text"].moc-shaping-input {
     padding: 6px 10px;
     font-size: var(--font-ui-small);
     min-width: 140px;
+}
+
+/* Let path fields (folder, exclusions, template) use the free space in their
+   row so a full path is readable. The 200px basis leaves room for the
+   Recursive toggle beside the folder field. */
+.moc-wizard-modal .moc-shaping-input-group:has(> input.moc-shaping-input) {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.moc-wizard-modal .moc-shaping-input-group > input.moc-shaping-input {
+    width: 100%;
 }
 
 .moc-shaping-trash-btn {
@@ -538,7 +556,11 @@ select.dropdown.moc-shaping-pill-select {
 }
 
 .moc-filter-rule-operator {
-    width: 72px;
+    /* Size to the chosen operator so date presets such as
+       'is in the next 7 days' are not cut off. */
+    width: auto;
+    min-width: 72px;
+    max-width: 220px;
 }
 
 .moc-filter-rule-input.moc-filter-rule-offset {
